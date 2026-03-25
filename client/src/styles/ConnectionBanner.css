@@ -1,0 +1,14 @@
+.cb-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: var(--warn);
+  color: hsl(38 100% 15%);
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 7px 16px;
+  letter-spacing: 0.01em;
+}

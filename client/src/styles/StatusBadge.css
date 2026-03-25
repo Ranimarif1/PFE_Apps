@@ -1,0 +1,33 @@
+.sb-badge {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.sb-badge--grey {
+  background: hsl(210 25% 94%);
+  color: hsl(215 20% 50%);
+  border: 1px solid hsl(210 25% 88%);
+}
+
+.sb-badge--yellow {
+  background: hsl(38 95% 50% / 0.12);
+  color: hsl(38 80% 35%);
+  border: 1px solid hsl(38 95% 50% / 0.4);
+}
+
+.sb-badge--red {
+  background: hsl(0 75% 55% / 0.1);
+  color: hsl(0 65% 45%);
+  border: 1px solid hsl(0 75% 55% / 0.35);
+}
+
+.sb-badge--green {
+  background: hsl(145 65% 40% / 0.1);
+  color: hsl(145 55% 32%);
+  border: 1px solid hsl(145 65% 40% / 0.35);
+}

@@ -1,0 +1,56 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  /* ── Light mode – mirrors desktop's index.css palette ────────── */
+  --bg:            hsl(210, 20%, 98%);
+  --surface:       hsl(0, 0%, 100%);
+  --surface-muted: hsl(210, 25%, 97%);
+  --border:        hsl(210, 25%, 88%);
+  --text:          hsl(215, 40%, 12%);
+  --muted:         hsl(215, 20%, 50%);
+
+  --primary:       hsl(210, 90%, 40%);
+  --primary-dark:  hsl(210, 90%, 33%);
+  --accent:        hsl(199, 80%, 48%);
+
+  --danger:        hsl(0, 75%, 55%);
+  --danger-bg:     hsl(0, 75%, 55%, 0.12);
+  --success:       hsl(145, 65%, 40%);
+  --success-bg:    hsl(145, 65%, 40%, 0.1);
+  --warn:          hsl(38, 95%, 50%);
+  --warn-bg:       hsl(38, 95%, 50%, 0.12);
+
+  --gradient-hero: linear-gradient(135deg, hsl(210, 90%, 40%), hsl(199, 80%, 48%));
+  --shadow-card:   0 2px 16px -4px hsl(210 60% 30% / 0.12);
+  --shadow-elevated: 0 8px 32px -8px hsl(210 60% 30% / 0.20);
+  --radius:        0.625rem;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.82em;
+  color: var(--primary);
+}
+
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
