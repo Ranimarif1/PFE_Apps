@@ -56,8 +56,8 @@ def _append_to_global_csv(report: Dict[str, Any], doctor: Dict[str, Any]) -> Non
     time_str = dt_obj.time().strftime("%H:%M:%S")
 
     file_exists = csv_path.exists()
-    with csv_path.open("a", newline="", encoding="utf-8") as f:
-        writer = csvlib.writer(f, delimiter="|")
+    with csv_path.open("a", newline="", encoding="utf-8-sig") as f:
+        writer = csvlib.writer(f, delimiter=";")
         if not file_exists:
             writer.writerow(["id_exam", "doctor_name", "date", "time", "transcription"])
 

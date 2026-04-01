@@ -24,7 +24,7 @@ import MédecinProfil from "./pages/medecin/Profil";
 
 // Admin
 import AdminDashboard from "./pages/admin/Dashboard";
-import AdminUtilisateurs from "./pages/admin/Utilisateurs";
+import AdminStatistiques from "./pages/admin/Statistiques";
 import AdminProfil from "./pages/medecin/Profil";
 
 // Admin IT
@@ -71,9 +71,9 @@ function AppWithLoading() {
       <Route path="/profil" element={<RouteGuard allowedRoles={["médecin", "admin"]}><MédecinProfil /></RouteGuard>} />
 
       {/* Admin */}
-      <Route path="/admin/dashboard" element={<RouteGuard allowedRoles={["admin"]}><AdminDashboard /></RouteGuard>} />
-      <Route path="/admin/utilisateurs" element={<RouteGuard allowedRoles={["admin"]}><AdminUtilisateurs /></RouteGuard>} />
-      <Route path="/admin/profil" element={<RouteGuard allowedRoles={["admin"]}><AdminProfil /></RouteGuard>} />
+      <Route path="/admin/dashboard"     element={<RouteGuard allowedRoles={["admin"]}><AdminDashboard /></RouteGuard>} />
+      <Route path="/admin/statistiques"  element={<RouteGuard allowedRoles={["admin"]}><AdminStatistiques /></RouteGuard>} />
+      <Route path="/admin/profil"        element={<RouteGuard allowedRoles={["admin"]}><AdminProfil /></RouteGuard>} />
 
       {/* Admin IT */}
       <Route path="/adminit/dashboard" element={<RouteGuard allowedRoles={["adminIT"]}><AdminITDashboard /></RouteGuard>} />
@@ -88,20 +88,36 @@ function AppWithLoading() {
   );
 }
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AppWithLoading />
-          </BrowserRouter>
-        </TooltipProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  // Render MobileRecord completely standalone — no providers, no loading screen
+  if (window.location.pathname.startsWith("/mobile/record/")) {
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="/mobile/record/:token" element={<MobileRecord />} />
+        </Routes>
+      </BrowserRouter>
+    );
+  }
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <div id="bg-mesh" />
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <AppWithLoading />
+              </div>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { Bell, Sun, Moon, Search } from "lucide-react";
+import { Bell, Sun, Moon, Search, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -56,15 +56,34 @@ export function Navbar({ title, showSearch, onSearch }: NavbarProps) {
     navigate(notif.link);
   };
 
+  const isAdmin   = user?.rôle === "admin";
+  const isMédecin = user?.rôle === "médecin";
+  const isDark = theme === "dark";
+
+  // Theme-aware backgrounds
+  const btnBg      = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.60)';
+  const dropdownBg = isDark ? 'rgba(22,33,52,0.97)'   : 'rgba(255,255,255,0.92)';
+  const hoverBg    = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(10,110,245,0.04)';
+
+  const section = isAdmin ? "Administration" : isMédecin ? "Service Radiologie" : "Admin Système";
+
   return (
     <header className="h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-between px-6 sticky top-0 z-10">
       <div className="flex items-center gap-4">
-        {title && <h1 className="text-lg font-semibold text-foreground">{title}</h1>}
+        {/* Breadcrumb for all roles */}
+        {title && (
+          <nav className="flex items-center gap-1.5 text-sm">
+            <span className="text-muted-foreground/60 font-medium text-xs">{section}</span>
+            <ChevronRight size={12} className="text-muted-foreground/40" />
+            <span className="font-semibold text-foreground text-sm">{title}</span>
+          </nav>
+        )}
         {showSearch && (
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
             <input
-              className="pl-9 pr-4 py-1.5 text-sm bg-muted rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/30 w-56"
+              className="pl-9 pr-4 py-2 text-sm rounded-xl border w-60"
+              style={{ background: btnBg, borderColor: 'var(--nv-border)' }}
               placeholder="Recherche par ID Exam..."
               onChange={e => onSearch?.(e.target.value)}
             />
@@ -72,37 +91,52 @@ export function Navbar({ title, showSearch, onSearch }: NavbarProps) {
         )}
       </div>
 
-      <div className="flex items-center gap-2">
-        <span className="hidden sm:flex items-center gap-1.5 text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full font-medium">
-          🩻 Service Radiologie
+      <div className="flex items-center gap-3">
+        {/* Status badge */}
+        <span className="hidden sm:flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+          style={{ background: 'rgba(0,201,167,0.12)', color: 'var(--nv-teal)', border: '1px solid rgba(0,201,167,0.22)' }}>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+          Système opérationnel
         </span>
 
         <button onClick={toggleTheme}
-          className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
-          {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:scale-105 text-muted-foreground hover:text-foreground"
+          style={{ background: btnBg, border: '1px solid var(--nv-border)' }}>
+          {isDark ? <Sun size={16} /> : <Moon size={16} />}
         </button>
 
         <div className="relative">
           <button onClick={openNotifs}
-            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors relative">
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:scale-105 relative text-muted-foreground hover:text-foreground"
+            style={{ background: btnBg, border: '1px solid var(--nv-border)' }}>
             <Bell size={16} />
             {unread > 0 && (
-              <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
+                style={{ background: 'var(--nv-teal)' }} />
             )}
           </button>
 
           {showNotifs && (
-            <div className="absolute right-0 top-10 w-72 bg-card rounded-xl border border-border shadow-elevated z-50 overflow-hidden">
-              <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-                <p className="font-semibold text-sm">Notifications</p>
-                {unread === 0 && <p className="text-xs text-muted-foreground">Tout lu ✓</p>}
+            <div className="absolute right-0 top-11 rounded-2xl border z-50 overflow-hidden notif-dropdown"
+              style={{ width: '300px', background: dropdownBg, borderColor: 'var(--nv-border)', backdropFilter: 'blur(20px)' }}>
+              <div className="px-4 py-3 border-b flex items-center justify-between"
+                style={{ borderColor: 'var(--nv-border)' }}>
+                <p className="font-bold text-sm text-foreground">Notifications</p>
+                {unread === 0 && <p className="text-xs" style={{ color: 'var(--nv-teal)' }}>Tout lu ✓</p>}
               </div>
               <div className="max-h-72 overflow-y-auto">
                 {allNotifications.map(n => (
                   <button key={n.id} onClick={() => handleNotifClick(n)}
-                    className={`w-full text-left px-4 py-3 border-b border-border last:border-0 hover:bg-muted/50 transition-colors ${!readIds.has(n.id) ? "bg-primary/5" : ""}`}>
+                    className="w-full text-left px-4 py-3 border-b last:border-0 transition-colors"
+                    style={{
+                      borderColor: 'var(--nv-border)',
+                      background: !readIds.has(n.id) ? 'rgba(0,201,167,0.07)' : 'transparent',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = hoverBg)}
+                    onMouseLeave={e => (e.currentTarget.style.background = !readIds.has(n.id) ? 'rgba(0,201,167,0.07)' : 'transparent')}
+                  >
                     <p className="text-sm text-foreground">{n.text}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{n.time}</p>
+                    <p className="text-xs mt-0.5 text-muted-foreground">{n.time}</p>
                   </button>
                 ))}
               </div>
@@ -110,8 +144,20 @@ export function Navbar({ title, showSearch, onSearch }: NavbarProps) {
           )}
         </div>
 
-        <div className="w-8 h-8 rounded-full gradient-hero flex items-center justify-center text-white text-xs font-bold">
-          {user?.prénom?.[0]}{user?.nom?.[0]}
+        {/* User chip */}
+        <div className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl"
+          style={{ background: btnBg, border: '1px solid var(--nv-border)' }}>
+          <div className="w-7 h-7 rounded-full gradient-hero flex items-center justify-center text-white text-xs font-bold shrink-0">
+            {user?.prénom?.[0]}{user?.nom?.[0]}
+          </div>
+          <div className="hidden md:block">
+            <p className="text-xs font-bold leading-none text-foreground">
+              {user?.prénom} {user?.nom}
+            </p>
+            <p className="text-xs leading-none mt-0.5" style={{ color: 'var(--nv-teal)' }}>
+              {isAdmin ? "Admin" : isMédecin ? "Médecin" : "Admin IT"}
+            </p>
+          </div>
         </div>
       </div>
     </header>

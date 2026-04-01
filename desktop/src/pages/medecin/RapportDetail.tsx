@@ -1,100 +1,119 @@
-import { useState, useEffect, useRef, useLayoutEffect } from "react";
+import { useState, useEffect, useCallback, useLayoutEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { getReport, createReport, updateReport } from "@/services/reportsService";
-import { CheckCircle, Edit3, Save, FileText, Loader2, ArrowLeft } from "lucide-react";
-import { motion } from "framer-motion";
+import { CheckCircle, Edit3, Save, FileText, Sparkles, Check, X, Loader2, ArrowLeft, BookOpen } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
+import { checkText, loadDictionary, isDictionaryReady, getDictionaryCount } from "@/lib/spellChecker";
+import type { Suggestion } from "@/lib/spellChecker";
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: "brouillon",
-  validated: "validé",
-  saved: "enregistré",
-};
-
+/* ── Status helpers ── */
+const STATUS_LABELS: Record<string, string> = { draft: "brouillon", validated: "validé", saved: "enregistré" };
 const STATUS_BADGE: Record<string, string> = {
-  saved: "bg-success/10 text-success",
+  saved:     "bg-success/10 text-success",
   validated: "bg-primary/10 text-primary",
-  draft: "bg-warning/10 text-warning",
+  draft:     "bg-warning/10 text-warning",
 };
 
+/* ── Suggestion type styling ── */
+const TYPE_STYLE: Record<string, { label: string; icon: string; classes: string }> = {
+  stt:     { label: "STT",       icon: "🎙️", classes: "bg-pink-100 dark:bg-pink-500/15 text-pink-700 dark:text-pink-400" },
+  ortho:   { label: "Ortho",     icon: "✏️", classes: "bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400" },
+  accord:  { label: "Accord",    icon: "📐", classes: "bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400" },
+  medical: { label: "Médical",   icon: "🏥", classes: "bg-violet-100 dark:bg-violet-500/15 text-violet-700 dark:text-violet-400" },
+};
+
+/* ── Auto-resizing textarea ── */
 function AutoTextarea({ value, onChange, className }: { value: string; onChange: (v: string) => void; className?: string }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   useLayoutEffect(() => {
-    if (ref.current) {
-      ref.current.style.height = "auto";
-      ref.current.style.height = ref.current.scrollHeight + "px";
-    }
+    if (ref.current) { ref.current.style.height = "auto"; ref.current.style.height = ref.current.scrollHeight + "px"; }
   }, [value]);
-  return (
-    <textarea
-      ref={ref}
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      rows={1}
-      className={className}
-      style={{ overflow: "hidden" }}
-    />
-  );
+  return <textarea ref={ref} value={value} onChange={e => onChange(e.target.value)} rows={1} className={className} style={{ overflow: "hidden" }} />;
 }
 
+/* ── Content parser / builder ── */
 function parseReport(text: string) {
   const lower = text.toLowerCase();
   const iIdx = lower.indexOf("indication:");
   const rIdx = lower.indexOf("resultat:");
   const cIdx = lower.indexOf("conclusion:");
-
   const extract = (start: number, end: number) => {
     if (start === -1) return "";
     const colonPos = text.indexOf(":", start) + 1;
-    const endPos = end === -1 ? text.length : end;
-    return text.slice(colonPos, endPos).trim();
+    return text.slice(colonPos, end === -1 ? text.length : end).trim();
   };
-
   return {
     indication: extract(iIdx, rIdx !== -1 ? rIdx : cIdx),
-    resultat: extract(rIdx, cIdx),
+    resultat:   extract(rIdx, cIdx),
     conclusion: extract(cIdx, -1),
   };
 }
-
 function buildContent(indication: string, resultat: string, conclusion: string) {
   return `Indication: ${indication}\n\nResultat: ${resultat}\n\nConclusion: ${conclusion}`;
 }
 
+/* ════════════════════════════════════════ */
 export default function RapportDetail() {
-  const { id } = useParams();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const [savedAsValidated, setSavedAsValidated] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState<"draft" | "validate" | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const { id }       = useParams();
+  const location     = useLocation();
+  const navigate     = useNavigate();
+  const { user }     = useAuth();
 
   const fromState = location.state as { ID_Exam?: string; transcription?: string; _restore?: object } | null;
-  const isNew = id === "new";
+  const isNew     = id === "new";
 
+  /* ── Report fields ── */
   const initialParsed = parseReport(fromState?.transcription || "");
-  const [indication, setIndication] = useState(initialParsed.indication);
-  const [resultat, setResultat] = useState(initialParsed.resultat);
-  const [conclusion, setConclusion] = useState(initialParsed.conclusion);
-  const [examId] = useState(fromState?.ID_Exam || "—");
-  const [status, setStatus] = useState<string>("draft");
-  const [createdAt, setCreatedAt] = useState<string | null>(null);
+  const [indication,  setIndication]  = useState(initialParsed.indication);
+  const [resultat,    setResultat]    = useState(initialParsed.resultat);
+  const [conclusion,  setConclusion]  = useState(initialParsed.conclusion);
+  const [examId]                      = useState(fromState?.ID_Exam || "—");
+  const [status,      setStatus]      = useState<string>("draft");
+  const [createdAt,   setCreatedAt]   = useState<string | null>(null);
+
+  /* ── UI states ── */
+  const [editing,              setEditing]              = useState(false);
+  const [saving,               setSaving]               = useState<"draft" | "validate" | null>(null);
+  const [loading,              setLoading]              = useState(false);
+  const [savedAsValidated,     setSavedAsValidated]     = useState(false);
+  const [error,                setError]                = useState("");
+
+  /* ── Dictionary state ── */
+  const [dictReady, setDictReady] = useState(isDictionaryReady());
+  const [dictLoading, setDictLoading] = useState(false);
+
+  /* ── Suggestion states ── */
+  const [suggestions,          setSuggestions]          = useState<Suggestion[]>([]);
+  const [loadingSuggestions,   setLoadingSuggestions]   = useState(false);
+  const [showSuggestions,      setShowSuggestions]      = useState(false);
+  const [appliedSuggestions,   setAppliedSuggestions]   = useState<Set<number>>(new Set());
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<number>>(new Set());
 
   const contenu = buildContent(indication, resultat, conclusion);
 
+  /* ── Auto-load dictionary on mount ── */
+  useEffect(() => {
+    if (!isDictionaryReady()) {
+      setDictLoading(true);
+      loadDictionary().then(() => {
+        setDictReady(isDictionaryReady());
+        setDictLoading(false);
+      });
+    }
+  }, []);
+
+  /* ── Load existing report ── */
   useEffect(() => {
     if (!isNew && id) {
       setLoading(true);
       getReport(id)
         .then(r => {
-          const parsed = parseReport(r.content);
-          setIndication(parsed.indication);
-          setResultat(parsed.resultat);
-          setConclusion(parsed.conclusion);
+          const p = parseReport(r.content);
+          setIndication(p.indication);
+          setResultat(p.resultat);
+          setConclusion(p.conclusion);
           setStatus(r.status);
           setCreatedAt(r.createdAt);
         })
@@ -103,6 +122,56 @@ export default function RapportDetail() {
     }
   }, [id, isNew]);
 
+  /* ── Analyze text ── */
+  const analyzeText = useCallback(() => {
+    setLoadingSuggestions(true);
+    setShowSuggestions(true);
+    setAppliedSuggestions(new Set());
+    setDismissedSuggestions(new Set());
+    setTimeout(() => {
+      setSuggestions(checkText(contenu));
+      setLoadingSuggestions(false);
+    }, 400);
+  }, [contenu]);
+
+  /* ── Auto-analyze when entering edit mode ── */
+  const handleToggleEdit = () => {
+    const next = !editing;
+    setEditing(next);
+    if (next) {
+      analyzeText();
+    } else {
+      setShowSuggestions(false);
+    }
+  };
+
+  /* ── Apply / dismiss suggestions ── */
+  const applySuggestion = (s: Suggestion, idx: number) => {
+    const updated = buildContent(indication, resultat, conclusion).replace(s.original, s.correction);
+    const p = parseReport(updated);
+    setIndication(p.indication);
+    setResultat(p.resultat);
+    setConclusion(p.conclusion);
+    setAppliedSuggestions(prev => new Set(prev).add(idx));
+  };
+
+  const applyAll = () => {
+    let updated = contenu;
+    suggestions.forEach((s, i) => {
+      if (!appliedSuggestions.has(i) && !dismissedSuggestions.has(i)) {
+        updated = updated.replace(s.original, s.correction);
+        setAppliedSuggestions(prev => new Set(prev).add(i));
+      }
+    });
+    const p = parseReport(updated);
+    setIndication(p.indication);
+    setResultat(p.resultat);
+    setConclusion(p.conclusion);
+  };
+
+  const visibleSuggestions = suggestions.filter((_, i) => !appliedSuggestions.has(i) && !dismissedSuggestions.has(i));
+
+  /* ── Save ── */
   const handleAction = async (action: "draft" | "validate") => {
     setSaving(action);
     setError("");
@@ -120,12 +189,20 @@ export default function RapportDetail() {
         navigate("/historique");
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Erreur lors de l'enregistrement.");
+      const raw = err instanceof Error ? err.message : "";
+      if (raw.toLowerCase().includes("id_exam") && raw.toLowerCase().includes("unique")) {
+        setError(`L'identifiant d'examen "${examId}" existe déjà. Veuillez utiliser un identifiant différent.`);
+      } else if (raw.toLowerCase().includes("id_exam") && raw.toLowerCase().includes("exists")) {
+        setError(`L'identifiant d'examen "${examId}" est déjà utilisé par un autre rapport.`);
+      } else {
+        setError(raw || "Erreur lors de l'enregistrement.");
+      }
     } finally {
       setSaving(null);
     }
   };
 
+  /* ── Loading ── */
   if (loading) {
     return (
       <AppLayout title="Rapport de transcription">
@@ -138,28 +215,30 @@ export default function RapportDetail() {
 
   return (
     <AppLayout title="Rapport de transcription">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         {!savedAsValidated && (
           <button
             onClick={() => fromState?._restore ? navigate("/rapport/nouveau", { state: { _restore: fromState._restore } }) : navigate(-1)}
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6">
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+          >
             <ArrowLeft size={16} /> Retour
           </button>
         )}
+
         {savedAsValidated ? (
-          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-            className="text-center py-16">
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center py-16">
             <div className="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="w-10 h-10 text-success" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">Rapport validé et enregistré ✅</h2>
-            <p className="text-muted-foreground">Le rapport a été ajouté au fichier CSV global.</p>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Rapport validé et enregistré</h2>
+            <p className="text-muted-foreground">Redirection vers l'historique…</p>
           </motion.div>
         ) : (
           <div className="space-y-6 animate-fade-in">
-            {/* Header */}
+
+            {/* ── Header card ── */}
             <div className="bg-card rounded-xl border border-border shadow-card p-6">
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-4">
                 <span className="text-lg">🩻</span>
                 <span className="text-xs font-semibold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full">Service Radiologie</span>
                 {!isNew && status && (
@@ -167,68 +246,250 @@ export default function RapportDetail() {
                     {STATUS_LABELS[status] ?? status}
                   </span>
                 )}
+
+                {/* Dictionary status badge */}
+                <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                  dictReady
+                    ? "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                    : dictLoading
+                      ? "bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400"
+                      : "bg-muted text-muted-foreground"
+                }`}>
+                  {dictLoading ? (
+                    <><Loader2 size={10} className="animate-spin" /> Chargement dictionnaire…</>
+                  ) : dictReady ? (
+                    <><BookOpen size={10} /> {getDictionaryCount().toLocaleString()} termes médicaux</>
+                  ) : (
+                    <>Mode règles uniquement</>
+                  )}
+                </span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-                <div><p className="text-muted-foreground text-xs">ID Exam</p><p className="font-mono font-bold text-foreground">{examId}</p></div>
-                <div><p className="text-muted-foreground text-xs">Médecin</p><p className="font-medium text-foreground">Dr. {user?.prénom} {user?.nom}</p></div>
-                <div><p className="text-muted-foreground text-xs">Date</p>
-                  <p className="font-medium text-foreground">
-                    {createdAt ? new Date(createdAt).toLocaleDateString("fr-FR") : new Date().toLocaleDateString("fr-FR")}
-                  </p>
-                </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                <div><p className="text-muted-foreground text-xs mb-0.5">ID Exam</p><p className="font-mono font-bold text-foreground">{examId}</p></div>
+                <div><p className="text-muted-foreground text-xs mb-0.5">Médecin</p><p className="font-medium text-foreground">Dr. {user?.prénom} {user?.nom}</p></div>
+                <div><p className="text-muted-foreground text-xs mb-0.5">Date</p><p className="font-medium text-foreground">{createdAt ? new Date(createdAt).toLocaleDateString("fr-FR") : new Date().toLocaleDateString("fr-FR")}</p></div>
+                <div><p className="text-muted-foreground text-xs mb-0.5">Heure</p><p className="font-medium text-foreground">{createdAt ? new Date(createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</p></div>
               </div>
             </div>
 
-            {/* Transcription */}
-            <div className="bg-card rounded-xl border border-border shadow-card p-6 space-y-5">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-foreground">Transcription</h3>
-                <button onClick={() => setEditing(e => !e)}
-                  className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors">
-                  <Edit3 size={14} /> {editing ? "Lecture" : "Modifier"}
-                </button>
+            {/* ── Content + Suggestions side by side ── */}
+            <div className="flex gap-4 items-start">
+
+              {/* Transcription card */}
+              <div className={`bg-card rounded-xl border border-border shadow-card p-6 space-y-5 transition-all ${showSuggestions && visibleSuggestions.length > 0 ? "flex-1" : "w-full"}`}>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-foreground">Transcription</h3>
+                  <div className="flex items-center gap-2">
+                    {editing && (
+                      <button
+                        onClick={analyzeText}
+                        disabled={loadingSuggestions}
+                        className="flex items-center gap-1.5 text-sm font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {loadingSuggestions ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                        {loadingSuggestions ? "Analyse..." : "Re-analyser"}
+                      </button>
+                    )}
+                    <button onClick={handleToggleEdit} className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors">
+                      <Edit3 size={14} /> {editing ? "Lecture" : "Modifier"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Indication */}
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Indication</label>
+                  {editing ? (
+                    <AutoTextarea value={indication} onChange={setIndication}
+                      className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
+                  ) : (
+                    <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3 min-h-[48px]">{indication || "—"}</p>
+                  )}
+                </div>
+
+                {/* Résultat */}
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Résultat</label>
+                  {editing ? (
+                    <AutoTextarea value={resultat} onChange={setResultat}
+                      className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
+                  ) : (
+                    <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3 min-h-[48px]">{resultat || "—"}</p>
+                  )}
+                </div>
+
+                {/* Conclusion */}
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Conclusion</label>
+                  {editing ? (
+                    <AutoTextarea value={conclusion} onChange={setConclusion}
+                      className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
+                  ) : (
+                    <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3 min-h-[48px]">{conclusion || "—"}</p>
+                  )}
+                </div>
               </div>
 
-              {/* Indication */}
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Indication</label>
-                {editing ? (
-                  <AutoTextarea value={indication} onChange={setIndication}
-                    className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
-                ) : (
-                  <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3">{indication || "—"}</p>
-                )}
-              </div>
+              {/* ── Suggestions panel ── */}
+              <AnimatePresence>
+                {showSuggestions && editing && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 40, width: 0 }}
+                    animate={{ opacity: 1, x: 0, width: 340 }}
+                    exit={{ opacity: 0, x: 40, width: 0 }}
+                    transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                    className="flex-shrink-0"
+                  >
+                    <div className="bg-card rounded-xl border border-border shadow-card p-5 w-[340px]">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center">
+                            <Sparkles size={14} className="text-amber-600 dark:text-amber-400" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-sm text-foreground">MedCorrect</h4>
+                            <p className="text-[10px] text-muted-foreground -mt-0.5">
+                              {dictReady ? "Dictionnaire + Règles + STT" : "Règles + STT"}
+                            </p>
+                          </div>
+                        </div>
+                        <button onClick={() => setShowSuggestions(false)} className="text-muted-foreground hover:text-foreground">
+                          <X size={14} />
+                        </button>
+                      </div>
 
-              {/* Résultat */}
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Résultat</label>
-                {editing ? (
-                  <AutoTextarea value={resultat} onChange={setResultat}
-                    className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
-                ) : (
-                  <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3">{resultat || "—"}</p>
-                )}
-              </div>
+                      {loadingSuggestions ? (
+                        <div className="flex flex-col items-center justify-center py-10 text-center">
+                          <Loader2 size={28} className="animate-spin text-primary mb-3" />
+                          <p className="text-sm text-muted-foreground">Analyse du texte…</p>
+                          <p className="text-xs text-muted-foreground mt-1">Vérification orthographique & grammaticale</p>
+                        </div>
+                      ) : visibleSuggestions.length === 0 ? (
+                        <div className="text-center py-10">
+                          <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-3">
+                            <CheckCircle size={20} className="text-success" />
+                          </div>
+                          <p className="text-sm font-medium text-foreground mb-1">Aucune correction nécessaire</p>
+                          <p className="text-xs text-muted-foreground">Le texte semble correct ✓</p>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Stats summary */}
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="text-xs text-muted-foreground">{visibleSuggestions.length} suggestion{visibleSuggestions.length > 1 ? "s" : ""}</p>
+                              {Object.entries(
+                                visibleSuggestions.reduce<Record<string, number>>((acc, s) => {
+                                  const t = s.type || "ortho";
+                                  acc[t] = (acc[t] || 0) + 1;
+                                  return acc;
+                                }, {})
+                              ).map(([type, count]) => {
+                                const ts = TYPE_STYLE[type] || TYPE_STYLE.ortho;
+                                return (
+                                  <span key={type} className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${ts.classes}`}>
+                                    {ts.icon}{count}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                            <button onClick={applyAll} className="text-xs font-medium text-primary hover:text-primary/80 transition-colors">
+                              Tout appliquer
+                            </button>
+                          </div>
 
-              {/* Conclusion */}
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Conclusion</label>
-                {editing ? (
-                  <AutoTextarea value={conclusion} onChange={setConclusion}
-                    className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
-                ) : (
-                  <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3">{conclusion || "—"}</p>
+                          <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1 scrollbar-thin">
+                            {suggestions.map((s, i) => {
+                              if (appliedSuggestions.has(i) || dismissedSuggestions.has(i)) return null;
+                              const ts = TYPE_STYLE[s.type || "ortho"] || TYPE_STYLE.ortho;
+                              return (
+                                <motion.div key={i}
+                                  initial={{ opacity: 0, y: 8 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.95 }}
+                                  transition={{ delay: i * 0.03 }}
+                                  className="bg-muted/40 rounded-lg p-3 border border-border"
+                                >
+                                  {/* Type badge + confidence */}
+                                  <div className="flex items-center gap-1.5 mb-1.5">
+                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${ts.classes}`}>
+                                      {ts.icon} {ts.label}
+                                    </span>
+                                    {s.confidence && (
+                                      <div className="flex items-center gap-1 ml-auto">
+                                        <div className="w-8 h-1 rounded-full bg-border overflow-hidden">
+                                          <div
+                                            className={`h-full rounded-full ${
+                                              s.confidence > 0.85 ? "bg-success" : s.confidence > 0.6 ? "bg-amber-500" : "bg-destructive"
+                                            }`}
+                                            style={{ width: `${s.confidence * 100}%` }}
+                                          />
+                                        </div>
+                                        <span className="text-[9px] text-muted-foreground tabular-nums">{Math.round(s.confidence * 100)}%</span>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Original → Correction */}
+                                  <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                                    <span className="text-xs line-through text-destructive/70 font-mono">{s.original}</span>
+                                    <span className="text-muted-foreground text-xs">→</span>
+                                    <span className="text-xs font-semibold text-success font-mono">{s.correction}</span>
+                                  </div>
+
+                                  <p className="text-[11px] text-muted-foreground mb-2">{s.reason}</p>
+
+                                  {/* Alternatives */}
+                                  {s.alternatives && s.alternatives.length > 0 && (
+                                    <div className="flex gap-1 flex-wrap mb-2">
+                                      {s.alternatives.map((alt, ai) => (
+                                        <button key={ai}
+                                          onClick={() => {
+                                            const updated = contenu.replace(s.original, alt);
+                                            const p = parseReport(updated);
+                                            setIndication(p.indication);
+                                            setResultat(p.resultat);
+                                            setConclusion(p.conclusion);
+                                            setAppliedSuggestions(prev => new Set(prev).add(i));
+                                          }}
+                                          className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border bg-background text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors"
+                                        >
+                                          {alt}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* Action buttons */}
+                                  <div className="flex gap-1.5">
+                                    <button onClick={() => applySuggestion(s, i)}
+                                      className="flex-1 flex items-center justify-center gap-1 text-xs font-medium py-1.5 rounded-md bg-success/10 text-success hover:bg-success/20 transition-colors">
+                                      <Check size={12} /> Appliquer
+                                    </button>
+                                    <button onClick={() => setDismissedSuggestions(prev => new Set(prev).add(i))}
+                                      className="flex-1 flex items-center justify-center gap-1 text-xs font-medium py-1.5 rounded-md bg-muted text-muted-foreground hover:bg-muted/80 transition-colors">
+                                      <X size={12} /> Ignorer
+                                    </button>
+                                  </div>
+                                </motion.div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </motion.div>
                 )}
-              </div>
+              </AnimatePresence>
             </div>
 
             {error && (
               <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 text-destructive text-sm">{error}</div>
             )}
 
-            {/* Actions */}
-            {status !== "saved" && (
+            {/* ── Actions ── */}
+            {status !== "saved" ? (
               <div className="flex gap-3">
                 <button onClick={() => handleAction("draft")} disabled={saving !== null}
                   className="flex-1 flex items-center justify-center gap-2 bg-muted hover:bg-muted/80 text-foreground font-semibold py-3 rounded-xl disabled:opacity-60 transition-all text-sm border border-border">
@@ -238,11 +499,10 @@ export default function RapportDetail() {
                 <button onClick={() => handleAction("validate")} disabled={saving !== null}
                   className="flex-1 flex items-center justify-center gap-2 gradient-hero text-white font-semibold py-3 rounded-xl hover:opacity-90 disabled:opacity-60 transition-all text-sm">
                   {saving === "validate" ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                  Valider et enregistrer ✅
+                  Valider et enregistrer
                 </button>
               </div>
-            )}
-            {status === "saved" && (
+            ) : (
               <div className="flex items-center justify-center gap-2 bg-success/10 text-success font-semibold py-3 rounded-xl text-sm border border-success/30">
                 <CheckCircle size={16} /> Rapport enregistré
               </div>

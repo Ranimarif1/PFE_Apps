@@ -1,121 +1,205 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Mic, StopCircle, CheckCircle, XCircle, Loader2 } from "lucide-react";
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
+
+const SOCKET_URL = `http://${window.location.hostname}:4000`;
+const SOCKET_TIMEOUT_MS = 10000;
+
+type State = "connecting" | "ready" | "recording" | "uploading" | "done" | "error";
+
+// All styles inline — no Tailwind/CSS variables needed on mobile
+const s = {
+  page:    { minHeight: "100vh", background: "#f0f5fc", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", padding: "24px", fontFamily: "Inter, -apple-system, sans-serif" },
+  card:    { background: "#ffffff", borderRadius: "20px", padding: "32px 24px", maxWidth: "360px", width: "100%", boxShadow: "0 8px 32px rgba(10,60,140,0.12)", textAlign: "center" as const },
+  logo:    { width: "64px", height: "64px", borderRadius: "16px", background: "linear-gradient(135deg,#0a6ef5,#00c9a7)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: "28px" },
+  title:   { fontSize: "22px", fontWeight: 700, color: "#0d1f3c", margin: "0 0 4px" },
+  sub:     { fontSize: "13px", color: "#6b7fa3", margin: "0 0 24px" },
+  btn:     { width: "110px", height: "110px", borderRadius: "50%", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto", fontSize: "48px", boxShadow: "0 8px 24px rgba(10,110,245,0.35)" },
+  btnRec:  { background: "linear-gradient(135deg,#0a6ef5,#00c9a7)" },
+  btnStop: { background: "#ef4444" },
+  timer:   { fontSize: "42px", fontWeight: 700, color: "#ef4444", fontVariantNumeric: "tabular-nums" as const, margin: "0 0 16px" },
+  hint:    { fontSize: "13px", color: "#6b7fa3", margin: "12px 0 0" },
+  spinner: { width: "48px", height: "48px", border: "4px solid #e2e8f0", borderTopColor: "#0a6ef5", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" },
+  ok:      { width: "72px", height: "72px", borderRadius: "50%", background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: "36px" },
+  err:     { width: "72px", height: "72px", borderRadius: "50%", background: "#fee2e2", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: "36px" },
+  errMsg:  { fontSize: "13px", color: "#6b7fa3", margin: "8px 0 0", lineHeight: 1.5 },
+  badge:   { display: "inline-block", background: "#dcfce7", color: "#16a34a", borderRadius: "20px", padding: "6px 14px", fontSize: "12px", fontWeight: 600, margin: "0 0 20px" },
+};
 
 export default function MobileRecord() {
-  const { token } = useParams();
-  const navigate = useNavigate();
-  const [status, setStatus] = useState<"valid" | "expired" | "loading">("loading");
-  const [recording, setRecording] = useState(false);
-  const [timer, setTimer] = useState(0);
-  const [uploading, setUploading] = useState(false);
-  const [done, setDone] = useState(false);
+  const { token: sessionId } = useParams<{ token: string }>();
+  const [state,    setState]    = useState<State>("connecting");
+  const [timer,    setTimer]    = useState(0);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const socketRef  = useRef<any>(null);
+  const mediaRef   = useRef<MediaRecorder | null>(null);
+  const chunksRef  = useRef<Blob[]>([]);
+  const timerRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    // Simulate token validation
-    setTimeout(() => {
-      if (token === "expired") setStatus("expired");
-      else setStatus("valid");
-    }, 1000);
-  }, [token]);
+    if (!sessionId) {
+      setState("error");
+      setErrorMsg("Session invalide — scannez un nouveau QR code.");
+      return;
+    }
 
-  const startRecording = () => {
-    setRecording(true);
-    const interval = setInterval(() => setTimer(t => t + 1), 1000);
-    return interval;
+    // Connection timeout
+    timeoutRef.current = setTimeout(() => {
+      if (socketRef.current) socketRef.current.disconnect();
+      setState("error");
+      setErrorMsg(`Impossible de joindre le serveur (${SOCKET_URL}). Vérifiez que le serveur Node.js est démarré et que PC/téléphone sont sur le même WiFi.`);
+    }, SOCKET_TIMEOUT_MS);
+
+    import("socket.io-client").then(({ io }) => {
+      const socket = io(SOCKET_URL, {
+        transports: ["websocket", "polling"],
+        reconnectionAttempts: 3,
+        timeout: 8000,
+      });
+      socketRef.current = socket;
+
+      socket.on("connect", () => {
+        socket.emit("mobile:join", { sessionId });
+      });
+
+      socket.on("session:ready", () => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        setState("ready");
+      });
+
+      socket.on("connect_error", () => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        setState("error");
+        setErrorMsg(`Serveur injoignable sur ${SOCKET_URL}. Vérifiez que le serveur Node.js tourne sur le port 4000.`);
+      });
+    }).catch(() => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      setState("error");
+      setErrorMsg("Erreur de chargement de l'application.");
+    });
+
+    return () => {
+      socketRef.current?.disconnect();
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      mediaRef.current?.stop();
+    };
+  }, [sessionId]);
+
+  const handleStart = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus" : "audio/webm";
+      const recorder = new MediaRecorder(stream, { mimeType });
+      mediaRef.current = recorder;
+      chunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+          e.data.arrayBuffer().then(buf =>
+            socketRef.current?.emit("audio:chunk", { sessionId, chunk: buf, mimeType, timestamp: Date.now() })
+          );
+        }
+      };
+
+      recorder.start(250);
+      setState("recording");
+      socketRef.current?.emit("recording:start", { sessionId });
+      timerRef.current = setInterval(() => setTimer(t => t + 1), 1000);
+    } catch {
+      setState("error");
+      setErrorMsg("Accès au microphone refusé. Autorisez le micro dans les réglages de votre navigateur.");
+    }
   };
 
-  let recordingInterval: ReturnType<typeof setInterval>;
+  const handleStop = () => {
+    if (!mediaRef.current) return;
+    setState("uploading");
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    socketRef.current?.emit("recording:stop", { sessionId });
 
-  const handleStart = () => {
-    recordingInterval = startRecording();
+    mediaRef.current.onstop = () => {
+      const mimeType = mediaRef.current?.mimeType || "audio/webm";
+      const blob = new Blob(chunksRef.current, { type: mimeType });
+      blob.arrayBuffer().then(buf => {
+        socketRef.current?.emit("audio:complete", { sessionId, audio: buf, mimeType, timestamp: Date.now() });
+        setState("done");
+      });
+      mediaRef.current?.stream.getTracks().forEach(t => t.stop());
+    };
+    mediaRef.current.stop();
   };
 
-  const handleStop = async () => {
-    clearInterval(recordingInterval);
-    setRecording(false);
-    setUploading(true);
-    await new Promise(r => setTimeout(r, 2000));
-    setUploading(false);
-    setDone(true);
-  };
-
-  const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
-
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="animate-spin text-primary" size={32} />
-      </div>
-    );
-  }
-
-  if (status === "expired") {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <div className="text-center">
-          <XCircle className="w-16 h-16 text-destructive mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-foreground">Session expirée</h2>
-          <p className="text-muted-foreground text-sm mt-2">Ce QR code a expiré. Veuillez en générer un nouveau depuis l'application.</p>
-        </div>
-      </div>
-    );
-  }
+  const fmt = (s: number) =>
+    `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-sm">
-        {/* Header */}
-        <div className="text-center mb-10">
-          <div className="w-16 h-16 rounded-2xl gradient-hero flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">🩻</span>
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">RadioAI Mobile</h1>
-          <p className="text-primary text-sm font-medium mt-1">🩻 Service Radiologie</p>
-          <div className="bg-muted/50 rounded-xl px-4 py-2 mt-3 text-sm text-muted-foreground">
-            <span>Patient : <strong className="text-foreground font-mono">PAT-001</strong></span>
-            <span className="mx-2">|</span>
-            <span>Dr. Martin</span>
-          </div>
-        </div>
+    <>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <div style={s.page}>
+        <div style={s.card}>
 
-        {done ? (
-          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center space-y-4">
-            <div className="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mx-auto">
-              <CheckCircle className="w-10 h-10 text-success" />
-            </div>
-            <h2 className="text-xl font-bold text-foreground">Audio envoyé avec succès ✅</h2>
-            <p className="text-muted-foreground text-sm">Vous pouvez fermer cette page.</p>
-          </motion.div>
-        ) : uploading ? (
-          <div className="text-center space-y-4">
-            <Loader2 className="animate-spin w-12 h-12 text-primary mx-auto" />
-            <p className="text-primary font-medium">Envoi de l'audio en cours...</p>
-            <div className="w-full bg-muted rounded-full h-2">
-              <div className="gradient-hero h-2 rounded-full animate-pulse" style={{ width: "75%" }} />
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-8 text-center">
-            {recording && (
-              <div className="text-4xl font-mono font-bold text-destructive">{formatTime(timer)}</div>
-            )}
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={recording ? handleStop : handleStart}
-              className={`w-28 h-28 rounded-full mx-auto flex items-center justify-center text-white shadow-elevated transition-all ${
-                recording ? "bg-destructive" : "gradient-hero"
-              }`}
-            >
-              {recording ? <StopCircle size={48} /> : <Mic size={48} />}
-            </motion.button>
-            <p className="text-sm text-muted-foreground">
-              {recording ? "⏹️ Appuyez pour terminer et envoyer" : "🔴 Appuyez pour démarrer l'enregistrement"}
-            </p>
-          </div>
-        )}
+          <div style={s.logo}>🩻</div>
+          <h1 style={s.title}>RadioAI Mobile</h1>
+          <p style={s.sub}>Service de Radiologie</p>
+
+          {state === "connecting" && (
+            <>
+              <div style={s.spinner} />
+              <p style={{ color: "#0a6ef5", fontWeight: 600, margin: 0 }}>Connexion au serveur…</p>
+              <p style={s.errMsg}>{SOCKET_URL}</p>
+            </>
+          )}
+
+          {state === "ready" && (
+            <>
+              <div style={s.badge}>✅ Connecté — prêt à enregistrer</div>
+              <button style={{ ...s.btn, ...s.btnRec }} onClick={handleStart}>
+                🎙️
+              </button>
+              <p style={s.hint}>Appuyez pour démarrer l'enregistrement</p>
+            </>
+          )}
+
+          {state === "recording" && (
+            <>
+              <p style={s.timer}>{fmt(timer)}</p>
+              <button style={{ ...s.btn, ...s.btnStop }} onClick={handleStop}>
+                ⏹️
+              </button>
+              <p style={s.hint}>Appuyez pour terminer et envoyer</p>
+            </>
+          )}
+
+          {state === "uploading" && (
+            <>
+              <div style={s.spinner} />
+              <p style={{ color: "#0a6ef5", fontWeight: 600, margin: 0 }}>Envoi de l'audio…</p>
+            </>
+          )}
+
+          {state === "done" && (
+            <>
+              <div style={s.ok}>✅</div>
+              <h2 style={{ ...s.title, fontSize: "18px" }}>Audio envoyé !</h2>
+              <p style={s.errMsg}>La transcription démarre sur l'application desktop. Vous pouvez fermer cette page.</p>
+            </>
+          )}
+
+          {state === "error" && (
+            <>
+              <div style={s.err}>❌</div>
+              <h2 style={{ ...s.title, fontSize: "18px" }}>Erreur</h2>
+              <p style={s.errMsg}>{errorMsg}</p>
+            </>
+          )}
+
+        </div>
       </div>
-    </div>
+    </>
   );
 }

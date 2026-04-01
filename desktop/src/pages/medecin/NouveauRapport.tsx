@@ -351,7 +351,7 @@ export default function NouveauRapport() {
 
                       {/* Real QR code */}
                       <div className="flex justify-center">
-                        <div className="w-44 h-44 bg-white rounded-2xl border-4 border-primary/20 p-3 shadow-card flex items-center justify-center">
+                        <div className="w-44 h-44 bg-white/65 backdrop-blur-md rounded-2xl border-4 border-primary/20 p-3 shadow-card flex items-center justify-center">
                           <QRCodeSVG
                             value={mobileUrl}
                             size={152}
@@ -406,7 +406,7 @@ export default function NouveauRapport() {
                   ) : (
                     <div className="space-y-6">
                       <div className={cn(
-                        "w-24 h-24 rounded-full mx-auto flex items-center justify-center shadow-elevated transition-all",
+                        "w-24 h-24 rounded-full mx-auto flex items-center justify-center transition-all",
                         recordingState === "recording" ? "gradient-hero animate-pulse-ring" :
                         recordingState === "paused" ? "bg-amber-500" : "bg-muted"
                       )}>
@@ -421,25 +421,25 @@ export default function NouveauRapport() {
                       <div className="flex items-center justify-center gap-4">
                         {recordingState === "idle" && (
                           <button onClick={handleMicStart}
-                            className="flex items-center gap-2 gradient-hero text-white font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition-all shadow-elevated">
+                            className="flex items-center gap-2 gradient-hero text-white font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition-all">
                             <Play className="w-5 h-5" /> Démarrer
                           </button>
                         )}
                         {recordingState === "recording" && (
                           <button onClick={handleMicPause}
-                            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold px-6 py-3 rounded-xl transition-all shadow-elevated">
+                            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold px-6 py-3 rounded-xl transition-all">
                             <Pause className="w-5 h-5" /> Pause
                           </button>
                         )}
                         {recordingState === "paused" && (
                           <button onClick={handleMicResume}
-                            className="flex items-center gap-2 gradient-hero text-white font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition-all shadow-elevated">
+                            className="flex items-center gap-2 gradient-hero text-white font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition-all">
                             <Play className="w-5 h-5" /> Reprendre
                           </button>
                         )}
                         {recordingState !== "idle" && (
                           <button onClick={handleMicStop}
-                            className="flex items-center gap-2 bg-destructive hover:bg-destructive/90 text-white font-semibold px-6 py-3 rounded-xl transition-all shadow-elevated">
+                            className="flex items-center gap-2 bg-destructive hover:bg-destructive/90 text-white font-semibold px-6 py-3 rounded-xl transition-all">
                             <Square className="w-5 h-5" /> Arrêter
                           </button>
                         )}
