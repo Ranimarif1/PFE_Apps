@@ -33,6 +33,7 @@ def register(request: HttpRequest) -> JsonResponse:
     role = (data.get("role") or "doctor").strip()
     nom = (data.get("nom") or "").strip()
     prenom = (data.get("prenom") or "").strip()
+    genre = (data.get("genre") or "").strip()
 
     if not email or not password or role not in {"doctor", "admin", "adminIT"}:
         return JsonResponse({"detail": "Invalid payload."}, status=400)
@@ -50,6 +51,8 @@ def register(request: HttpRequest) -> JsonResponse:
         "status": status,
         "nom": nom,
         "prenom": prenom,
+        "genre": genre,
+        "photo": "",
         "createdAt": now,
     }
     inserted = users_col.insert_one(user_doc)
@@ -91,6 +94,8 @@ def login_view(request: HttpRequest) -> JsonResponse:
                 "status": user["status"],
                 "nom": user.get("nom", ""),
                 "prenom": user.get("prenom", ""),
+                "genre": user.get("genre", ""),
+                "photo": user.get("photo", ""),
             },
         }
     )
@@ -112,6 +117,8 @@ def me(request: HttpRequest) -> JsonResponse:
             "status": user.status,
             "nom": user.raw.get("nom", ""),
             "prenom": user.raw.get("prenom", ""),
+            "genre": user.raw.get("genre", ""),
+            "photo": user.raw.get("photo", ""),
         }
     )
 
@@ -191,4 +198,57 @@ def list_users(request: HttpRequest) -> JsonResponse:
     users_col = get_collection("users")
     docs = list(users_col.find({}, {"password": 0}).sort("createdAt", -1))
     return JsonResponse({"results": [serialize_document(d) for d in docs]})
+
+
+@csrf_exempt
+def update_profile(request: HttpRequest) -> JsonResponse:
+    if request.method not in {"PUT", "PATCH"}:
+        return JsonResponse({"detail": "Method not allowed."}, status=405)
+
+    current = get_current_user(request)
+    if not current:
+        return JsonResponse({"detail": "Authentication required."}, status=401)
+
+    data = _parse_body(request)
+    updates: Dict[str, Any] = {}
+
+    nom = (data.get("nom") or "").strip()
+    prenom = (data.get("prenom") or "").strip()
+    email = (data.get("email") or "").strip().lower()
+    photo = data.get("photo")  # base64 data URI string
+    password = data.get("password") or ""
+
+    if nom:
+        updates["nom"] = nom
+    if prenom:
+        updates["prenom"] = prenom
+    if email:
+        users_col_check = get_collection("users")
+        existing = users_col_check.find_one({"email": email, "_id": {"$ne": ObjectId(current.id)}})
+        if existing:
+            return JsonResponse({"detail": "Email already in use."}, status=400)
+        updates["email"] = email
+    if photo is not None:
+        updates["photo"] = photo
+    if password:
+        if len(password) < 6:
+            return JsonResponse({"detail": "Password too short."}, status=400)
+        updates["password"] = hash_password(password)
+
+    if not updates:
+        return JsonResponse({"detail": "Nothing to update."}, status=400)
+
+    users_col = get_collection("users")
+    users_col.update_one({"_id": ObjectId(current.id)}, {"$set": updates})
+    updated = users_col.find_one({"_id": ObjectId(current.id)})
+    return JsonResponse({
+        "_id": str(updated["_id"]),
+        "email": updated["email"],
+        "role": updated["role"],
+        "status": updated["status"],
+        "nom": updated.get("nom", ""),
+        "prenom": updated.get("prenom", ""),
+        "genre": updated.get("genre", ""),
+        "photo": updated.get("photo", ""),
+    })
 

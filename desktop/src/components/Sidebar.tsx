@@ -5,7 +5,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import {
   LayoutDashboard, FileText, History, MessageSquare, User,
   Users, Download, Brain, LogOut, Sun, Moon,
-  ChevronLeft, ChevronRight, Radio, TrendingUp,
+  ChevronLeft, ChevronRight, TrendingUp,
   AlertCircle, Plus,
 } from "lucide-react";
 import { useState } from "react";
@@ -167,9 +167,8 @@ export function Sidebar() {
     >
       {/* ── Logo ── */}
       <div className={cn("flex items-center gap-3 px-4 py-4 border-b border-sidebar-border", collapsed && "justify-center px-2")}>
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-          style={{ background: 'rgba(76,201,192,0.18)', border: '1px solid rgba(76,201,192,0.28)' }}>
-          <Radio size={15} className="text-[#4cc9c0]" />
+        <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0">
+          <img src="/ReportEase.png" alt="ReportEase" className="w-full h-full object-cover" />
         </div>
         <AnimatePresence>
           {!collapsed && (
@@ -179,7 +178,7 @@ export function Sidebar() {
               exit={{ opacity: 0, width: 0 }}
               className="overflow-hidden"
             >
-              <p className="text-white font-semibold text-[13px] whitespace-nowrap leading-tight">RadioAI</p>
+              <p className="text-white font-semibold text-[13px] whitespace-nowrap leading-tight">ReportEase</p>
               <p className="whitespace-nowrap text-[9px] font-semibold tracking-widest" style={{ color: '#4cc9c0', letterSpacing: '0.09em' }}>
                 {subtitle}
               </p>

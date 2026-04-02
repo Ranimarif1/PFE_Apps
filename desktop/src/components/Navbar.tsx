@@ -65,7 +65,7 @@ export function Navbar({ title, showSearch, onSearch }: NavbarProps) {
   const dropdownBg = isDark ? 'rgba(22,33,52,0.97)'   : 'rgba(255,255,255,0.92)';
   const hoverBg    = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(10,110,245,0.04)';
 
-  const section = isAdmin ? "Administration" : isMédecin ? "Service Radiologie" : "Admin Système";
+  const section = isAdmin ? "Administration" : isMédecin ? "Médecin" : "Admin Système";
 
   return (
     <header className="h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-between px-6 sticky top-0 z-10">
@@ -147,9 +147,31 @@ export function Navbar({ title, showSearch, onSearch }: NavbarProps) {
         {/* User chip */}
         <div className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl"
           style={{ background: btnBg, border: '1px solid var(--nv-border)' }}>
-          <div className="w-7 h-7 rounded-full gradient-hero flex items-center justify-center text-white text-xs font-bold shrink-0">
-            {user?.prénom?.[0]}{user?.nom?.[0]}
-          </div>
+          {user?.photo ? (
+            <img src={user.photo} alt="Photo de profil" className="w-7 h-7 rounded-full object-cover shrink-0" />
+          ) : user?.genre === "femme" ? (
+            <div className="w-7 h-7 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center shrink-0">
+              <svg viewBox="0 0 64 64" className="w-4 h-4" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="32" cy="20" r="12" fill="#f9a8d4" />
+                <path d="M12 56c0-11.046 8.954-20 20-20s20 8.954 20 20" fill="#f9a8d4" />
+                <circle cx="32" cy="20" r="10" fill="#fbcfe8" />
+                <ellipse cx="32" cy="56" rx="18" ry="10" fill="#f9a8d4" />
+              </svg>
+            </div>
+          ) : user?.genre === "homme" ? (
+            <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+              <svg viewBox="0 0 64 64" className="w-4 h-4" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="32" cy="20" r="12" fill="#93c5fd" />
+                <path d="M12 56c0-11.046 8.954-20 20-20s20 8.954 20 20" fill="#93c5fd" />
+                <circle cx="32" cy="20" r="10" fill="#bfdbfe" />
+                <ellipse cx="32" cy="56" rx="18" ry="10" fill="#93c5fd" />
+              </svg>
+            </div>
+          ) : (
+            <div className="w-7 h-7 rounded-full gradient-hero flex items-center justify-center text-white text-xs font-bold shrink-0">
+              {user?.prénom?.[0]}{user?.nom?.[0]}
+            </div>
+          )}
           <div className="hidden md:block">
             <p className="text-xs font-bold leading-none text-foreground">
               {user?.prénom} {user?.nom}

@@ -160,17 +160,12 @@ def list_or_create_reports(request: HttpRequest) -> JsonResponse:
         inserted = reports_col.insert_one(doc)
         created = reports_col.find_one({"_id": inserted.inserted_id})
 
-        # If report is immediately validated, push to CSV and mark as saved.
-        if created and created.get("status") == "validated":
+        # If report is saved (final archival), push to CSV.
+        if created and created.get("status") == "saved":
             users_col = get_collection("users")
             doctor_doc = users_col.find_one({"_id": ObjectId(user.id)})
             if doctor_doc:
                 _append_to_global_csv(created, doctor_doc)
-                reports_col.update_one(
-                    {"_id": created["_id"]},
-                    {"$set": {"status": "saved", "updatedAt": dt.datetime.utcnow().isoformat()}},
-                )
-                created = reports_col.find_one({"_id": created["_id"]})
 
         return JsonResponse(serialize_document(created), status=201)
 
@@ -214,17 +209,12 @@ def get_or_update_report(request: HttpRequest, report_id: str):
         reports_col.update_one({"_id": oid}, {"$set": update_doc})
         updated = reports_col.find_one({"_id": oid})
 
-        # When report is validated, append to CSV and mark as saved.
-        if updated and updated.get("status") == "validated":
+        # When report is saved (final archival), append to CSV.
+        if updated and updated.get("status") == "saved":
             users_col = get_collection("users")
             doctor_doc = users_col.find_one({"_id": ObjectId(updated["doctorId"])})
             if doctor_doc:
                 _append_to_global_csv(updated, doctor_doc)
-                reports_col.update_one(
-                    {"_id": updated["_id"]},
-                    {"$set": {"status": "saved", "updatedAt": dt.datetime.utcnow().isoformat()}},
-                )
-                updated = reports_col.find_one({"_id": updated["_id"]})
 
         return JsonResponse(serialize_document(updated))
 

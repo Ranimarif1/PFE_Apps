@@ -143,9 +143,7 @@ export default function MobileRecord() {
       <div style={s.page}>
         <div style={s.card}>
 
-          <div style={s.logo}>🩻</div>
-          <h1 style={s.title}>RadioAI Mobile</h1>
-          <p style={s.sub}>Service de Radiologie</p>
+          <h1 style={s.title}>ReportEase Mobile</h1>
 
           {state === "connecting" && (
             <>

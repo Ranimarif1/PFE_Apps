@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
-import { Radio, Sun, Moon, Eye, EyeOff, CheckCircle } from "lucide-react";
+import { Sun, Moon, Eye, EyeOff, CheckCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { registerApi } from "@/services/authService";
 
 export default function Register() {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ nom: "", prénom: "", email: "", password: "", confirm: "", rôle: "médecin" as "médecin" | "admin" | "adminIT" });
+  const [form, setForm] = useState({ nom: "", prénom: "", email: "", password: "", confirm: "", rôle: "médecin" as "médecin" | "admin" | "adminIT", genre: "" as "homme" | "femme" | "" });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -30,6 +30,7 @@ export default function Register() {
         role: roleMap[form.rôle] ?? "doctor",
         nom: form.nom,
         prenom: form.prénom,
+        genre: form.genre,
       });
       setSuccess(true);
     } catch (err: unknown) {
@@ -47,7 +48,6 @@ export default function Register() {
             <CheckCircle className="w-10 h-10 text-success" />
           </div>
           <h2 className="text-2xl font-bold text-foreground mb-2">Inscription réussie !</h2>
-          <p className="text-muted-foreground mb-2">🩻 Service Radiologie</p>
           <p className="text-muted-foreground text-sm leading-relaxed mb-6">
             {form.rôle === "médecin"
               ? "Votre compte est en attente de validation par un administrateur."
@@ -68,10 +68,10 @@ export default function Register() {
       <div className="w-full max-w-md">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl gradient-hero flex items-center justify-center">
-              <Radio className="w-5 h-5 text-white" />
+            <div className="w-9 h-9 rounded-xl overflow-hidden">
+              <img src="/ReportEase.png" alt="ReportEase" className="w-full h-full object-cover" />
             </div>
-            <span className="font-bold text-lg">RadioAI</span>
+            <span className="font-bold text-lg">ReportEase</span>
           </div>
           <button onClick={toggleTheme} className="w-9 h-9 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
             {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
@@ -82,10 +82,6 @@ export default function Register() {
           <h2 className="text-2xl font-bold text-foreground mb-1">Créer un compte</h2>
           <p className="text-muted-foreground text-sm mb-2">Rejoignez le service de radiologie</p>
 
-          <div className="flex items-center gap-2 bg-primary/5 border border-primary/20 rounded-xl px-4 py-2.5 mb-6">
-            <span className="text-lg">🩻</span>
-            <span className="text-sm font-medium text-primary">Service Radiologie</span>
-          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
@@ -98,6 +94,24 @@ export default function Register() {
                 <label className="text-sm font-medium text-foreground mb-1.5 block">Nom</label>
                 <input value={form.nom} onChange={e => handleChange("nom", e.target.value)} required
                   className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder="Dupont" />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">Genre <span className="text-muted-foreground font-normal">(optionnel)</span></label>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { value: "homme", label: "👨 Homme" },
+                  { value: "femme", label: "👩 Femme" },
+                ] as const).map(({ value, label }) => (
+                  <button key={value} type="button" onClick={() => handleChange("genre", form.genre === value ? "" : value)}
+                    className={`px-3 py-2.5 rounded-xl border text-sm font-medium transition-all text-center ${
+                      form.genre === value
+                        ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/30"
+                        : "border-border bg-background text-muted-foreground hover:border-primary/40"
+                    }`}>
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
             <div>

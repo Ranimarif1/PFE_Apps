@@ -75,9 +75,9 @@ export default function RapportDetail() {
 
   /* ── UI states ── */
   const [editing,              setEditing]              = useState(false);
-  const [saving,               setSaving]               = useState<"draft" | "validate" | null>(null);
+  const [saving,               setSaving]               = useState<"draft" | "validate" | "save" | null>(null);
   const [loading,              setLoading]              = useState(false);
-  const [savedAsValidated,     setSavedAsValidated]     = useState(false);
+  const [savedAsValidated,     setSavedAsValidated]     = useState<"validate" | "save" | false>(false);
   const [error,                setError]                = useState("");
 
   /* ── Dictionary state ── */
@@ -172,18 +172,18 @@ export default function RapportDetail() {
   const visibleSuggestions = suggestions.filter((_, i) => !appliedSuggestions.has(i) && !dismissedSuggestions.has(i));
 
   /* ── Save ── */
-  const handleAction = async (action: "draft" | "validate") => {
+  const handleAction = async (action: "draft" | "validate" | "save") => {
     setSaving(action);
     setError("");
-    const newStatus = action === "draft" ? "draft" : "validated";
+    const newStatus = action === "draft" ? "draft" : action === "validate" ? "validated" : "saved";
     try {
       if (isNew) {
         await createReport({ ID_Exam: examId, content: contenu, status: newStatus });
       } else if (id) {
         await updateReport(id, { content: contenu, status: newStatus });
       }
-      if (action === "validate") {
-        setSavedAsValidated(true);
+      if (action === "validate" || action === "save") {
+        setSavedAsValidated(action);
         setTimeout(() => navigate("/historique"), 2000);
       } else {
         navigate("/historique");
@@ -230,7 +230,9 @@ export default function RapportDetail() {
             <div className="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="w-10 h-10 text-success" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">Rapport validé et enregistré</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-2">
+              {savedAsValidated === "save" ? "Rapport enregistré" : "Rapport validé"}
+            </h2>
             <p className="text-muted-foreground">Redirection vers l'historique…</p>
           </motion.div>
         ) : (
@@ -239,8 +241,6 @@ export default function RapportDetail() {
             {/* ── Header card ── */}
             <div className="bg-card rounded-xl border border-border shadow-card p-6">
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-lg">🩻</span>
-                <span className="text-xs font-semibold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full">Service Radiologie</span>
                 {!isNew && status && (
                   <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full capitalize ${STATUS_BADGE[status] ?? "bg-muted text-muted-foreground"}`}>
                     {STATUS_LABELS[status] ?? status}
@@ -489,22 +489,46 @@ export default function RapportDetail() {
             )}
 
             {/* ── Actions ── */}
-            {status !== "saved" ? (
+            {status === "saved" ? (
+              <div className="flex items-center justify-center gap-2 bg-success/10 text-success font-semibold py-3 rounded-xl text-sm border border-success/30">
+                <CheckCircle size={16} /> Rapport enregistré
+              </div>
+            ) : status === "validated" && !isNew ? (
+              <button onClick={() => handleAction("save")} disabled={saving !== null}
+                className="w-full flex items-center justify-center gap-2 gradient-hero text-white font-semibold py-3 rounded-xl hover:opacity-90 disabled:opacity-60 transition-all text-sm">
+                {saving === "save" ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                Enregistrer
+              </button>
+            ) : isNew ? (
               <div className="flex gap-3">
                 <button onClick={() => handleAction("draft")} disabled={saving !== null}
                   className="flex-1 flex items-center justify-center gap-2 bg-muted hover:bg-muted/80 text-foreground font-semibold py-3 rounded-xl disabled:opacity-60 transition-all text-sm border border-border">
                   {saving === "draft" ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
-                  Enregistrer en brouillon
+                  Brouillon
                 </button>
                 <button onClick={() => handleAction("validate")} disabled={saving !== null}
+                  className="flex-1 flex items-center justify-center gap-2 border border-primary text-primary font-semibold py-3 rounded-xl hover:bg-primary/10 disabled:opacity-60 transition-all text-sm">
+                  {saving === "validate" ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                  Valider
+                </button>
+                <button onClick={() => handleAction("save")} disabled={saving !== null}
                   className="flex-1 flex items-center justify-center gap-2 gradient-hero text-white font-semibold py-3 rounded-xl hover:opacity-90 disabled:opacity-60 transition-all text-sm">
-                  {saving === "validate" ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                  Valider et enregistrer
+                  {saving === "save" ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  Enregistrer
                 </button>
               </div>
             ) : (
-              <div className="flex items-center justify-center gap-2 bg-success/10 text-success font-semibold py-3 rounded-xl text-sm border border-success/30">
-                <CheckCircle size={16} /> Rapport enregistré
+              <div className="flex gap-3">
+                <button onClick={() => handleAction("validate")} disabled={saving !== null}
+                  className="flex-1 flex items-center justify-center gap-2 border border-primary text-primary font-semibold py-3 rounded-xl hover:bg-primary/10 disabled:opacity-60 transition-all text-sm">
+                  {saving === "validate" ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                  Valider
+                </button>
+                <button onClick={() => handleAction("save")} disabled={saving !== null}
+                  className="flex-1 flex items-center justify-center gap-2 gradient-hero text-white font-semibold py-3 rounded-xl hover:opacity-90 disabled:opacity-60 transition-all text-sm">
+                  {saving === "save" ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  Enregistrer
+                </button>
               </div>
             )}
           </div>

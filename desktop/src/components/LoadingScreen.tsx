@@ -17,9 +17,9 @@ export function LoadingScreen() {
         className="flex flex-col items-center gap-6"
       >
         <div className="relative">
-          <div className="w-24 h-24 rounded-3xl flex items-center justify-center shadow-elevated"
-            style={{ background: 'linear-gradient(135deg, #0a6ef5, #00c9a7)', border: '2px solid rgba(255,255,255,0.30)' }}>
-            <span className="text-5xl">🩻</span>
+          <div className="w-24 h-24 rounded-3xl overflow-hidden shadow-elevated"
+            style={{ border: '2px solid rgba(255,255,255,0.30)' }}>
+            <img src="/ReportEase.png" alt="ReportEase" className="w-full h-full object-cover" />
           </div>
           <div className="absolute inset-0 rounded-3xl animate-pulse-ring"
             style={{ border: '2px solid rgba(0,201,167,0.40)' }} />
@@ -30,7 +30,7 @@ export function LoadingScreen() {
         <div className="text-center">
           <h1 className="text-3xl font-bold mb-1"
             style={{ fontFamily: 'Inter, sans-serif', color: 'var(--nv-navy)', letterSpacing: '-0.03em' }}>
-            RadioAI
+            ReportEase
           </h1>
           <p className="text-sm" style={{ color: 'var(--nv-muted)' }}>
             Plateforme de Transcription Médicale

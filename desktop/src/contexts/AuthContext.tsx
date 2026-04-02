@@ -10,6 +10,8 @@ export interface User {
   email: string;
   rôle: UserRole;
   statut: "en_attente" | "validé" | "refusé";
+  genre: "homme" | "femme" | "";
+  photo: string;
 }
 
 interface AuthContextType {
@@ -18,6 +20,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   loading: boolean;
+  updateUser: (updated: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -84,8 +87,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("auth_user");
   };
 
+  const updateUser = (updated: User) => {
+    setUser(updated);
+    localStorage.setItem("auth_user", JSON.stringify(updated));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, loading, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

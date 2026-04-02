@@ -20,6 +20,8 @@ function mapUser(raw: BackendUser): User {
     prénom: raw.prenom || "",
     rôle: roleMap[raw.role] ?? "médecin",
     statut: statusMap[raw.status] ?? "en_attente",
+    genre: (raw.genre === "homme" || raw.genre === "femme") ? raw.genre : "",
+    photo: raw.photo || "",
   };
 }
 
@@ -30,6 +32,8 @@ interface BackendUser {
   status: string;
   nom: string;
   prenom: string;
+  genre: string;
+  photo: string;
 }
 
 interface LoginResponse {
@@ -59,11 +63,23 @@ export async function registerApi(payload: {
   role: string;
   nom: string;
   prenom: string;
+  genre?: string;
 }): Promise<void> {
   await api.post("/api/auth/register", payload);
 }
 
 export async function getMeApi(): Promise<User> {
   const raw = await api.get<BackendUser>("/api/auth/me");
+  return mapUser(raw);
+}
+
+export async function updateProfileApi(payload: {
+  nom?: string;
+  prenom?: string;
+  email?: string;
+  password?: string;
+  photo?: string;
+}): Promise<User> {
+  const raw = await api.patch<BackendUser>("/api/auth/profile", payload);
   return mapUser(raw);
 }
