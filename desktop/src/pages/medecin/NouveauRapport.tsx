@@ -6,13 +6,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Mic, Upload, Smartphone, QrCode, CheckCircle, Loader2,
   Play, Pause, Square, ArrowLeft, Wifi, WifiOff, RefreshCw,
+  LayoutDashboard,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { createSession } from "@/services/sessionService";
-import { useDesktopSocket } from "@/hooks/useDesktopSocket";
-import { mockRapportTranscription } from "@/data/mockData";
+import { useRecording } from "@/contexts/RecordingContext";
 
-type Etape = 1 | 2 | 3;
+type Etape  = 1 | 2 | 3;
 type Méthode = "navigateur" | "import" | "smartphone" | null;
 
 function getAllowedYears(): Set<number> {
@@ -42,130 +41,74 @@ function examIdError(id: string): string | null {
   return null;
 }
 
-export default function NouveauRapport() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const restore = location.state as { _restore?: { etape: Etape; examId: string; méthode: Méthode } } | null;
+const fmt = (s: number) =>
+  `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 
-  const [etape, setEtape] = useState<Etape>(restore?._restore?.etape ?? 1);
-  const [examId, setExamId] = useState(restore?._restore?.examId ?? "");
+export default function NouveauRapport() {
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  const recording = useRecording();
+
+  const restore = location.state as {
+    _restore?: { etape: Etape; examId: string; méthode: Méthode };
+  } | null;
+
+  const [etape,   setEtape]   = useState<Etape>(restore?._restore?.etape ?? 1);
+  const [examId,  setExamId]  = useState(restore?._restore?.examId ?? "");
   const [méthode, setMéthode] = useState<Méthode>(restore?._restore?.méthode ?? null);
 
-  // Browser mic recording state
-  const [recordingState, setRecordingState] = useState<"idle" | "recording" | "paused">("idle");
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Transcription
-  const [transcribing, setTranscribing] = useState(false);
-
-  // Smartphone session
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [mobileUrl, setMobileUrl] = useState<string>("");
+  // Smartphone UI only: session loading/error + QR expiry countdown
   const [sessionLoading, setSessionLoading] = useState(false);
-  const [sessionError, setSessionError] = useState<string | null>(null);
-  const [audioReceived, setAudioReceived] = useState(false);
+  const [sessionError,   setSessionError]   = useState<string | null>(null);
+  const [timer,          setTimer]          = useState(900);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // QR expiry countdown (15 min)
-  const [timer, setTimer] = useState(900);
-  const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // ── If recording already active for this examId, jump to step 3 ───────────
+  useEffect(() => {
+    if (
+      recording.examId === examId &&
+      examId &&
+      (recording.isRecording || recording.isPaused || recording.isTranscribing) &&
+      etape !== 3
+    ) {
+      setMéthode(recording.méthode as Méthode);
+      setEtape(3);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Desktop socket — only active during smartphone step
-  const { connected, mobileConnected, recordingActive, audioBlob } = useDesktopSocket({
-    sessionId,
-    enabled: méthode === "smartphone" && etape === 3,
-  });
+  // ── QR countdown once mobileUrl is ready ─────────────────────────────────
+  useEffect(() => {
+    if (!recording.mobileUrl) return;
+    setTimer(900);
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setTimer(t => { if (t <= 1) { clearInterval(timerRef.current!); return 0; } return t - 1; });
+    }, 1000);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [recording.mobileUrl]);
 
-  // ── Create session when entering smartphone step ───────────────────────
+  useEffect(() => {
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, []);
+
+  // ── Start smartphone session ───────────────────────────────────────────────
   useEffect(() => {
     if (méthode !== "smartphone" || etape !== 3) return;
-    if (sessionId || sessionLoading) return;
+    if (recording.sessionId || sessionLoading) return;
 
     setSessionLoading(true);
     setSessionError(null);
-    createSession()
-      .then(({ sessionId: id, mobileUrl: url }) => {
-        setSessionId(id);
-        setMobileUrl(url);
-      })
+    recording.startSmartphoneSession(examId)
       .catch(() => setSessionError("Impossible de créer la session. Vérifiez que le serveur est démarré."))
       .finally(() => setSessionLoading(false));
-  }, [méthode, etape, sessionId, sessionLoading]);
-
-  // ── Start QR countdown once mobileUrl is ready ────────────────────────
-  useEffect(() => {
-    if (!mobileUrl) return;
-    setTimer(900);
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    timerIntervalRef.current = setInterval(() => {
-      setTimer(t => {
-        if (t <= 1) { clearInterval(timerIntervalRef.current!); return 0; }
-        return t - 1;
-      });
-    }, 1000);
-    return () => { if (timerIntervalRef.current) clearInterval(timerIntervalRef.current); };
-  }, [mobileUrl]);
-
-  // ── Audio received from mobile ────────────────────────────────────────
-  useEffect(() => {
-    if (!audioBlob || audioReceived) return;
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    setAudioReceived(true);
-    triggerTranscription();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [audioBlob]);
+  }, [méthode, etape]);
 
-  // ── Cleanup on unmount ────────────────────────────────────────────────
-  useEffect(() => {
-    return () => {
-      if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    };
-  }, []);
-
-  const triggerTranscription = async () => {
-    setTranscribing(true);
-    await new Promise(r => setTimeout(r, 3000));
-    setTranscribing(false);
-    navigate("/rapport/new", {
-      state: {
-        ID_Exam: examId,
-        transcription: mockRapportTranscription,
-        _restore: { etape: 3, examId, méthode },
-      },
-    });
-  };
-
-  const refreshSession = () => {
-    setSessionId(null);
-    setMobileUrl("");
-    setAudioReceived(false);
+  const refreshSmartphoneSession = () => {
+    recording.cancelRecording();
     setSessionError(null);
   };
-
-  // Browser mic handlers
-  const handleMicStart = () => {
-    setRecordingState("recording");
-    recordingIntervalRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000);
-  };
-  const handleMicPause = () => {
-    setRecordingState("paused");
-    if (recordingIntervalRef.current) { clearInterval(recordingIntervalRef.current); recordingIntervalRef.current = null; }
-  };
-  const handleMicResume = () => {
-    setRecordingState("recording");
-    recordingIntervalRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000);
-  };
-  const handleMicStop = () => {
-    if (recordingIntervalRef.current) { clearInterval(recordingIntervalRef.current); recordingIntervalRef.current = null; }
-    setRecordingState("idle");
-    setRecordingSeconds(0);
-    triggerTranscription();
-  };
-
-  const formatTimer = (s: number) =>
-    `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
-  const timerProgress = (timer / 900) * 100;
 
   const handleBack = () => {
     if (etape === 1) {
@@ -173,21 +116,16 @@ export default function NouveauRapport() {
     } else if (etape === 2) {
       setEtape(1);
     } else {
-      // Reset smartphone session when going back from step 3
       if (méthode === "smartphone") {
-        setSessionId(null);
-        setMobileUrl("");
-        setAudioReceived(false);
-        setSessionError(null);
-        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+        recording.cancelRecording();
+        if (timerRef.current) clearInterval(timerRef.current);
       }
-      if (recordingIntervalRef.current) { clearInterval(recordingIntervalRef.current); recordingIntervalRef.current = null; }
-      setRecordingState("idle");
-      setRecordingSeconds(0);
       setMéthode(null);
       setEtape(2);
     }
   };
+
+  const timerProgress = (timer / 900) * 100;
 
   return (
     <AppLayout title="Nouveau rapport">
@@ -217,36 +155,43 @@ export default function NouveauRapport() {
         </div>
 
         <AnimatePresence mode="wait">
-          {/* ── ÉTAPE 1 ─────────────────────────────────────────────────── */}
+
+          {/* ── ÉTAPE 1 ── */}
           {etape === 1 && (
             <motion.div key="e1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
               className="bg-card rounded-2xl border border-border shadow-card p-8">
               <h2 className="text-xl font-bold text-foreground mb-2">Identification de l'examen</h2>
               <p className="text-muted-foreground text-sm mb-6">
-                Entrez l'identifiant de l'examen au format <span className="font-mono font-semibold">{new Date().getFullYear()}N…</span>
+                Entrez l'identifiant au format <span className="font-mono font-semibold">{new Date().getFullYear()}N…</span>
               </p>
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">ID Exam</label>
-                  <input value={examId} onChange={e => setExamId(e.target.value.replace(/\D/g, ""))}
+                  <input
+                    value={examId}
+                    onChange={e => setExamId(e.target.value.replace(/\D/g, ""))}
                     className={cn(
                       "w-full px-4 py-3 rounded-xl border bg-background text-foreground font-mono focus:outline-none focus:ring-2 transition-all",
                       examIdError(examId) ? "border-destructive focus:ring-destructive/30" : "border-border focus:ring-primary/30"
                     )}
-                    placeholder={`${new Date().getFullYear()}1`} />
+                    placeholder={`${new Date().getFullYear()}1`}
+                  />
                   {examId.length > 0 && examIdError(examId) && (
                     <p className="text-destructive text-xs mt-1">{examIdError(examId)}</p>
                   )}
                 </div>
-                <button onClick={() => isValidExamId(examId) && setEtape(2)} disabled={!isValidExamId(examId)}
-                  className="w-full gradient-hero text-white font-semibold py-3 rounded-xl hover:opacity-90 disabled:opacity-40 transition-all">
+                <button
+                  onClick={() => isValidExamId(examId) && setEtape(2)}
+                  disabled={!isValidExamId(examId)}
+                  className="w-full gradient-hero text-white font-semibold py-3 rounded-xl hover:opacity-90 disabled:opacity-40 transition-all"
+                >
                   Continuer →
                 </button>
               </div>
             </motion.div>
           )}
 
-          {/* ── ÉTAPE 2 ─────────────────────────────────────────────────── */}
+          {/* ── ÉTAPE 2 ── */}
           {etape === 2 && (
             <motion.div key="e2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <div className="bg-card rounded-2xl border border-border shadow-card p-8 mb-4">
@@ -256,9 +201,9 @@ export default function NouveauRapport() {
                 </p>
                 <div className="grid gap-4">
                   {[
-                    { id: "navigateur", icon: Mic, title: "Enregistrer depuis le navigateur", desc: "Utilisez le micro de votre ordinateur" },
-                    { id: "import", icon: Upload, title: "Importer un fichier audio", desc: "MP3, WAV, M4A acceptés" },
-                    { id: "smartphone", icon: Smartphone, title: "Enregistrer via smartphone", desc: "Scannez un QR code pour continuer sur mobile" },
+                    { id: "navigateur", icon: Mic,       title: "Enregistrer depuis le navigateur", desc: "Utilisez le micro de votre ordinateur" },
+                    { id: "import",     icon: Upload,     title: "Importer un fichier audio",        desc: "MP3, WAV, M4A acceptés" },
+                    { id: "smartphone", icon: Smartphone, title: "Enregistrer via smartphone",       desc: "Scannez un QR code pour continuer sur mobile" },
                   ].map(({ id, icon: Icon, title, desc }) => (
                     <button key={id} onClick={() => { setMéthode(id as Méthode); setEtape(3); }}
                       className={cn(
@@ -282,9 +227,89 @@ export default function NouveauRapport() {
             </motion.div>
           )}
 
-          {/* ── ÉTAPE 3 ─────────────────────────────────────────────────── */}
+          {/* ── ÉTAPE 3 ── */}
           {etape === 3 && (
             <motion.div key="e3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+
+              {/* ── NAVIGATEUR ── */}
+              {méthode === "navigateur" && (
+                <div className="bg-card rounded-2xl border border-border shadow-card p-8 text-center">
+                  <h2 className="text-xl font-bold text-foreground mb-6">Enregistrement depuis le navigateur</h2>
+
+                  {/* Transcribing (background) */}
+                  {recording.isTranscribing ? (
+                    <div className="space-y-4">
+                      <Loader2 className="animate-spin w-12 h-12 text-primary mx-auto" />
+                      <p className="text-primary font-medium">Transcription en cours par le modèle IA…</p>
+                    </div>
+
+                  ) : recording.error ? (
+                    <div className="space-y-4">
+                      <p className="text-destructive text-sm">{recording.error}</p>
+                      <button
+                        onClick={() => { recording.clearError(); }}
+                        className="mx-auto flex items-center gap-2 gradient-hero text-white font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all text-sm"
+                      >
+                        Réessayer
+                      </button>
+                    </div>
+
+                  ) : recording.isRecording || recording.isPaused ? (
+                    /* Recording in progress — user can stay or navigate away */
+                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="space-y-6">
+                      <div className={cn(
+                        "w-24 h-24 rounded-full mx-auto flex items-center justify-center transition-all",
+                        recording.isPaused ? "bg-amber-500" : "gradient-hero animate-pulse-ring"
+                      )}>
+                        <Mic className="w-10 h-10 text-white" />
+                      </div>
+                      <p className="font-mono text-3xl font-bold text-foreground">{fmt(recording.seconds)}</p>
+                      <p className="text-muted-foreground text-sm">
+                        {recording.isPaused ? "Enregistrement en pause" : "Enregistrement en cours…"}
+                      </p>
+                      <p className="text-xs text-muted-foreground/60">
+                        Vous pouvez naviguer librement — l'enregistrement continue en arrière-plan.
+                      </p>
+                      <div className="flex items-center justify-center gap-3">
+                        <button onClick={recording.togglePause}
+                          className={cn(
+                            "flex items-center gap-2 font-semibold px-5 py-2.5 rounded-xl transition-all text-sm",
+                            recording.isPaused
+                              ? "gradient-hero text-white hover:opacity-90"
+                              : "bg-amber-500 hover:bg-amber-600 text-white"
+                          )}>
+                          {recording.isPaused ? <><Play size={15} /> Reprendre</> : <><Pause size={15} /> Pause</>}
+                        </button>
+                        <button onClick={recording.stopRecording}
+                          className="flex items-center gap-2 bg-destructive hover:bg-destructive/90 text-white font-semibold px-5 py-2.5 rounded-xl transition-all text-sm">
+                          <Square size={15} /> Arrêter
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => navigate("/dashboard")}
+                        className="flex items-center gap-1.5 mx-auto text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <LayoutDashboard size={12} /> Aller au tableau de bord
+                      </button>
+                    </motion.div>
+
+                  ) : (
+                    /* Idle — start button */
+                    <div className="space-y-6">
+                      <div className="w-24 h-24 rounded-full mx-auto flex items-center justify-center bg-muted">
+                        <Mic className="w-10 h-10 text-muted-foreground" />
+                      </div>
+                      <p className="text-muted-foreground text-sm">Prêt à enregistrer</p>
+                      <button
+                        onClick={() => recording.startMicRecording(examId)}
+                        className="flex items-center gap-2 mx-auto gradient-hero text-white font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition-all"
+                      >
+                        <Play className="w-5 h-5" /> Démarrer l'enregistrement
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* ── SMARTPHONE ── */}
               {méthode === "smartphone" && (
@@ -294,7 +319,6 @@ export default function NouveauRapport() {
                     ID Exam : <span className="font-mono font-semibold text-primary">{examId}</span>
                   </p>
 
-                  {/* Loading session */}
                   {sessionLoading && (
                     <div className="flex flex-col items-center gap-4 py-8">
                       <Loader2 className="animate-spin w-10 h-10 text-primary" />
@@ -302,73 +326,68 @@ export default function NouveauRapport() {
                     </div>
                   )}
 
-                  {/* Session error */}
                   {sessionError && !sessionLoading && (
                     <div className="space-y-4 py-4">
                       <p className="text-destructive text-sm">{sessionError}</p>
-                      <button onClick={refreshSession}
+                      <button onClick={refreshSmartphoneSession}
                         className="flex items-center gap-2 mx-auto gradient-hero text-white font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all text-sm">
                         <RefreshCw size={15} /> Réessayer
                       </button>
                     </div>
                   )}
 
-                  {/* Audio received + transcribing */}
-                  {audioReceived && !sessionLoading && (
+                  {/* Audio received → transcribing */}
+                  {(recording.audioReceived || recording.isTranscribing) && !sessionLoading && (
                     <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="space-y-4 py-4">
                       <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto">
                         <CheckCircle className="w-8 h-8 text-success" />
                       </div>
                       <p className="text-success font-semibold">Audio reçu depuis votre smartphone ✅</p>
-                      {transcribing && (
+                      {recording.isTranscribing && (
                         <div className="flex items-center gap-2 justify-center text-primary">
                           <Loader2 className="animate-spin" size={18} />
                           <span className="text-sm">Transcription en cours par le modèle IA…</span>
                         </div>
                       )}
+                      {recording.error && !recording.isTranscribing && (
+                        <p className="text-destructive text-sm">{recording.error}</p>
+                      )}
                     </motion.div>
                   )}
 
                   {/* QR code + waiting */}
-                  {!sessionLoading && !sessionError && !audioReceived && mobileUrl && (
+                  {!sessionLoading && !sessionError && !recording.audioReceived && !recording.isTranscribing && recording.mobileUrl && (
                     <div className="space-y-6">
-                      {/* Connection status */}
                       <div className="flex items-center justify-center gap-2">
-                        {connected ? (
+                        {recording.socketConnected ? (
                           <Wifi size={14} className="text-success" />
                         ) : (
                           <WifiOff size={14} className="text-muted-foreground" />
                         )}
-                        <span className={cn("text-xs font-medium", connected ? "text-success" : "text-muted-foreground")}>
-                          {connected ? (mobileConnected ? "Mobile connecté" : "En attente du mobile…") : "Connexion au serveur…"}
+                        <span className={cn("text-xs font-medium", recording.socketConnected ? "text-success" : "text-muted-foreground")}>
+                          {recording.socketConnected
+                            ? (recording.mobileConnected ? "Mobile connecté" : "En attente du mobile…")
+                            : "Connexion au serveur…"}
                         </span>
-                        {mobileConnected && (
+                        {recording.mobileConnected && (
                           <span className="text-xs text-muted-foreground ml-2">
-                            {recordingActive ? "⏺ Enregistrement en cours…" : "Prêt"}
+                            {recording.isRecording ? "⏺ Enregistrement en cours…" : "Prêt"}
                           </span>
                         )}
                       </div>
 
-                      {/* Real QR code */}
                       <div className="flex justify-center">
                         <div className="w-44 h-44 bg-white/65 backdrop-blur-md rounded-2xl border-4 border-primary/20 p-3 shadow-card flex items-center justify-center">
-                          <QRCodeSVG
-                            value={mobileUrl}
-                            size={152}
-                            bgColor="#ffffff"
-                            fgColor="#0d2137"
-                            level="M"
-                          />
+                          <QRCodeSVG value={recording.mobileUrl} size={152} bgColor="#ffffff" fgColor="#0d2137" level="M" />
                         </div>
                       </div>
 
-                      {/* Timer */}
                       {timer > 0 ? (
                         <>
                           <div className="flex items-center gap-2 justify-center">
                             <QrCode className="text-primary" size={16} />
                             <span className="text-sm text-muted-foreground">Expire dans</span>
-                            <span className="font-mono font-bold text-primary">{formatTimer(timer)}</span>
+                            <span className="font-mono font-bold text-primary">{fmt(timer)}</span>
                           </div>
                           <div className="w-full bg-muted rounded-full h-2">
                             <div className="gradient-hero h-2 rounded-full transition-all duration-1000" style={{ width: `${timerProgress}%` }} />
@@ -377,7 +396,7 @@ export default function NouveauRapport() {
                       ) : (
                         <div className="flex flex-col items-center gap-3">
                           <p className="text-sm text-destructive font-medium">Session expirée</p>
-                          <button onClick={refreshSession}
+                          <button onClick={refreshSmartphoneSession}
                             className="flex items-center gap-2 gradient-hero text-white font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all text-sm">
                             <RefreshCw size={15} /> Nouvelle session
                           </button>
@@ -385,65 +404,16 @@ export default function NouveauRapport() {
                       )}
 
                       <p className="text-xs text-muted-foreground">
-                        {mobileConnected
+                        {recording.mobileConnected
                           ? "Mobile connecté — appuyez sur Envoyer depuis le mobile une fois l'enregistrement terminé."
                           : "Scannez ce QR code avec votre smartphone pour démarrer l'enregistrement."}
                       </p>
-                    </div>
-                  )}
-                </div>
-              )}
 
-              {/* ── NAVIGATEUR (MIC) ── */}
-              {méthode === "navigateur" && (
-                <div className="bg-card rounded-2xl border border-border shadow-card p-8 text-center">
-                  <h2 className="text-xl font-bold text-foreground mb-6">Enregistrement depuis le navigateur</h2>
-                  {transcribing ? (
-                    <div className="space-y-4">
-                      <Loader2 className="animate-spin w-12 h-12 text-primary mx-auto" />
-                      <p className="text-primary font-medium">Transcription en cours par le modèle IA…</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      <div className={cn(
-                        "w-24 h-24 rounded-full mx-auto flex items-center justify-center transition-all",
-                        recordingState === "recording" ? "gradient-hero animate-pulse-ring" :
-                        recordingState === "paused" ? "bg-amber-500" : "bg-muted"
-                      )}>
-                        <Mic className={cn("w-10 h-10", recordingState === "idle" ? "text-muted-foreground" : "text-white")} />
-                      </div>
-                      <p className="font-mono text-2xl font-bold text-foreground">{formatTimer(recordingSeconds)}</p>
-                      <p className="text-muted-foreground text-sm">
-                        {recordingState === "idle" && "Prêt à enregistrer"}
-                        {recordingState === "recording" && "Enregistrement en cours…"}
-                        {recordingState === "paused" && "Enregistrement en pause"}
-                      </p>
-                      <div className="flex items-center justify-center gap-4">
-                        {recordingState === "idle" && (
-                          <button onClick={handleMicStart}
-                            className="flex items-center gap-2 gradient-hero text-white font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition-all">
-                            <Play className="w-5 h-5" /> Démarrer
-                          </button>
-                        )}
-                        {recordingState === "recording" && (
-                          <button onClick={handleMicPause}
-                            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold px-6 py-3 rounded-xl transition-all">
-                            <Pause className="w-5 h-5" /> Pause
-                          </button>
-                        )}
-                        {recordingState === "paused" && (
-                          <button onClick={handleMicResume}
-                            className="flex items-center gap-2 gradient-hero text-white font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition-all">
-                            <Play className="w-5 h-5" /> Reprendre
-                          </button>
-                        )}
-                        {recordingState !== "idle" && (
-                          <button onClick={handleMicStop}
-                            className="flex items-center gap-2 bg-destructive hover:bg-destructive/90 text-white font-semibold px-6 py-3 rounded-xl transition-all">
-                            <Square className="w-5 h-5" /> Arrêter
-                          </button>
-                        )}
-                      </div>
+                      {recording.isRecording && (
+                        <p className="text-xs text-muted-foreground/60">
+                          Vous pouvez naviguer librement — l'enregistrement continue en arrière-plan.
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -453,10 +423,18 @@ export default function NouveauRapport() {
               {méthode === "import" && (
                 <div className="bg-card rounded-2xl border border-border shadow-card p-8 text-center">
                   <h2 className="text-xl font-bold text-foreground mb-6">Importer un fichier audio</h2>
-                  {transcribing ? (
+                  {recording.isTranscribing ? (
                     <div className="space-y-4">
                       <Loader2 className="animate-spin w-12 h-12 text-primary mx-auto" />
                       <p className="text-primary font-medium">Transcription en cours par le modèle IA…</p>
+                    </div>
+                  ) : recording.error ? (
+                    <div className="space-y-4">
+                      <p className="text-destructive text-sm">{recording.error}</p>
+                      <button onClick={recording.clearError}
+                        className="mx-auto flex items-center gap-2 gradient-hero text-white font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all text-sm">
+                        Réessayer
+                      </button>
                     </div>
                   ) : (
                     <label className="block cursor-pointer">
@@ -465,7 +443,15 @@ export default function NouveauRapport() {
                         <p className="font-semibold text-foreground mb-1">Cliquez pour importer</p>
                         <p className="text-sm text-muted-foreground">MP3, WAV, M4A — Max 50 Mo</p>
                       </div>
-                      <input type="file" accept=".mp3,.wav,.m4a" className="hidden" onChange={() => triggerTranscription()} />
+                      <input
+                        type="file"
+                        accept=".mp3,.wav,.m4a"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) recording.transcribeFile(examId, f);
+                        }}
+                      />
                     </label>
                   )}
                 </div>

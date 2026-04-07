@@ -5,4 +5,5 @@ urlpatterns = [
     path("api/reports/", include("reports.urls")),
     path("api/complaints/", include("complaints.urls")),
     path("api/csv/", include("csvapp.urls")),
+    path("api/transcribe/", include("transcription.urls")),
 ]

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { RecordingProvider } from "@/contexts/RecordingContext";
 import { RouteGuard } from "@/components/RouteGuard";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { useEffect, useState } from "react";
@@ -25,6 +26,7 @@ import MédecinProfil from "./pages/medecin/Profil";
 // Admin
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminStatistiques from "./pages/admin/Statistiques";
+import AdminExport from "./pages/admin/Export";
 import AdminProfil from "./pages/medecin/Profil";
 
 // Admin IT
@@ -73,6 +75,7 @@ function AppWithLoading() {
       {/* Admin */}
       <Route path="/admin/dashboard"     element={<RouteGuard allowedRoles={["admin"]}><AdminDashboard /></RouteGuard>} />
       <Route path="/admin/statistiques"  element={<RouteGuard allowedRoles={["admin"]}><AdminStatistiques /></RouteGuard>} />
+      <Route path="/admin/export"        element={<RouteGuard allowedRoles={["admin"]}><AdminExport /></RouteGuard>} />
       <Route path="/admin/profil"        element={<RouteGuard allowedRoles={["admin"]}><AdminProfil /></RouteGuard>} />
 
       {/* Admin IT */}
@@ -104,16 +107,18 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <div id="bg-mesh" />
-              <div style={{ position: 'relative', zIndex: 1 }}>
-                <AppWithLoading />
-              </div>
-            </BrowserRouter>
-          </TooltipProvider>
+          <RecordingProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <div id="bg-mesh" />
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                  <AppWithLoading />
+                </div>
+              </BrowserRouter>
+            </TooltipProvider>
+          </RecordingProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

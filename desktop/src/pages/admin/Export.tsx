@@ -3,7 +3,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { downloadCSV } from "@/services/csvService";
 import { Download, Loader2 } from "lucide-react";
 
-export default function AdminITExport() {
+export default function AdminExport() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 

@@ -1,0 +1,206 @@
+"""
+Traitement de la ponctuation pour les transcriptions médicales.
+  - Commandes verbales → symboles
+  - Restauration automatique (deepmultilingualpunctuation, optionnel)
+  - Correction orthographique LanguageTool (optionnel)
+"""
+from __future__ import annotations
+
+import re
+import sys
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 1. COMMANDES VERBALES
+# ──────────────────────────────────────────────────────────────────────────────
+
+VERBAL_COMMANDS = [
+    # Sauts de ligne
+    (r"\bnouveau paragraphe\b",                         "\n\n"),
+    (r"\bnouvelle ligne\b",                             "\n"),
+    (r"\bà la ligne\b",                                 "\n"),
+    (r"\bsaut de ligne\b",                              "\n"),
+
+    # Ponctuation de fin — AVANT "point" seul pour éviter collision
+    (r"\bpoints? d[' ]interrogation\b",                 "?"),
+    (r"\bpoints? d[' ]exclamation\b",                   "!"),
+    (r"\bpoints? virgule\b",                            ";"),
+    (r"\bpoints? de suspension\b",                      "..."),
+
+    # "deux points" → deux-points (:)
+    (r"\b(?:deux|de|des|2)\s+pointe?s?\b",              ":"),
+
+    # "point" ou "points" seul → point final
+    (r"\bpoints?\b",                                    "."),
+
+    # Ponctuation interne
+    (r"\bvirgule\b",                                    ","),
+    (r"\btiret\b",                                      "-"),
+    (r"\bslash\b",                                      "/"),
+
+    # Parenthèses / guillemets
+    (r"\bouvr(?:ez|ir) (?:la )?parenth[èe]se\b",       "("),
+    (r"\bferm(?:ez|er) (?:la )?parenth[èe]se\b",       ")"),
+    (r"\bparenth[èe]se (?:ouvrante|ouverte)\b",         "("),
+    (r"\bparenth[èe]se fermante\b",                     ")"),
+    (r"\bouvr(?:ez|ir) (?:les )?guillemets\b",          '"'),
+    (r"\bferm(?:ez|er) (?:les )?guillemets\b",          '"'),
+]
+
+
+def strip_whisper_punctuation(text: str) -> str:
+    """Supprime la ponctuation automatique ajoutée par Whisper avant traitement."""
+    result = re.sub(r"(?<!\d)[.,!?;](?!\d)", " ", text)
+    result = re.sub(r"[^\S\n]{2,}", " ", result)
+    return result.strip()
+
+
+def apply_verbal_commands(text: str) -> str:
+    """Remplace les commandes verbales par les symboles de ponctuation."""
+    result = strip_whisper_punctuation(text)
+    result = result.lower()
+
+    for pattern, replacement in VERBAL_COMMANDS:
+        result = re.sub(pattern, replacement, result, flags=re.IGNORECASE)
+
+    result = re.sub(r"\s+([.,;:?!])", r"\1", result)
+    result = re.sub(r"([.,;:?!])(?=[^\s\n])", r"\1 ", result)
+
+    result = re.sub(r",\s*,+", ",", result)
+    result = re.sub(r"\.\s*\.+", ".", result)
+    result = re.sub(r";\s*;+", ";", result)
+    result = re.sub(r":\s*:+", ":", result)
+    result = re.sub(r",\s*\.", ".", result)
+    result = re.sub(r"\.\s*,", ".", result)
+
+    result = re.sub(r" *\n *", "\n", result)
+    result = re.sub(r"[^\S\n]{2,}", " ", result)
+    result = result.strip()
+
+    result = _capitalize_sentences(result)
+    return result
+
+
+def _capitalize_sentences(text: str) -> str:
+    """Met une majuscule après chaque fin de phrase."""
+    text = text[:1].upper() + text[1:] if text else text
+
+    def _upper_match(m):
+        return m.group(0)[:-1] + m.group(0)[-1].upper()
+
+    text = re.sub(r"[.?!]\s+[a-zàâäéèêëîïôùûüç]", _upper_match, text)
+    text = re.sub(r"\n+[a-zàâäéèêëîïôùûüç]", _upper_match, text)
+    return text
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 2. RESTAURATION AUTOMATIQUE (deepmultilingualpunctuation, optionnel)
+# ──────────────────────────────────────────────────────────────────────────────
+
+def restore_punctuation_auto(text: str) -> str:
+    """Ajoute la ponctuation manquante via deepmultilingualpunctuation."""
+    try:
+        from deepmultilingualpunctuation import PunctuationModel
+        model = PunctuationModel(model="kredor/punctuate-all")
+        result = model.restore_punctuation(text)
+        return _capitalize_sentences(result)
+    except ImportError:
+        return text
+    except Exception as e:
+        print(f"  [warn] Restauration auto échouée : {e}", file=sys.stderr)
+        return text
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 3. CORRECTION ORTHOGRAPHIQUE — LanguageTool (optionnel)
+# ──────────────────────────────────────────────────────────────────────────────
+
+_lt_tool = None
+
+DISABLED_RULES = [
+    "FRENCH_WHITESPACE",
+    "UPPERCASE_SENTENCE_START",
+    "COMMA_PARENTHESIS_WHITESPACE",
+    "PHRASE_REPETITION",
+    "FR_SPELLING_REFORM",
+    "POINTS_VIRGULES",
+    "APOS_TYP",
+    "NON_STANDARD_WORD",
+    "MORFOLOGIK_RULE_FR",
+]
+
+
+def _get_lt_tool():
+    global _lt_tool
+    if _lt_tool is None:
+        import language_tool_python
+        _lt_tool = language_tool_python.LanguageTool(
+            "fr",
+            config={"disabledRuleIds": ",".join(DISABLED_RULES)},
+        )
+    return _lt_tool
+
+
+def _fix_medical_punctuation(text: str) -> str:
+    """Supprime les ? ajoutés par LanguageTool sur des phrases nominales médicales."""
+    question_starters = r"(?:est-ce|y a-t-il|quel|quelle|comment|pourquoi|où|quand|combien)"
+    lines = text.split("\n")
+    result = []
+    for line in lines:
+        line = line.strip()
+        if line.endswith("?"):
+            if not re.search(question_starters, line, re.IGNORECASE):
+                line = line[:-1] + "."
+        result.append(line)
+    return "\n".join(result)
+
+
+def correct_orthography(text: str) -> str:
+    """Corrige l'orthographe et la grammaire via LanguageTool (serveur local)."""
+    try:
+        tool = _get_lt_tool()
+        corrected = tool.correct(text)
+        return _fix_medical_punctuation(corrected)
+    except ImportError:
+        print("  [info] LanguageTool non installé → pip install language_tool_python",
+              file=sys.stderr)
+        return text
+    except Exception as e:
+        print(f"  [warn] LanguageTool échoué : {e}", file=sys.stderr)
+        return text
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 4. PIPELINE COMBINÉ
+# ──────────────────────────────────────────────────────────────────────────────
+
+def process(text: str, auto_punct: bool = True, spellcheck: bool = True) -> str:
+    """
+    Pipeline complet :
+      1. Commandes verbales   (toujours appliquées)
+      2. Restauration auto    (si peu de ponctuation détectée)
+      3. Correction LanguageTool (orthographe + grammaire)
+    """
+    text = apply_verbal_commands(text)
+
+    if auto_punct:
+        punct_ratio = sum(1 for c in text if c in ".,;:?!") / max(len(text), 1)
+        if punct_ratio < 0.02:
+            text = restore_punctuation_auto(text)
+
+    if spellcheck:
+        text = correct_orthography(text)
+
+    return text
+
+
+if __name__ == "__main__":
+    raw = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else (
+        "le patient présente une fièvre virgule une toux et des céphalées point "
+        "à la ligne diagnostic deux points pneumonie bactérienne point virgule "
+        "traitement deux points amoxicilline 1g trois fois par jour point"
+    )
+    print("Texte brut :")
+    print(raw)
+    print()
+    print("Après traitement :")
+    print(process(raw, auto_punct=False, spellcheck=False))

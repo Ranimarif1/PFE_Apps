@@ -8,7 +8,7 @@ from django.http import FileResponse, HttpRequest, JsonResponse
 from core.auth import jwt_required
 
 
-@jwt_required(roles={"adminIT"})
+@jwt_required(roles={"adminIT", "admin"})
 def download_global_csv(request: HttpRequest):
     media_root: Path = settings.MEDIA_ROOT
     csv_path = media_root / "exports" / "transcriptions_globales.csv"

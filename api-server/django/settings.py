@@ -4,7 +4,10 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
+try:
+    load_dotenv(encoding="utf-8-sig")
+except Exception:
+    pass
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -23,6 +26,7 @@ INSTALLED_APPS = [
     "reports",
     "complaints",
     "csvapp",
+    "transcription",
 ]
 
 MIDDLEWARE = [

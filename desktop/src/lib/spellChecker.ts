@@ -249,7 +249,11 @@ const MEDICAL_FEM = [
   "calcification", "fracture", "luxation", "hernie", "tumeur", "métastase",
   "nécrose", "fibrose", "hémorragie", "embolie", "thrombose", "méninge",
   "vertèbre", "côte", "rate", "prostate", "thyroïde", "surrénale",
+  "irm", "tdm",
 ];
+
+// Plural determiners — more reliable than checking word endings
+const PLURAL_DET = new Set(["les", "des", "ces", "aux", "plusieurs", "certains", "certaines", "nombreux", "nombreuses"]);
 
 /* ═══════════════════════════════════════════════════════════
    7. TOKENIZER
@@ -324,7 +328,7 @@ export function checkText(text: string): Suggestion[] {
       const nearby = tokens.slice(Math.max(0, ti - 5), ti).map(t2 => t2.word.toLowerCase());
       const isFem = nearby.some(n => MEDICAL_FEM.some(f => n.includes(f)));
       const isMasc = nearby.some(n => MEDICAL_MASC.some(f => n.includes(f)));
-      const isPlural = nearby.some(n => n.endsWith("s") || n.endsWith("aux"));
+      const isPlural = nearby.some(n => PLURAL_DET.has(n));
 
       let expected: string | null = null;
       let reason = "";
@@ -354,8 +358,9 @@ export function checkText(text: string): Suggestion[] {
     let adjFixed = false;
     for (const rule of ADJ_RULES) {
       const allAdj = [rule.masc, rule.fem, rule.mascPl, rule.femPl];
+      // Word is already a valid form of this rule → not a typo, skip
+      if (allAdj.some(f => f.toLowerCase() === lower)) { adjFixed = true; break; }
       for (const adj of allAdj) {
-        if (adj.toLowerCase() === lower) { adjFixed = true; break; }
         const d = lev(lower, adj.toLowerCase());
         if (d === 1) {
           corrections.push({

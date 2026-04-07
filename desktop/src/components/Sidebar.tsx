@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { RecordingIndicator } from "@/components/RecordingIndicator";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type NavItem   = { to: string; icon: React.ElementType; label: string };
@@ -45,6 +46,7 @@ const adminSections: Section[] = [
     label: "SYSTÈME",
     links: [
       { to: "/admin/statistiques", icon: TrendingUp, label: "Statistiques" },
+      { to: "/admin/export",       icon: Download,   label: "Export CSV"   },
     ],
   },
 ];
@@ -194,6 +196,9 @@ export function Sidebar() {
           <SectionBlock key={section.label} section={section} collapsed={collapsed} first={i === 0} />
         ))}
       </nav>
+
+      {/* ── Recording indicator ── */}
+      <RecordingIndicator collapsed={collapsed} />
 
       {/* ── Footer ── */}
       <div className="border-t border-sidebar-border">
