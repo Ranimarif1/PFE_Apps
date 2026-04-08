@@ -36,7 +36,7 @@ const adminSections: Section[] = [
     links: [
       { to: "/admin/dashboard",    icon: LayoutDashboard, label: "Tableau de bord" },
       { to: "/rapport/nouveau",    icon: Plus,            label: "Nouveau rapport"  },
-      { to: "/historique",         icon: FileText,        label: "Rapports"         },
+      { to: "/historique",         icon: History,         label: "Historique"       },
       { to: "/reclamations",       icon: MessageSquare,   label: "Réclamations"     },
       { to: "/admin/profil",       icon: User,            label: "Mon profil"       },
     ],

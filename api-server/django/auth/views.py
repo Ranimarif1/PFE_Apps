@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import secrets
 from typing import Any, Dict
 
 from bson import ObjectId
+from django.conf import settings
+from django.core.mail import send_mail
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -164,7 +167,7 @@ def delete_user(request: HttpRequest, user_id: str) -> JsonResponse:
     if not current:
         return JsonResponse({"detail": "Authentication required."}, status=401)
 
-    if current.role != "admin":
+    if current.role not in {"admin", "adminIT"}:
         return JsonResponse({"detail": "Permission denied."}, status=403)
 
     users_col = get_collection("users")
@@ -177,8 +180,11 @@ def delete_user(request: HttpRequest, user_id: str) -> JsonResponse:
     if not user:
         return JsonResponse({"detail": "User not found."}, status=404)
 
-    if user.get("role") != "doctor":
-        return JsonResponse({"detail": "Only doctor accounts can be deleted."}, status=403)
+    # Admin can only delete doctors; AdminIT can only delete admins
+    if current.role == "admin" and user.get("role") != "doctor":
+        return JsonResponse({"detail": "Les admins ne peuvent supprimer que des médecins."}, status=403)
+    if current.role == "adminIT" and user.get("role") != "admin":
+        return JsonResponse({"detail": "L'Admin IT ne peut supprimer que des comptes admin."}, status=403)
 
     users_col.delete_one({"_id": oid})
     return JsonResponse({"detail": "User deleted."})
@@ -251,4 +257,140 @@ def update_profile(request: HttpRequest) -> JsonResponse:
         "genre": updated.get("genre", ""),
         "photo": updated.get("photo", ""),
     })
+
+
+@csrf_exempt
+def change_user_role(request: HttpRequest, user_id: str) -> JsonResponse:
+    if request.method not in {"PUT", "PATCH"}:
+        return JsonResponse({"detail": "Method not allowed."}, status=405)
+
+    current = get_current_user(request)
+    if not current:
+        return JsonResponse({"detail": "Authentication required."}, status=401)
+
+    if current.role not in {"admin", "adminIT"}:
+        return JsonResponse({"detail": "Permission denied."}, status=403)
+
+    data = _parse_body(request)
+    new_role = (data.get("role") or "").strip()
+
+    if new_role not in {"doctor", "admin"}:
+        return JsonResponse({"detail": "Invalid role."}, status=400)
+
+    users_col = get_collection("users")
+    try:
+        oid = ObjectId(user_id)
+    except Exception:
+        return JsonResponse({"detail": "Invalid user id."}, status=400)
+
+    user = users_col.find_one({"_id": oid})
+    if not user:
+        return JsonResponse({"detail": "User not found."}, status=404)
+
+    # Admin can only promote doctor → admin
+    if current.role == "admin":
+        if user.get("role") != "doctor" or new_role != "admin":
+            return JsonResponse({"detail": "Les admins ne peuvent que promouvoir un médecin en admin."}, status=400)
+
+    # AdminIT can only demote admin → doctor
+    if current.role == "adminIT":
+        if user.get("role") != "admin" or new_role != "doctor":
+            return JsonResponse({"detail": "L'Admin IT ne peut que rétrograder un admin en médecin."}, status=400)
+
+    users_col.update_one({"_id": oid}, {"$set": {"role": new_role}})
+    updated = users_col.find_one({"_id": oid})
+    return JsonResponse({"user": serialize_document(updated)})
+
+
+@csrf_exempt
+def forgot_password(request: HttpRequest) -> JsonResponse:
+    if request.method != "POST":
+        return JsonResponse({"detail": "Method not allowed."}, status=405)
+
+    data = _parse_body(request)
+    email = (data.get("email") or "").strip().lower()
+
+    if not email:
+        return JsonResponse({"detail": "Email requis."}, status=400)
+
+    # Always return the same message to avoid email enumeration
+    success_msg = "Si cet email est associé à un compte, un lien de réinitialisation a été envoyé."
+
+    users_col = get_collection("users")
+    user = users_col.find_one({"email": email})
+    if not user:
+        return JsonResponse({"detail": success_msg})
+
+    token = secrets.token_urlsafe(32)
+    expires_at = (dt.datetime.utcnow() + dt.timedelta(hours=1)).isoformat()
+
+    tokens_col = get_collection("password_reset_tokens")
+    tokens_col.delete_many({"email": email})
+    tokens_col.insert_one({"email": email, "token": token, "expires_at": expires_at, "used": False})
+
+    prenom = user.get("prenom", "")
+    nom = user.get("nom", "")
+    full_name = f"{prenom} {nom}".strip() or email
+    reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+
+    try:
+        send_mail(
+            subject="Réinitialisation de votre mot de passe — ReportEase",
+            message=(
+                f"Bonjour {full_name},\n\n"
+                f"Vous avez demandé la réinitialisation de votre mot de passe ReportEase.\n\n"
+                f"Cliquez sur le lien ci-dessous pour définir un nouveau mot de passe :\n\n"
+                f"{reset_url}\n\n"
+                f"Ce lien est valable pendant 1 heure.\n\n"
+                f"Si vous n'avez pas effectué cette demande, ignorez cet email.\n\n"
+                f"L'équipe ReportEase\nCHU Fattouma-Bourguiba de Monastir"
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+    except Exception as exc:
+        return JsonResponse({"detail": f"Erreur SMTP : {exc}"}, status=500)
+
+    return JsonResponse({"detail": success_msg})
+
+
+@csrf_exempt
+def reset_password(request: HttpRequest) -> JsonResponse:
+    if request.method != "POST":
+        return JsonResponse({"detail": "Method not allowed."}, status=405)
+
+    data = _parse_body(request)
+    token = (data.get("token") or "").strip()
+    new_password = data.get("password") or ""
+
+    if not token or not new_password:
+        return JsonResponse({"detail": "Token et mot de passe requis."}, status=400)
+
+    if len(new_password) < 6:
+        return JsonResponse({"detail": "Le mot de passe doit contenir au moins 6 caractères."}, status=400)
+
+    tokens_col = get_collection("password_reset_tokens")
+    token_doc = tokens_col.find_one({"token": token, "used": False})
+
+    if not token_doc:
+        return JsonResponse({"detail": "Lien invalide ou déjà utilisé."}, status=400)
+
+    try:
+        expires_at = dt.datetime.fromisoformat(token_doc["expires_at"])
+    except Exception:
+        return JsonResponse({"detail": "Lien invalide."}, status=400)
+
+    if dt.datetime.utcnow() > expires_at:
+        tokens_col.delete_one({"token": token})
+        return JsonResponse({"detail": "Lien expiré. Veuillez refaire une demande."}, status=400)
+
+    users_col = get_collection("users")
+    users_col.update_one(
+        {"email": token_doc["email"]},
+        {"$set": {"password": hash_password(new_password)}}
+    )
+    tokens_col.update_one({"token": token}, {"$set": {"used": True}})
+
+    return JsonResponse({"detail": "Mot de passe réinitialisé avec succès."})
 

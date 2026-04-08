@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getUsers, updateUserStatus, type BackendUserRecord } from "@/services/usersService";
-import { Check, X } from "lucide-react";
+import { getUsers, updateUserStatus, deleteUser, changeUserRole, type BackendUserRecord } from "@/services/usersService";
+import { Check, X, Trash2, AlertTriangle, UserRoundCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STATUS_MAP: Record<string, string> = {
@@ -25,6 +25,8 @@ const ROLE_BADGE: Record<string, string> = {
 export default function AdminITAdmins() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("tous");
+  const [confirmDelete, setConfirmDelete] = useState<BackendUserRecord | null>(null);
+  const [confirmDemote, setConfirmDemote] = useState<BackendUserRecord | null>(null);
 
   const { data: users = [] } = useQuery<BackendUserRecord[]>({
     queryKey: ["users"],
@@ -35,6 +37,22 @@ export default function AdminITAdmins() {
     mutationFn: ({ id, status }: { id: string; status: "validated" | "refused" }) =>
       updateUserStatus(id, status),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteUser(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setConfirmDelete(null);
+    },
+  });
+
+  const demoteMutation = useMutation({
+    mutationFn: (id: string) => changeUserRole(id, "doctor"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setConfirmDemote(null);
+    },
   });
 
   const admins = users.filter(u => u.role === "admin" || u.role === "adminIT");
@@ -102,6 +120,18 @@ export default function AdminITAdmins() {
                           </button>
                         </>
                       )}
+                      {a.status === "validated" && a.role === "admin" && (
+                        <>
+                          <button onClick={() => setConfirmDemote(a)}
+                            className="w-8 h-8 bg-primary/10 text-primary rounded-lg flex items-center justify-center hover:bg-primary/20 transition-colors" title="Rétrograder en médecin">
+                            <UserRoundCheck size={14} />
+                          </button>
+                          <button onClick={() => setConfirmDelete(a)}
+                            className="w-8 h-8 bg-destructive/10 text-destructive rounded-lg flex items-center justify-center hover:bg-destructive/20 transition-colors" title="Supprimer définitivement">
+                            <Trash2 size={14} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -113,6 +143,77 @@ export default function AdminITAdmins() {
           </table>
         </div>
       </div>
+      {confirmDemote && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-card rounded-2xl border border-border shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                <UserRoundCheck className="w-5 h-5 text-primary" />
+              </div>
+              <h2 className="text-lg font-semibold text-foreground">Rétrograder en médecin</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-2">
+              Vous êtes sur le point de changer le rôle de :
+            </p>
+            <p className="text-sm font-semibold text-foreground mb-1">
+              {confirmDemote.prenom} {confirmDemote.nom}
+            </p>
+            <p className="text-xs text-muted-foreground mb-4">{confirmDemote.email}</p>
+            <div className="bg-warning/10 border border-warning/30 rounded-xl px-4 py-3 mb-5">
+              <p className="text-xs text-warning font-medium">
+                ⚠️ Cette action est irréversible. Le compte passera du rôle <strong>Admin</strong> au rôle <strong>Médecin</strong> et perdra tous ses accès administrateur.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDemote(null)}
+                className="flex-1 py-2.5 rounded-xl border border-border text-foreground hover:bg-muted transition-all text-sm font-medium">
+                Annuler
+              </button>
+              <button onClick={() => demoteMutation.mutate(confirmDemote._id)}
+                disabled={demoteMutation.isPending}
+                className="flex-1 py-2.5 rounded-xl gradient-hero text-white font-semibold hover:opacity-90 disabled:opacity-60 transition-all text-sm">
+                {demoteMutation.isPending ? "Modification..." : "Confirmer le changement"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-card rounded-2xl border border-border shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-destructive/10 rounded-full flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-destructive" />
+              </div>
+              <h2 className="text-lg font-semibold text-foreground">Supprimer le compte admin</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-2">
+              Vous êtes sur le point de supprimer définitivement le compte de :
+            </p>
+            <p className="text-sm font-semibold text-foreground mb-1">
+              {confirmDelete.prenom} {confirmDelete.nom}
+            </p>
+            <p className="text-xs text-muted-foreground mb-4">{confirmDelete.email}</p>
+            <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 mb-5">
+              <p className="text-xs text-destructive font-medium">
+                ⚠️ Cette action est irréversible. Le compte sera définitivement supprimé de la base de données.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDelete(null)}
+                className="flex-1 py-2.5 rounded-xl border border-border text-foreground hover:bg-muted transition-all text-sm font-medium">
+                Annuler
+              </button>
+              <button onClick={() => deleteMutation.mutate(confirmDelete._id)}
+                disabled={deleteMutation.isPending}
+                className="flex-1 py-2.5 rounded-xl bg-destructive text-white font-semibold hover:bg-destructive/90 disabled:opacity-60 transition-all text-sm">
+                {deleteMutation.isPending ? "Suppression..." : "Supprimer définitivement"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }

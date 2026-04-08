@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getUsers, updateUserStatus, deleteUser, type BackendUserRecord } from "@/services/usersService";
-import { Check, X, Trash2, AlertTriangle } from "lucide-react";
+import { getUsers, updateUserStatus, deleteUser, changeUserRole, type BackendUserRecord } from "@/services/usersService";
+import { Check, X, Trash2, AlertTriangle, UserRoundCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STATUS_MAP: Record<string, string> = {
@@ -21,6 +21,7 @@ export default function AdminUtilisateurs() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("tous");
   const [confirmDelete, setConfirmDelete] = useState<BackendUserRecord | null>(null);
+  const [confirmPromote, setConfirmPromote] = useState<BackendUserRecord | null>(null);
 
   const { data: users = [] } = useQuery<BackendUserRecord[]>({
     queryKey: ["users"],
@@ -38,6 +39,14 @@ export default function AdminUtilisateurs() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setConfirmDelete(null);
+    },
+  });
+
+  const promoteMutation = useMutation({
+    mutationFn: (id: string) => changeUserRole(id, "admin"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setConfirmPromote(null);
     },
   });
 
@@ -102,10 +111,16 @@ export default function AdminUtilisateurs() {
                         </>
                       )}
                       {u.status === "validated" && (
-                        <button onClick={() => setConfirmDelete(u)}
-                          className="w-8 h-8 bg-destructive/10 text-destructive rounded-lg flex items-center justify-center hover:bg-destructive/20 transition-colors" title="Supprimer définitivement">
-                          <Trash2 size={14} />
-                        </button>
+                        <>
+                          <button onClick={() => setConfirmPromote(u)}
+                            className="w-8 h-8 bg-primary/10 text-primary rounded-lg flex items-center justify-center hover:bg-primary/20 transition-colors" title="Promouvoir en admin">
+                            <UserRoundCheck size={14} />
+                          </button>
+                          <button onClick={() => setConfirmDelete(u)}
+                            className="w-8 h-8 bg-destructive/10 text-destructive rounded-lg flex items-center justify-center hover:bg-destructive/20 transition-colors" title="Supprimer définitivement">
+                            <Trash2 size={14} />
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>
@@ -118,6 +133,43 @@ export default function AdminUtilisateurs() {
           </table>
         </div>
       </div>
+
+      {/* Promote confirmation dialog */}
+      {confirmPromote && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-card rounded-2xl border border-border shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                <UserRoundCheck className="w-5 h-5 text-primary" />
+              </div>
+              <h2 className="text-lg font-semibold text-foreground">Promouvoir en administrateur</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-2">
+              Vous êtes sur le point de changer le rôle de :
+            </p>
+            <p className="text-sm font-semibold text-foreground mb-1">
+              {confirmPromote.prenom} {confirmPromote.nom}
+            </p>
+            <p className="text-xs text-muted-foreground mb-4">{confirmPromote.email}</p>
+            <div className="bg-warning/10 border border-warning/30 rounded-xl px-4 py-3 mb-5">
+              <p className="text-xs text-warning font-medium">
+                ⚠️ Cette action est irréversible. Le compte passera du rôle <strong>Médecin</strong> au rôle <strong>Admin</strong> et obtiendra tous les accès administrateur.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmPromote(null)}
+                className="flex-1 py-2.5 rounded-xl border border-border text-foreground hover:bg-muted transition-all text-sm font-medium">
+                Annuler
+              </button>
+              <button onClick={() => promoteMutation.mutate(confirmPromote._id)}
+                disabled={promoteMutation.isPending}
+                className="flex-1 py-2.5 rounded-xl gradient-hero text-white font-semibold hover:opacity-90 disabled:opacity-60 transition-all text-sm">
+                {promoteMutation.isPending ? "Modification..." : "Confirmer le changement"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete confirmation dialog */}
       {confirmDelete && (

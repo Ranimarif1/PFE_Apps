@@ -107,8 +107,7 @@ function HBar({ label, value, total, color }: { label: string; value: number; to
 ══════════════════════════════════════════════════════════════════════════════ */
 export default function AdminITDashboard() {
   const navigate = useNavigate();
-  const [tab, setTab]       = useState<"apercu" | "reclamations" | "systeme">("apercu");
-  const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<"apercu" | "systeme">("apercu");
 
   const { data: complaints = [] } = useQuery<Complaint[]>({ queryKey: ["complaints"], queryFn: getComplaints });
   const { data: reports    = [] } = useQuery<Report[]>   ({ queryKey: ["reports"],    queryFn: getReports    });
@@ -121,13 +120,6 @@ export default function AdminITDashboard() {
 
   const weeklyData = buildWeeklyData(complaints);
   const recent5    = complaints.slice(0, 5);
-
-  const filteredComplaints = search
-    ? complaints.filter(c =>
-        (c.ID_Exam ?? "").toLowerCase().includes(search.toLowerCase()) ||
-        (c.message ?? "").toLowerCase().includes(search.toLowerCase())
-      )
-    : complaints;
 
   /* ── services status ── */
   const services = [
@@ -149,9 +141,8 @@ export default function AdminITDashboard() {
 
       {/* ══ Tabs bar ═══════════════════════════════════════════════════════ */}
       <div className="flex items-center gap-0 border-b border-border -mx-6 px-2 bg-card">
-        <Tab active={tab === "apercu"}       onClick={() => setTab("apercu")}       icon={LayoutGrid}  label="Aperçu"       />
-        <Tab active={tab === "reclamations"} onClick={() => setTab("reclamations")} icon={MessageSquare} label="Réclamations" count={total} />
-        <Tab active={tab === "systeme"}      onClick={() => setTab("systeme")}      icon={Server}      label="Système"      />
+        <Tab active={tab === "apercu"}  onClick={() => setTab("apercu")}  icon={LayoutGrid} label="Aperçu"  />
+        <Tab active={tab === "systeme"} onClick={() => setTab("systeme")} icon={Server}     label="Système" />
       </div>
 
       {/* ══ Content ════════════════════════════════════════════════════════ */}
@@ -213,7 +204,7 @@ export default function AdminITDashboard() {
               <div className="lg:col-span-2 bg-card border border-border rounded-xl">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                   <span className="text-sm font-medium text-foreground">Réclamations récentes</span>
-                  <button onClick={() => setTab("reclamations")} className="text-xs text-teal-600 hover:underline">Voir tout →</button>
+                  <button onClick={() => navigate("/adminit/reclamations")} className="text-xs text-teal-600 hover:underline">Voir tout →</button>
                 </div>
                 {recent5.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
@@ -243,7 +234,7 @@ export default function AdminITDashboard() {
                   <span className="text-sm font-medium text-foreground">Actions rapides</span>
                 </div>
                 <div className="p-4 flex flex-col gap-2">
-                  <button onClick={() => setTab("reclamations")}
+                  <button onClick={() => navigate("/adminit/reclamations")}
                     className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-sm text-foreground transition-colors text-left">
                     <MessageSquare size={14} className="text-teal-600" />
                     Gérer les réclamations →
@@ -274,85 +265,6 @@ export default function AdminITDashboard() {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── Réclamations ───────────────────────────────────────────────── */}
-        {tab === "reclamations" && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm font-semibold text-foreground">Gestion des réclamations</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{total} réclamations reçues sur la plateforme</p>
-              </div>
-            </div>
-
-            {/* 3 mini stats */}
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              {[
-                { label: "En attente", value: pending,    color: "text-amber-600"   },
-                { label: "En cours",   value: inProgress, color: "text-purple-600"  },
-                { label: "Traitées",   value: resolved,   color: "text-teal-600"    },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="bg-muted/50 border border-border rounded-xl py-3 px-4 text-center">
-                  <p className={cn("text-2xl font-semibold tracking-tight leading-none", color)}>{value}</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-1.5">{label}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Search */}
-            <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2 mb-4 bg-card">
-              <Search size={13} className="text-muted-foreground shrink-0" />
-              <input value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Rechercher par ID ou message..."
-                className="flex-1 text-xs bg-transparent text-foreground placeholder:text-muted-foreground outline-none" />
-            </div>
-
-            {/* Table */}
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
-              <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
-                <colgroup>
-                  <col style={{ width: "20%" }} /><col style={{ width: "35%" }} />
-                  <col style={{ width: "15%" }} /><col style={{ width: "15%" }} /><col style={{ width: "15%" }} />
-                </colgroup>
-                <thead>
-                  <tr className="bg-muted/50 border-b border-border">
-                    {["ID Examen", "Message", "Statut", "Date", "Action"].map(h => (
-                      <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {filteredComplaints.length === 0 && (
-                    <tr><td colSpan={5} className="px-4 py-12 text-center text-xs text-muted-foreground">
-                      <MessageSquare size={20} className="opacity-25 mb-2 mx-auto" />
-                      Aucune réclamation trouvée
-                    </td></tr>
-                  )}
-                  {filteredComplaints.map((c, i) => (
-                    <tr key={i} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs font-medium text-foreground">{c.ID_Exam ?? "—"}</td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground truncate">{c.message ?? "Sans message"}</td>
-                      <td className="px-4 py-3">
-                        <span className={cn("text-[10px] px-2 py-0.5 rounded font-semibold", COMPLAINT_CLS[c.status] ?? "bg-muted text-muted-foreground")}>
-                          {COMPLAINT_LABEL[c.status] ?? c.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground">
-                        {c.createdAt ? new Date(c.createdAt).toLocaleDateString("fr-FR") : "—"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <button onClick={() => navigate(`/adminit/reclamations`)}
-                          className="flex items-center gap-1 text-xs text-teal-600 hover:text-teal-700 font-medium transition-colors">
-                          <Eye size={12} /> Traiter
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </div>
         )}

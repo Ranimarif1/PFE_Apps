@@ -2,12 +2,12 @@ import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getUsers, updateUserStatus, deleteUser, type BackendUserRecord } from "@/services/usersService";
+import { getUsers, updateUserStatus, deleteUser, changeUserRole, type BackendUserRecord } from "@/services/usersService";
 import { getReports, type Report } from "@/services/reportsService";
 import { getComplaints } from "@/services/complaintsService";
 import {
   Users, Clock, FileText, AlertTriangle, Check, X, Trash2,
-  Search, Eye, Plus, LayoutGrid, Activity, MessageSquare,
+  Search, Eye, Plus, LayoutGrid, Activity, MessageSquare, UserRoundCheck, Download,
 } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -123,6 +123,7 @@ export default function AdminDashboard() {
   const [userFilter,    setUserFilter]    = useState<"all" | "validated" | "pending" | "refused">("all");
   const [search,        setSearch]        = useState("");
   const [confirmDelete, setConfirmDelete] = useState<BackendUserRecord | null>(null);
+  const [confirmPromote, setConfirmPromote] = useState<BackendUserRecord | null>(null);
 
   /* ── data ── */
   const { data: users      = [] } = useQuery<BackendUserRecord[]>({ queryKey: ["users"],      queryFn: getUsers      });
@@ -151,6 +152,10 @@ export default function AdminDashboard() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteUser(id),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["users"] }); setConfirmDelete(null); },
+  });
+  const promoteMutation = useMutation({
+    mutationFn: (id: string) => changeUserRole(id, "admin"),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["users"] }); setConfirmPromote(null); },
   });
 
   /* ── filtered doctors ── */
@@ -455,6 +460,12 @@ export default function AdminDashboard() {
                               </button>
                             </>
                           )}
+                          {doc.status === "validated" && (
+                            <button onClick={() => setConfirmPromote(doc)} title="Promouvoir en admin"
+                              className="w-6 h-6 rounded-md border border-border bg-muted hover:bg-primary/10 hover:border-primary/30 hover:text-primary flex items-center justify-center transition-colors">
+                              <UserRoundCheck size={11} />
+                            </button>
+                          )}
                           <button onClick={() => setConfirmDelete(doc)} title="Supprimer"
                             className="w-6 h-6 rounded-md border border-border bg-muted hover:bg-red-100 hover:border-red-300 hover:text-red-700 flex items-center justify-center transition-colors">
                             <Trash2 size={11} />
@@ -496,25 +507,46 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                 <span className="text-sm font-medium text-foreground">Tous les rapports</span>
                 <div className="flex gap-2">
-                  <button className="text-xs px-2.5 py-1 border border-border bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors">Filtrer</button>
-                  <button className="text-xs px-2.5 py-1 border border-border bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors">Exporter</button>
+                  <button
+                    onClick={() => {
+                      const header = ["ID Examen", "Médecin", "Date"];
+                      const rows = reports.map(r => [
+                        r.ID_Exam,
+                        r.doctorName || "",
+                        new Date(r.createdAt).toLocaleDateString("fr-FR"),
+                      ]);
+                      const csv = [header, ...rows]
+                        .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";"))
+                        .join("\n");
+                      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `rapports_${new Date().toISOString().slice(0, 10)}.csv`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="flex items-center gap-1.5 text-xs px-2.5 py-1 border border-border bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Download size={11} /> Exporter
+                  </button>
                 </div>
               </div>
               <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
                 <colgroup>
-                  <col style={{ width: "22%" }} /><col style={{ width: "22%" }} /><col style={{ width: "20%" }} />
-                  <col style={{ width: "14%" }} /><col style={{ width: "12%" }} /><col style={{ width: "10%" }} />
+                  <col style={{ width: "28%" }} /><col style={{ width: "34%" }} />
+                  <col style={{ width: "24%" }} /><col style={{ width: "14%" }} />
                 </colgroup>
                 <thead>
                   <tr className="bg-muted/50 border-b border-border">
-                    {["ID Examen", "Médecin", "Date", "Statut", "Score IA", "Action"].map(h => (
+                    {["ID Examen", "Médecin", "Date", "Action"].map(h => (
                       <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {reports.length === 0 && (
-                    <tr><td colSpan={6} className="px-4 py-12 text-center text-xs text-muted-foreground">
+                    <tr><td colSpan={4} className="px-4 py-12 text-center text-xs text-muted-foreground">
                       <FileText size={20} className="opacity-25 mb-2 mx-auto" />
                       Aucun rapport pour l'instant
                     </td></tr>
@@ -522,14 +554,8 @@ export default function AdminDashboard() {
                   {reports.map(r => (
                     <tr key={r._id} className="hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3 font-mono text-xs font-medium text-foreground">{r.ID_Exam}</td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground">—</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{r.doctorName || "—"}</td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(r.createdAt).toLocaleDateString("fr-FR")}</td>
-                      <td className="px-4 py-3">
-                        <span className={cn("text-[10px] px-2 py-0.5 rounded font-semibold", rptCls(r.status))}>
-                          {rptLabel(r.status)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground">—</td>
                       <td className="px-4 py-3">
                         <button onClick={() => navigate(`/rapport/${r._id}`)}
                           className="flex items-center gap-1 text-xs text-teal-600 hover:text-teal-700 font-medium transition-colors">
@@ -576,6 +602,39 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {/* ══ Promote modal ═══════════════════════════════════════════════════ */}
+      {confirmPromote && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-card rounded-2xl border border-border shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+                <UserRoundCheck className="w-5 h-5 text-primary" />
+              </div>
+              <h2 className="text-lg font-semibold text-foreground">Promouvoir en administrateur</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-2">Vous êtes sur le point de changer le rôle de :</p>
+            <p className="text-sm font-semibold text-foreground mb-1">Dr. {confirmPromote.prenom} {confirmPromote.nom}</p>
+            <p className="text-xs text-muted-foreground mb-4">{confirmPromote.email}</p>
+            <div className="bg-warning/10 border border-warning/30 rounded-xl px-4 py-3 mb-5">
+              <p className="text-xs text-warning font-medium">
+                ⚠️ Cette action est irréversible. Le compte passera du rôle <strong>Médecin</strong> au rôle <strong>Admin</strong> et obtiendra tous les accès administrateur.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmPromote(null)}
+                className="flex-1 py-2.5 rounded-xl border border-border text-foreground hover:bg-muted transition-all text-sm font-medium">
+                Annuler
+              </button>
+              <button onClick={() => promoteMutation.mutate(confirmPromote._id)}
+                disabled={promoteMutation.isPending}
+                className="flex-1 py-2.5 rounded-xl gradient-hero text-white font-semibold hover:opacity-90 disabled:opacity-60 transition-all text-sm">
+                {promoteMutation.isPending ? "Modification..." : "Confirmer le changement"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══ Delete modal ════════════════════════════════════════════════════ */}
       {confirmDelete && (

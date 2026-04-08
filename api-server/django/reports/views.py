@@ -80,9 +80,17 @@ def list_or_create_reports(request: HttpRequest) -> JsonResponse:
     user: CurrentUser = request.user  # type: ignore[assignment]
 
     if request.method == "GET":
-        query: Dict[str, Any] = {}
         if user.role == "doctor":
-            query["doctorId"] = user.id
+            # Doctors see all their own reports
+            query: Dict[str, Any] = {"doctorId": user.id}
+        else:
+            # Admins see: all their own reports + only "saved" reports from others
+            query = {
+                "$or": [
+                    {"doctorId": user.id},
+                    {"doctorId": {"$ne": user.id}, "status": "saved"},
+                ]
+            }
 
         docs: List[Dict[str, Any]] = list(reports_col.find(query).sort("createdAt", -1))
         serialized = [serialize_document(d) for d in docs]

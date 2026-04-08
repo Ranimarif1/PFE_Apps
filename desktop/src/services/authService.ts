@@ -73,6 +73,14 @@ export async function getMeApi(): Promise<User> {
   return mapUser(raw);
 }
 
+export async function forgotPasswordApi(email: string): Promise<void> {
+  await api.post("/api/auth/forgot-password", { email });
+}
+
+export async function resetPasswordApi(token: string, password: string): Promise<void> {
+  await api.post("/api/auth/reset-password", { token, password });
+}
+
 export async function updateProfileApi(payload: {
   nom?: string;
   prenom?: string;

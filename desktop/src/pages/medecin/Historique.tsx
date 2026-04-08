@@ -4,7 +4,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { getReports, type Report } from "@/services/reportsService";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { Eye } from "lucide-react";
+import { Eye, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -26,6 +26,7 @@ export default function Historique() {
 
   const [filterStatut, setFilterStatut] = useState("tous");
   const [filterDate, setFilterDate] = useState("");
+  const [searchId, setSearchId] = useState("");
   const [viewMode, setViewMode] = useState<"all" | "mine">(isAdmin ? "all" : "mine");
 
   const { data: reports = [] } = useQuery<Report[]>({
@@ -43,6 +44,7 @@ export default function Historique() {
       const reportDate = new Date(r.createdAt).toISOString().slice(0, 10);
       if (reportDate !== filterDate) return false;
     }
+    if (searchId && !r.ID_Exam.toLowerCase().includes(searchId.toLowerCase())) return false;
     return true;
   });
 
@@ -85,8 +87,20 @@ export default function Historique() {
             ))}
           </div>
 
-          <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
-            className="ml-auto px-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          <div className="ml-auto flex items-center gap-2">
+            <div className="relative">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                value={searchId}
+                onChange={e => setSearchId(e.target.value)}
+                placeholder="Rechercher par ID Exam…"
+                className="pl-8 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 w-52"
+              />
+            </div>
+            <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
+              className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          </div>
         </div>
 
         <div className="overflow-x-auto">

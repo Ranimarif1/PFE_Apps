@@ -14,7 +14,7 @@
   --card-foreground:        220 65% 14%;
   --popover:                0 0% 100%;
   --popover-foreground:     220 65% 14%;
-  --primary:                218 91% 50%;
+  --primary:                214 61% 73%;
   --primary-foreground:     0 0% 100%;
   --secondary:              215 35% 90%;
   --secondary-foreground:   220 50% 20%;
@@ -30,7 +30,7 @@
   --warning-foreground:     0 0% 100%;
   --border:                 215 30% 86%;
   --input:                  215 30% 86%;
-  --ring:                   218 91% 50%;
+  --ring:                   214 61% 73%;
   --radius:                 0.875rem;
 
   /* ── Sidebar dark navy ── */
@@ -44,17 +44,17 @@
   --sidebar-ring:                 169 100% 44%;
 
   /* ── Utility vars ── */
-  --gradient-hero:   linear-gradient(135deg, #0a6ef5, #0ea5e9 60%, #00c9a7);
+  --gradient-hero:   linear-gradient(135deg, #8fb4e4, #a5c5eb 60%, #00c9a7);
   --gradient-card:   linear-gradient(160deg, #ffffff, #f0f5fc);
   --shadow-card:     0 4px 24px rgba(10, 60, 140, 0.08);
   --shadow-elevated: 0 12px 48px rgba(10, 60, 140, 0.14);
 
   /* ── Named color tokens (used in components) ── */
-  --nv-blue:   #0a6ef5;
+  --nv-blue:   #8fb4e4;
   --nv-teal:   #00c9a7;
   --nv-navy:   #0d1f3c;
   --nv-muted:  #6b7fa3;
-  --nv-border: rgba(10, 110, 245, 0.12);
+  --nv-border: rgba(143, 180, 228, 0.20);
 }
 
 /* ── Dark mode — medium dark, not black ── */

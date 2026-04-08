@@ -29,3 +29,8 @@ export async function updateUserStatus(
 export async function deleteUser(userId: string): Promise<void> {
   await api.delete(`/api/auth/users/${userId}`);
 }
+
+export async function changeUserRole(userId: string, role: "doctor" | "admin"): Promise<BackendUserRecord> {
+  const data = await api.put<{ user: BackendUserRecord }>(`/api/auth/users/${userId}/role`, { role });
+  return data.user;
+}
