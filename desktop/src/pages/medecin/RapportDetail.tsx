@@ -46,19 +46,30 @@ function AutoTextarea({ value, onChange, className }: { value: string; onChange:
 
 /* ── Content parser / builder ── */
 function parseReport(text: string) {
-  const lower = text.toLowerCase();
-  const iIdx = lower.indexOf("indication:");
-  const rIdx = lower.indexOf("resultat:");
-  const cIdx = lower.indexOf("conclusion:");
-  const extract = (start: number, end: number) => {
-    if (start === -1) return "";
-    const colonPos = text.indexOf(":", start) + 1;
-    return text.slice(colonPos, end === -1 ? text.length : end).trim();
+  // Accent-tolerant, colon-optional regex matching
+  const iMatch = /indication\s*:?/i.exec(text);
+  const rMatch = /r[ée]sultat\s*:?/i.exec(text);
+  const cMatch = /conclusion\s*:?/i.exec(text);
+
+  const iIdx = iMatch?.index ?? -1;
+  const rIdx = rMatch?.index ?? -1;
+  const cIdx = cMatch?.index ?? -1;
+
+  // If none of the section keywords are present, put everything in résultat
+  if (iIdx === -1 && rIdx === -1 && cIdx === -1) {
+    return { indication: "", resultat: text.trim(), conclusion: "" };
+  }
+
+  const extract = (match: RegExpExecArray | null, end: number) => {
+    if (!match) return "";
+    const afterKeyword = match.index + match[0].length;
+    return text.slice(afterKeyword, end === -1 ? text.length : end).trim();
   };
+
   return {
-    indication: extract(iIdx, rIdx !== -1 ? rIdx : cIdx),
-    resultat:   extract(rIdx, cIdx),
-    conclusion: extract(cIdx, -1),
+    indication: extract(iMatch, rIdx !== -1 ? rIdx : cIdx),
+    resultat:   extract(rMatch, cIdx),
+    conclusion: extract(cMatch, -1),
   };
 }
 function buildContent(indication: string, resultat: string, conclusion: string) {
