@@ -22,8 +22,8 @@ const médécinNotifications: Notification[] = [
 ];
 
 const adminNotifications: Notification[] = [
-  { id: "1", text: "Nouveau médecin en attente de validation", time: "Il y a 30min", link: "/admin/utilisateurs" },
-  { id: "2", text: "Nouveau médecin en attente de validation", time: "Il y a 1h", link: "/admin/utilisateurs" },
+  { id: "1", text: "Nouveau médecin en attente de validation", time: "Il y a 30min", link: "/admin/dashboard?tab=medecins&filter=pending" },
+  { id: "2", text: "Nouveau médecin en attente de validation", time: "Il y a 1h", link: "/admin/dashboard?tab=medecins&filter=pending" },
 ];
 
 const adminITNotifications: Notification[] = [

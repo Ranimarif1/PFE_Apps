@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getUsers, updateUserStatus, deleteUser, changeUserRole, type BackendUserRecord } from "@/services/usersService";
 import { getReports, type Report } from "@/services/reportsService";
@@ -118,9 +119,14 @@ export default function AdminDashboard() {
   useAuth();
   const navigate    = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [mainTab,       setMainTab]       = useState<"apercu" | "medecins" | "rapports" | "activite">("apercu");
-  const [userFilter,    setUserFilter]    = useState<"all" | "validated" | "pending" | "refused">("all");
+  const mainTab    = (searchParams.get("tab")    as "apercu" | "medecins" | "rapports" | "activite") ?? "apercu";
+  const userFilter = (searchParams.get("filter") as "all" | "validated" | "pending" | "refused")     ?? "all";
+
+  const setMainTab    = (tab: string) => setSearchParams({ tab });
+  const setUserFilter = (filter: string) => setSearchParams({ tab: mainTab, filter });
+
   const [search,        setSearch]        = useState("");
   const [confirmDelete, setConfirmDelete] = useState<BackendUserRecord | null>(null);
   const [confirmPromote, setConfirmPromote] = useState<BackendUserRecord | null>(null);
@@ -510,7 +516,7 @@ export default function AdminDashboard() {
                   <button
                     onClick={() => {
                       const header = ["ID Examen", "Médecin", "Date"];
-                      const rows = reports.map(r => [
+                      const rows = reports.filter(r => r.status === "saved").map(r => [
                         r.ID_Exam,
                         r.doctorName || "",
                         new Date(r.createdAt).toLocaleDateString("fr-FR"),
@@ -551,7 +557,7 @@ export default function AdminDashboard() {
                       Aucun rapport pour l'instant
                     </td></tr>
                   )}
-                  {reports.map(r => (
+                  {reports.filter(r => r.status === "saved").map(r => (
                     <tr key={r._id} className="hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3 font-mono text-xs font-medium text-foreground">{r.ID_Exam}</td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">{r.doctorName || "—"}</td>

@@ -27,10 +27,21 @@ const TYPE_STYLE: Record<string, { label: string; icon: string; classes: string 
 /* ── Auto-resizing textarea ── */
 function AutoTextarea({ value, onChange, className }: { value: string; onChange: (v: string) => void; className?: string }) {
   const ref = useRef<HTMLTextAreaElement>(null);
-  useLayoutEffect(() => {
-    if (ref.current) { ref.current.style.height = "auto"; ref.current.style.height = ref.current.scrollHeight + "px"; }
-  }, [value]);
-  return <textarea ref={ref} value={value} onChange={e => onChange(e.target.value)} rows={1} className={className} style={{ overflow: "hidden" }} />;
+  const resize = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + "px";
+  };
+  useLayoutEffect(() => resize(ref.current), [value]);
+  return (
+    <textarea
+      ref={el => { (ref as React.MutableRefObject<HTMLTextAreaElement | null>).current = el; resize(el); }}
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      className={className}
+      style={{ overflow: "hidden", resize: "none" }}
+    />
+  );
 }
 
 /* ── Content parser / builder ── */
@@ -291,9 +302,11 @@ export default function RapportDetail() {
                         {loadingSuggestions ? "Analyse..." : "Re-analyser"}
                       </button>
                     )}
-                    <button onClick={handleToggleEdit} className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors">
-                      <Edit3 size={14} /> {editing ? "Lecture" : "Modifier"}
-                    </button>
+                    {(isNew || status === "draft") && (
+                      <button onClick={handleToggleEdit} className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors">
+                        <Edit3 size={14} /> {editing ? "Lecture" : "Modifier"}
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -304,7 +317,7 @@ export default function RapportDetail() {
                     <AutoTextarea value={indication} onChange={setIndication}
                       className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                   ) : (
-                    <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3 min-h-[48px]">{indication || "—"}</p>
+                    <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3">{indication || "—"}</p>
                   )}
                 </div>
 
@@ -315,7 +328,7 @@ export default function RapportDetail() {
                     <AutoTextarea value={resultat} onChange={setResultat}
                       className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                   ) : (
-                    <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3 min-h-[48px]">{resultat || "—"}</p>
+                    <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3">{resultat || "—"}</p>
                   )}
                 </div>
 
@@ -326,7 +339,7 @@ export default function RapportDetail() {
                     <AutoTextarea value={conclusion} onChange={setConclusion}
                       className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                   ) : (
-                    <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3 min-h-[48px]">{conclusion || "—"}</p>
+                    <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3">{conclusion || "—"}</p>
                   )}
                 </div>
               </div>
