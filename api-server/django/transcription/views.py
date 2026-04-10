@@ -5,6 +5,7 @@ import tempfile
 
 import numpy as np
 import torch
+import av
 import librosa
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -130,6 +131,22 @@ def _transcribe(audio: np.ndarray, processor, model, device) -> str:
     return " ".join(parts)
 
 
+# ── Audio loader (handles webm/opus/wav via PyAV) ─────────────────────────────
+def _load_audio(path: str, sample_rate: int) -> np.ndarray:
+    container = av.open(path)
+    resampler = av.AudioResampler(format="fltp", layout="mono", rate=sample_rate)
+    chunks: list[np.ndarray] = []
+    for frame in container.decode(audio=0):
+        for out in resampler.resample(frame):
+            chunks.append(out.to_ndarray()[0])
+    for out in resampler.resample(None):  # flush remaining samples
+        chunks.append(out.to_ndarray()[0])
+    container.close()
+    if not chunks:
+        return np.zeros(sample_rate, dtype=np.float32)
+    return np.concatenate(chunks).astype(np.float32)
+
+
 # ── Django view ────────────────────────────────────────────────────────────────
 
 @csrf_exempt
@@ -147,14 +164,14 @@ def transcribe(request: HttpRequest) -> JsonResponse:
 
     tmp_path: str | None = None
     try:
-        # Write upload to a temp file so librosa can read it
+        # Write upload to a temp file
         with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
             for chunk in audio_file.chunks():
                 tmp.write(chunk)
             tmp_path = tmp.name
 
-        # Load and resample to 16 kHz mono float32
-        audio, _ = librosa.load(tmp_path, sr=SAMPLE_RATE, mono=True)
+        # Load and resample to 16 kHz mono float32 (handles webm/opus via PyAV)
+        audio = _load_audio(tmp_path, SAMPLE_RATE)
 
         processor, model, device = _load_model()
         raw  = _transcribe(audio, processor, model, device)

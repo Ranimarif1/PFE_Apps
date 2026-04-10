@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useLayoutEffect, useRef } from "react
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { getReport, createReport, updateReport } from "@/services/reportsService";
-import { CheckCircle, Edit3, Save, FileText, Sparkles, Check, X, Loader2, ArrowLeft, BookOpen } from "lucide-react";
+import { CheckCircle, Edit3, Save, FileText, Sparkles, Check, X, Loader2, ArrowLeft, BookOpen, Pencil } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { checkText, loadDictionary, isDictionaryReady, getDictionaryCount } from "@/lib/spellChecker";
@@ -91,7 +91,10 @@ export default function RapportDetail() {
   const [indication,  setIndication]  = useState(initialParsed.indication);
   const [resultat,    setResultat]    = useState(initialParsed.resultat);
   const [conclusion,  setConclusion]  = useState(initialParsed.conclusion);
-  const [examId]                      = useState(fromState?.ID_Exam || "—");
+  const [examId,      setExamId]      = useState(fromState?.ID_Exam || "");
+  const [editingId,   setEditingId]   = useState(false);
+  const [examIdInput, setExamIdInput] = useState(fromState?.ID_Exam || "");
+  const [examIdError, setExamIdError] = useState("");
   const [status,      setStatus]      = useState<string>("draft");
   const [createdAt,   setCreatedAt]   = useState<string | null>(null);
 
@@ -288,7 +291,49 @@ export default function RapportDetail() {
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-                <div><p className="text-muted-foreground text-xs mb-0.5">ID Exam</p><p className="font-mono font-bold text-foreground">{examId}</p></div>
+                <div>
+                  <p className="text-muted-foreground text-xs mb-0.5">ID Exam</p>
+                  {(isNew || status === "draft") && editingId ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        autoFocus
+                        value={examIdInput}
+                        onChange={e => {
+                          const v = e.target.value;
+                          setExamIdInput(v);
+                          setExamIdError(/^\d*$/.test(v) ? "" : "Chiffres uniquement");
+                        }}
+                        className="font-mono font-bold text-foreground bg-background border border-border rounded px-1.5 py-0.5 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                      <button
+                        onClick={() => {
+                          if (examIdError) return;
+                          setExamId(examIdInput);
+                          setEditingId(false);
+                        }}
+                        className="text-success hover:text-success/80 transition-colors"
+                        title="Confirmer"
+                      ><Check size={13} /></button>
+                      <button
+                        onClick={() => { setExamIdInput(examId); setExamIdError(""); setEditingId(false); }}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        title="Annuler"
+                      ><X size={13} /></button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 group">
+                      <p className="font-mono font-bold text-foreground">{examId || "—"}</p>
+                      {(isNew || status === "draft") && (
+                        <button
+                          onClick={() => { setExamIdInput(examId); setExamIdError(""); setEditingId(true); }}
+                          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-all"
+                          title="Modifier l'ID Exam"
+                        ><Pencil size={11} /></button>
+                      )}
+                    </div>
+                  )}
+                  {examIdError && <p className="text-destructive text-[10px] mt-0.5">{examIdError}</p>}
+                </div>
                 <div><p className="text-muted-foreground text-xs mb-0.5">Médecin</p><p className="font-medium text-foreground">Dr. {user?.prénom} {user?.nom}</p></div>
                 <div><p className="text-muted-foreground text-xs mb-0.5">Date</p><p className="font-medium text-foreground">{createdAt ? new Date(createdAt).toLocaleDateString("fr-FR") : new Date().toLocaleDateString("fr-FR")}</p></div>
                 <div><p className="text-muted-foreground text-xs mb-0.5">Heure</p><p className="font-medium text-foreground">{createdAt ? new Date(createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</p></div>
