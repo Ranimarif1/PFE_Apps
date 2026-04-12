@@ -6,6 +6,7 @@ export interface Report {
   ID_Exam: string;
   content: string;
   status: "draft" | "validated" | "saved";
+  audioId?: string;
   createdAt: string;
   updatedAt: string;
   doctorName?: string;
@@ -25,8 +26,13 @@ export async function createReport(payload: {
   ID_Exam: string;
   content: string;
   status?: "draft" | "validated" | "saved";
+  audioId?: string;
 }): Promise<Report> {
   return api.post<Report>("/api/reports/", payload);
+}
+
+export async function checkExamId(id: string): Promise<{ available: boolean }> {
+  return api.get<{ available: boolean }>(`/api/reports/check-exam-id/?id=${encodeURIComponent(id)}`);
 }
 
 export async function updateReport(

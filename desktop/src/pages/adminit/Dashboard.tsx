@@ -2,10 +2,12 @@ import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { getComplaints, type Complaint } from "@/services/complaintsService";
 import { getReports, type Report } from "@/services/reportsService";
+import { getTrainingData, type TrainingEntry } from "@/services/audioService";
 import { useQuery } from "@tanstack/react-query";
 import {
-  MessageSquare, Clock, CheckCircle, Brain,
-  LayoutGrid, Activity, Server, Eye, Search,
+  MessageSquare, Clock, CheckCircle,
+  LayoutGrid, Activity, Server,
+  Database, FileAudio, FileText,
 } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -13,6 +15,9 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+
+const fmtDuration = (s: number) =>
+  `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 
 /* ─── helpers ─────────────────────────────────────────────────────────────── */
 const COMPLAINT_LABEL: Record<string, string> = {
@@ -109,8 +114,9 @@ export default function AdminITDashboard() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<"apercu" | "systeme">("apercu");
 
-  const { data: complaints = [] } = useQuery<Complaint[]>({ queryKey: ["complaints"], queryFn: getComplaints });
-  const { data: reports    = [] } = useQuery<Report[]>   ({ queryKey: ["reports"],    queryFn: getReports    });
+  const { data: complaints = [] } = useQuery<Complaint[]>   ({ queryKey: ["complaints"], queryFn: getComplaints   });
+  const { data: reports    = [] } = useQuery<Report[]>      ({ queryKey: ["reports"],    queryFn: getReports      });
+  const { data: training   = [] } = useQuery<TrainingEntry[]>({ queryKey: ["training"],  queryFn: getTrainingData });
 
   /* ── computed ── */
   const total      = complaints.length;
@@ -118,8 +124,13 @@ export default function AdminITDashboard() {
   const inProgress = complaints.filter(c => c.status === "in_progress").length;
   const resolved   = complaints.filter(c => c.status === "resolved").length;
 
-  const weeklyData = buildWeeklyData(complaints);
-  const recent5    = complaints.slice(0, 5);
+  const weeklyData        = buildWeeklyData(complaints);
+  const recent5           = complaints.slice(0, 5);
+
+  /* ── training stats ── */
+  const trainingTotal     = training.length;
+  const trainingValidated = training.filter(e => e.status !== "draft").length;
+  const trainingDuration  = fmtDuration(training.reduce((s, e) => s + (e.duration || 0), 0));
 
   /* ── services status ── */
   const services = [
@@ -198,7 +209,46 @@ export default function AdminITDashboard() {
               </div>
             </div>
 
-            {/* Row 2: recent complaints + actions + services */}
+            {/* Row 2: training dataset stats */}
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                <span className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Database size={14} className="text-primary" /> Dataset d'entraînement
+                </span>
+                <button onClick={() => navigate("/adminit/training")} className="text-xs text-teal-600 hover:underline">Voir tout →</button>
+              </div>
+              <div className="grid grid-cols-3 divide-x divide-border">
+                <div className="px-5 py-4 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                    <Database size={15} />
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-foreground">{trainingTotal}</p>
+                    <p className="text-[11px] text-muted-foreground">Paires Audio|Texte</p>
+                  </div>
+                </div>
+                <div className="px-5 py-4 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center text-success shrink-0">
+                    <FileAudio size={15} />
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-foreground">{trainingValidated}</p>
+                    <p className="text-[11px] text-muted-foreground">Validés / Enregistrés</p>
+                  </div>
+                </div>
+                <div className="px-5 py-4 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
+                    <FileText size={15} />
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-foreground">{trainingDuration}</p>
+                    <p className="text-[11px] text-muted-foreground">Durée totale</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Row 3: recent complaints + actions + services */}
             <div className="grid lg:grid-cols-3 gap-4">
               {/* Réclamations récentes */}
               <div className="lg:col-span-2 bg-card border border-border rounded-xl">
@@ -244,10 +294,10 @@ export default function AdminITDashboard() {
                     <CheckCircle size={14} className="text-blue-600" />
                     Comptes administrateurs →
                   </button>
-                  <button onClick={() => navigate("/adminit/export")}
+                  <button onClick={() => navigate("/adminit/training")}
                     className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-sm text-foreground transition-colors text-left">
-                    <Activity size={14} className="text-purple-600" />
-                    Exporter les données →
+                    <Database size={14} className="text-primary" />
+                    Données d'entraînement →
                   </button>
                 </div>
 
@@ -321,15 +371,16 @@ export default function AdminITDashboard() {
               </div>
 
               <div className="bg-card border border-border rounded-xl">
-                <div className="px-4 py-3 border-b border-border">
-                  <span className="text-sm font-medium text-foreground">Transcriptions</span>
+                <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+                  <Database size={13} className="text-primary" />
+                  <span className="text-sm font-medium text-foreground">Dataset d'entraînement</span>
                 </div>
                 <div className="divide-y divide-border">
                   {[
-                    { label: "Total transcriptions", value: reports.length },
-                    { label: "Réclamations reçues",  value: total          },
-                    { label: "Taux de résolution",   value: total > 0 ? `${Math.round((resolved/total)*100)}%` : "—" },
-                    { label: "En attente traitement",value: pending        },
+                    { label: "Paires Audio|Texte",   value: trainingTotal     },
+                    { label: "Validés / Enregistrés", value: trainingValidated },
+                    { label: "Durée totale audio",    value: trainingDuration  },
+                    { label: "Total rapports",        value: reports.length    },
                   ].map(({ label, value }) => (
                     <div key={label} className="flex items-center justify-between px-4 py-3">
                       <span className="text-xs text-muted-foreground">{label}</span>

@@ -6,10 +6,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Mic, Upload, Smartphone, QrCode, CheckCircle, Loader2,
   Play, Pause, Square, ArrowLeft, Wifi, WifiOff, RefreshCw,
-  LayoutDashboard,
+  LayoutDashboard, CloudUpload,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useRecording } from "@/contexts/RecordingContext";
+import { checkExamId } from "@/services/reportsService";
 
 type Etape  = 1 | 2 | 3;
 type Méthode = "navigateur" | "import" | "smartphone" | null;
@@ -56,6 +57,23 @@ export default function NouveauRapport() {
   const [etape,   setEtape]   = useState<Etape>(restore?._restore?.etape ?? 1);
   const [examId,  setExamId]  = useState(restore?._restore?.examId ?? "");
   const [méthode, setMéthode] = useState<Méthode>(restore?._restore?.méthode ?? null);
+
+  // Step 1: async exam-id availability check
+  const [idChecking,  setIdChecking]  = useState(false);
+  const [idAvailable, setIdAvailable] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    setIdAvailable(null);
+    if (!isValidExamId(examId)) return;
+    setIdChecking(true);
+    const t = setTimeout(() => {
+      checkExamId(examId)
+        .then(r => setIdAvailable(r.available))
+        .catch(() => setIdAvailable(null))
+        .finally(() => setIdChecking(false));
+    }, 500);
+    return () => clearTimeout(t);
+  }, [examId]);
 
   // Smartphone UI only: session loading/error + QR expiry countdown
   const [sessionLoading, setSessionLoading] = useState(false);
@@ -179,10 +197,21 @@ export default function NouveauRapport() {
                   {examId.length > 0 && examIdError(examId) && (
                     <p className="text-destructive text-xs mt-1">{examIdError(examId)}</p>
                   )}
+                  {isValidExamId(examId) && (
+                    <p className={cn("text-xs mt-1 flex items-center gap-1", idChecking ? "text-muted-foreground" : idAvailable === true ? "text-success" : idAvailable === false ? "text-destructive" : "text-muted-foreground")}>
+                      {idChecking ? (
+                        <><Loader2 size={11} className="animate-spin" /> Vérification…</>
+                      ) : idAvailable === true ? (
+                        <><CheckCircle size={11} /> Identifiant disponible</>
+                      ) : idAvailable === false ? (
+                        <>✗ Cet identifiant est déjà utilisé</>
+                      ) : null}
+                    </p>
+                  )}
                 </div>
                 <button
-                  onClick={() => isValidExamId(examId) && setEtape(2)}
-                  disabled={!isValidExamId(examId)}
+                  onClick={() => isValidExamId(examId) && idAvailable === true && setEtape(2)}
+                  disabled={!isValidExamId(examId) || idChecking || idAvailable !== true}
                   className="w-full gradient-hero text-white font-semibold py-3 rounded-xl hover:opacity-90 disabled:opacity-40 transition-all"
                 >
                   Continuer →
@@ -233,80 +262,83 @@ export default function NouveauRapport() {
 
               {/* ── NAVIGATEUR ── */}
               {méthode === "navigateur" && (
-                <div className="bg-card rounded-2xl border border-border shadow-card p-8 text-center">
-                  <h2 className="text-xl font-bold text-foreground mb-6">Enregistrement depuis le navigateur</h2>
+                <div className="space-y-4">
+                  <div className="bg-card rounded-2xl border border-border shadow-card p-8 text-center">
+                    <h2 className="text-xl font-bold text-foreground mb-6">Enregistrement depuis le navigateur</h2>
 
-                  {/* Transcribing (background) */}
-                  {recording.isTranscribing ? (
-                    <div className="space-y-4">
-                      <Loader2 className="animate-spin w-12 h-12 text-primary mx-auto" />
-                      <p className="text-primary font-medium">Transcription en cours par le modèle IA…</p>
-                    </div>
-
-                  ) : recording.error ? (
-                    <div className="space-y-4">
-                      <p className="text-destructive text-sm">{recording.error}</p>
-                      <button
-                        onClick={() => { recording.clearError(); }}
-                        className="mx-auto flex items-center gap-2 gradient-hero text-white font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all text-sm"
-                      >
-                        Réessayer
-                      </button>
-                    </div>
-
-                  ) : recording.isRecording || recording.isPaused ? (
-                    /* Recording in progress — user can stay or navigate away */
-                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="space-y-6">
-                      <div className={cn(
-                        "w-24 h-24 rounded-full mx-auto flex items-center justify-center transition-all",
-                        recording.isPaused ? "bg-amber-500" : "gradient-hero animate-pulse-ring"
-                      )}>
-                        <Mic className="w-10 h-10 text-white" />
+                    {recording.isTranscribing ? (
+                      <div className="space-y-4">
+                        <Loader2 className="animate-spin w-12 h-12 text-primary mx-auto" />
+                        <p className="text-primary font-medium">Transcription en cours par le modèle IA…</p>
                       </div>
-                      <p className="font-mono text-3xl font-bold text-foreground">{fmt(recording.seconds)}</p>
-                      <p className="text-muted-foreground text-sm">
-                        {recording.isPaused ? "Enregistrement en pause" : "Enregistrement en cours…"}
-                      </p>
-                      <p className="text-xs text-muted-foreground/60">
-                        Vous pouvez naviguer librement — l'enregistrement continue en arrière-plan.
-                      </p>
-                      <div className="flex items-center justify-center gap-3">
-                        <button onClick={recording.togglePause}
-                          className={cn(
-                            "flex items-center gap-2 font-semibold px-5 py-2.5 rounded-xl transition-all text-sm",
-                            recording.isPaused
-                              ? "gradient-hero text-white hover:opacity-90"
-                              : "bg-amber-500 hover:bg-amber-600 text-white"
-                          )}>
-                          {recording.isPaused ? <><Play size={15} /> Reprendre</> : <><Pause size={15} /> Pause</>}
-                        </button>
-                        <button onClick={recording.stopRecording}
-                          className="flex items-center gap-2 bg-destructive hover:bg-destructive/90 text-white font-semibold px-5 py-2.5 rounded-xl transition-all text-sm">
-                          <Square size={15} /> Arrêter
+
+                    ) : recording.error ? (
+                      <div className="space-y-4">
+                        <p className="text-destructive text-sm">{recording.error}</p>
+                        <button onClick={() => recording.clearError()}
+                          className="mx-auto flex items-center gap-2 gradient-hero text-white font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all text-sm">
+                          Réessayer
                         </button>
                       </div>
-                      <button
-                        onClick={() => navigate("/dashboard")}
-                        className="flex items-center gap-1.5 mx-auto text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <LayoutDashboard size={12} /> Aller au tableau de bord
-                      </button>
+
+                    ) : recording.isRecording || recording.isPaused ? (
+                      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="space-y-6">
+                        <div className={cn("w-24 h-24 rounded-full mx-auto flex items-center justify-center transition-all",
+                          recording.isPaused ? "bg-amber-500" : "gradient-hero animate-pulse-ring")}>
+                          <Mic className="w-10 h-10 text-white" />
+                        </div>
+                        <p className="font-mono text-3xl font-bold text-foreground">{fmt(recording.seconds)}</p>
+                        <p className="text-muted-foreground text-sm">
+                          {recording.isPaused ? "Enregistrement en pause" : "Enregistrement en cours…"}
+                        </p>
+                        <p className="text-xs text-muted-foreground/60">Vous pouvez naviguer librement — l'enregistrement continue en arrière-plan.</p>
+                        <div className="flex items-center justify-center gap-3">
+                          <button onClick={recording.togglePause}
+                            className={cn("flex items-center gap-2 font-semibold px-5 py-2.5 rounded-xl transition-all text-sm",
+                              recording.isPaused ? "gradient-hero text-white hover:opacity-90" : "bg-amber-500 hover:bg-amber-600 text-white")}>
+                            {recording.isPaused ? <><Play size={15} /> Reprendre</> : <><Pause size={15} /> Pause</>}
+                          </button>
+                          <button onClick={recording.stopRecording}
+                            className="flex items-center gap-2 bg-destructive hover:bg-destructive/90 text-white font-semibold px-5 py-2.5 rounded-xl transition-all text-sm">
+                            <Square size={15} /> Arrêter
+                          </button>
+                        </div>
+                        <button onClick={() => navigate("/dashboard")}
+                          className="flex items-center gap-1.5 mx-auto text-xs text-muted-foreground hover:text-foreground transition-colors">
+                          <LayoutDashboard size={12} /> Aller au tableau de bord
+                        </button>
+                      </motion.div>
+
+                    ) : recording.audioUploading ? (
+                      <div className="space-y-4">
+                        <CloudUpload className="w-12 h-12 text-primary mx-auto animate-bounce" />
+                        <p className="text-primary font-medium">Sauvegarde de l'audio…</p>
+                      </div>
+
+                    ) : (
+                      <div className="space-y-6">
+                        <div className="w-24 h-24 rounded-full mx-auto flex items-center justify-center bg-muted">
+                          <Mic className="w-10 h-10 text-muted-foreground" />
+                        </div>
+                        <p className="text-muted-foreground text-sm">Prêt à enregistrer</p>
+                        <button onClick={() => recording.startMicRecording(examId)}
+                          className="flex items-center gap-2 mx-auto gradient-hero text-white font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition-all">
+                          <Play className="w-5 h-5" /> Démarrer l'enregistrement
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Audio sauvegardé — pointer vers la sidebar */}
+                  {!recording.isRecording && !recording.isPaused && !recording.audioUploading && !recording.isTranscribing && recording.savedAudio && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                      className="bg-success/10 border border-success/30 rounded-2xl p-4 flex items-center gap-3">
+                      <CheckCircle size={20} className="text-success shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">Audio sauvegardé</p>
+                        <p className="text-xs text-muted-foreground">Retrouvez-le dans <span className="font-medium text-foreground">Audios en attente</span> dans la barre latérale pour le transcrire.</p>
+                      </div>
                     </motion.div>
-
-                  ) : (
-                    /* Idle — start button */
-                    <div className="space-y-6">
-                      <div className="w-24 h-24 rounded-full mx-auto flex items-center justify-center bg-muted">
-                        <Mic className="w-10 h-10 text-muted-foreground" />
-                      </div>
-                      <p className="text-muted-foreground text-sm">Prêt à enregistrer</p>
-                      <button
-                        onClick={() => recording.startMicRecording(examId)}
-                        className="flex items-center gap-2 mx-auto gradient-hero text-white font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition-all"
-                      >
-                        <Play className="w-5 h-5" /> Démarrer l'enregistrement
-                      </button>
-                    </div>
                   )}
                 </div>
               )}
@@ -336,20 +368,26 @@ export default function NouveauRapport() {
                     </div>
                   )}
 
-                  {/* Audio received → transcribing */}
-                  {(recording.audioReceived || recording.isTranscribing) && !sessionLoading && (
+                  {/* Audio received → uploading / transcribing */}
+                  {recording.audioReceived && !sessionLoading && (
                     <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="space-y-4 py-4">
                       <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto">
                         <CheckCircle className="w-8 h-8 text-success" />
                       </div>
                       <p className="text-success font-semibold">Audio reçu depuis votre smartphone ✅</p>
+                      {recording.audioUploading && (
+                        <div className="flex items-center gap-2 justify-center text-primary">
+                          <CloudUpload className="animate-bounce" size={18} />
+                          <span className="text-sm">Sauvegarde de l'audio…</span>
+                        </div>
+                      )}
                       {recording.isTranscribing && (
                         <div className="flex items-center gap-2 justify-center text-primary">
                           <Loader2 className="animate-spin" size={18} />
                           <span className="text-sm">Transcription en cours par le modèle IA…</span>
                         </div>
                       )}
-                      {recording.error && !recording.isTranscribing && (
+                      {recording.error && !recording.isTranscribing && !recording.audioUploading && (
                         <p className="text-destructive text-sm">{recording.error}</p>
                       )}
                     </motion.div>
@@ -416,43 +454,75 @@ export default function NouveauRapport() {
                       )}
                     </div>
                   )}
+                {/* Audio sauvegardé — smartphone */}
+                {recording.audioReceived && !recording.audioUploading && !recording.isTranscribing && recording.savedAudio && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                    className="mt-4 bg-success/10 border border-success/30 rounded-2xl p-4 flex items-center gap-3">
+                    <CheckCircle size={20} className="text-success shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Audio sauvegardé</p>
+                      <p className="text-xs text-muted-foreground">Retrouvez-le dans <span className="font-medium text-foreground">Audios en attente</span> dans la barre latérale.</p>
+                    </div>
+                  </motion.div>
+                )}
                 </div>
               )}
 
               {/* ── IMPORT ── */}
               {méthode === "import" && (
-                <div className="bg-card rounded-2xl border border-border shadow-card p-8 text-center">
-                  <h2 className="text-xl font-bold text-foreground mb-6">Importer un fichier audio</h2>
-                  {recording.isTranscribing ? (
-                    <div className="space-y-4">
-                      <Loader2 className="animate-spin w-12 h-12 text-primary mx-auto" />
-                      <p className="text-primary font-medium">Transcription en cours par le modèle IA…</p>
-                    </div>
-                  ) : recording.error ? (
-                    <div className="space-y-4">
-                      <p className="text-destructive text-sm">{recording.error}</p>
-                      <button onClick={recording.clearError}
-                        className="mx-auto flex items-center gap-2 gradient-hero text-white font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all text-sm">
-                        Réessayer
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="block cursor-pointer">
-                      <div className="border-2 border-dashed border-primary/40 rounded-2xl p-12 hover:border-primary hover:bg-primary/5 transition-all">
-                        <Upload className="w-12 h-12 text-primary/60 mx-auto mb-4" />
-                        <p className="font-semibold text-foreground mb-1">Cliquez pour importer</p>
-                        <p className="text-sm text-muted-foreground">MP3, WAV, M4A — Max 50 Mo</p>
+                <div className="space-y-4">
+                  <div className="bg-card rounded-2xl border border-border shadow-card p-8 text-center">
+                    <h2 className="text-xl font-bold text-foreground mb-6">Importer un fichier audio</h2>
+                    {recording.isTranscribing ? (
+                      <div className="space-y-4">
+                        <Loader2 className="animate-spin w-12 h-12 text-primary mx-auto" />
+                        <p className="text-primary font-medium">Transcription en cours par le modèle IA…</p>
                       </div>
-                      <input
-                        type="file"
-                        accept=".mp3,.wav,.m4a"
-                        className="hidden"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) recording.transcribeFile(examId, f);
-                        }}
-                      />
-                    </label>
+                    ) : recording.audioUploading ? (
+                      <div className="space-y-4">
+                        <CloudUpload className="w-12 h-12 text-primary mx-auto animate-bounce" />
+                        <p className="text-primary font-medium">Sauvegarde de l'audio…</p>
+                      </div>
+                    ) : recording.error ? (
+                      <div className="space-y-4">
+                        <p className="text-destructive text-sm">{recording.error}</p>
+                        <button onClick={recording.clearError}
+                          className="mx-auto flex items-center gap-2 gradient-hero text-white font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all text-sm">
+                          Réessayer
+                        </button>
+                      </div>
+                    ) : !recording.savedAudio ? (
+                      <label className="block cursor-pointer">
+                        <div className="border-2 border-dashed border-primary/40 rounded-2xl p-12 hover:border-primary hover:bg-primary/5 transition-all">
+                          <Upload className="w-12 h-12 text-primary/60 mx-auto mb-4" />
+                          <p className="font-semibold text-foreground mb-1">Cliquez pour importer</p>
+                          <p className="text-sm text-muted-foreground">MP3, WAV, M4A — Max 50 Mo</p>
+                        </div>
+                        <input type="file" accept=".mp3,.wav,.m4a" className="hidden"
+                          onChange={(e) => { const f = e.target.files?.[0]; if (f) recording.transcribeFile(examId, f); }} />
+                      </label>
+                    ) : (
+                      <div className="space-y-3">
+                        <CheckCircle className="w-12 h-12 text-success mx-auto" />
+                        <p className="text-success font-medium">Fichier sauvegardé</p>
+                        <button onClick={() => recording.clearSavedAudio()}
+                          className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                          Importer un autre fichier
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Audio sauvegardé — import */}
+                  {!recording.audioUploading && !recording.isTranscribing && recording.savedAudio && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                      className="bg-success/10 border border-success/30 rounded-2xl p-4 flex items-center gap-3">
+                      <CheckCircle size={20} className="text-success shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">Audio sauvegardé</p>
+                        <p className="text-xs text-muted-foreground">Retrouvez-le dans <span className="font-medium text-foreground">Audios en attente</span> dans la barre latérale.</p>
+                      </div>
+                    </motion.div>
                   )}
                 </div>
               )}

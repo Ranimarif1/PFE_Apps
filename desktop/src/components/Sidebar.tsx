@@ -3,14 +3,102 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
-  LayoutDashboard, FileText, History, MessageSquare, User,
+  LayoutDashboard, History, MessageSquare, User,
   Users, Download, Brain, LogOut, Sun, Moon,
   ChevronLeft, ChevronRight, TrendingUp,
-  AlertCircle, Plus,
+  AlertCircle, Plus, FileAudio, Sparkles, Loader2, Database,
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RecordingIndicator } from "@/components/RecordingIndicator";
+import { useRecording } from "@/contexts/RecordingContext";
+
+// ── Audio Queue ────────────────────────────────────────────────────────────────
+function AudioQueue({ collapsed }: { collapsed: boolean }) {
+  const recording = useRecording();
+  const { audioQueue, transcribeById, isTranscribing } = recording;
+  const [transcribingId, setTranscribingId] = useState<string | null>(null);
+  const [open, setOpen] = useState(true);
+
+  if (audioQueue.length === 0) return null;
+
+  const handleTranscribe = async (id: string, examId: string) => {
+    setTranscribingId(id);
+    await transcribeById(id, examId);
+    setTranscribingId(null);
+  };
+
+  const fmt = (s: number) =>
+    `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+
+  if (collapsed) {
+    return (
+      <div className="mx-2 mb-2 relative">
+        <div className="w-full flex items-center justify-center p-2 rounded-lg"
+          style={{ background: "rgba(76,201,192,0.08)" }}
+          title={`${audioQueue.length} audio(s) en attente`}>
+          <FileAudio size={15} style={{ color: "#4cc9c0" }} />
+          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center"
+            style={{ background: "#4cc9c0", color: "#0d2137" }}>
+            {audioQueue.length}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-2 mb-2 rounded-xl overflow-hidden border" style={{ borderColor: "rgba(76,201,192,0.2)", background: "rgba(76,201,192,0.05)" }}>
+      <button onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left">
+        <FileAudio size={13} style={{ color: "#4cc9c0" }} />
+        <span className="text-[11px] font-bold tracking-wide flex-1" style={{ color: "#4cc9c0" }}>
+          AUDIOS EN ATTENTE
+        </span>
+        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+          style={{ background: "rgba(76,201,192,0.2)", color: "#4cc9c0" }}>
+          {audioQueue.length}
+        </span>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }}
+            className="overflow-hidden">
+            <div className="px-2 pb-2 space-y-1.5 max-h-48 overflow-y-auto scrollbar-thin">
+              {audioQueue.map(audio => {
+                const busy = transcribingId === audio._id || isTranscribing;
+                return (
+                  <div key={audio._id} className="rounded-lg p-2 flex items-center gap-2"
+                    style={{ background: "rgba(255,255,255,0.04)" }}>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-mono font-semibold truncate" style={{ color: "rgba(255,255,255,0.8)" }}>
+                        {audio.examId}
+                      </p>
+                      <p className="text-[9px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+                        {audio.duration > 0 ? fmt(audio.duration) : "—"} · {new Date(audio.createdAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleTranscribe(audio._id, audio.examId)}
+                      disabled={!!busy}
+                      className="shrink-0 flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-md disabled:opacity-40 transition-all"
+                      style={{ background: "rgba(76,201,192,0.15)", color: "#4cc9c0" }}
+                    >
+                      {transcribingId === audio._id
+                        ? <><Loader2 size={10} className="animate-spin" /> …</>
+                        : <><Sparkles size={10} /> Transcrire</>}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type NavItem   = { to: string; icon: React.ElementType; label: string };
@@ -63,9 +151,9 @@ const adminITSections: Section[] = [
   {
     label: "GESTION",
     links: [
-      { to: "/adminit/admins",  icon: Users,    label: "Comptes Admin" },
-      { to: "/adminit/modele",  icon: Brain,    label: "Modèle IA"    },
-      { to: "/adminit/export",  icon: Download, label: "Export CSV"   },
+      { to: "/adminit/admins",    icon: Users,     label: "Comptes Admin"     },
+      { to: "/adminit/modele",    icon: Brain,     label: "Modèle IA"         },
+      { to: "/adminit/training",  icon: Database,  label: "Données entraîn."  },
     ],
   },
 ];
@@ -195,6 +283,9 @@ export function Sidebar() {
           <SectionBlock key={section.label} section={section} collapsed={collapsed} first={i === 0} />
         ))}
       </nav>
+
+      {/* ── Audio queue ── */}
+      <AudioQueue collapsed={collapsed} />
 
       {/* ── Recording indicator ── */}
       <RecordingIndicator collapsed={collapsed} />

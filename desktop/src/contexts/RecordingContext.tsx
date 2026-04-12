@@ -4,43 +4,52 @@ import {
 } from "react";
 import { createSession } from "@/services/sessionService";
 import { transcribeAudio } from "@/services/transcriptionService";
+import { uploadAudio, fetchAudioBlob, getAudios, type AudioRecord } from "@/services/audioService";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:4000";
 
 export type RecMéthode = "navigateur" | "smartphone" | null;
 
 export interface RecordingResult {
-  examId: string;
-  text: string;
+  examId:  string;
+  text:    string;
   méthode: RecMéthode;
+  audioId: string | null;
 }
 
 interface RecordingContextType {
   // State
-  isRecording: boolean;
-  isPaused: boolean;
-  seconds: number;
-  examId: string | null;
-  méthode: RecMéthode;
+  isRecording:    boolean;
+  isPaused:       boolean;
+  seconds:        number;
+  examId:         string | null;
+  méthode:        RecMéthode;
   // Smartphone
-  sessionId: string | null;
-  mobileUrl: string;
+  sessionId:      string | null;
+  mobileUrl:      string;
   mobileConnected: boolean;
   socketConnected: boolean;
-  audioReceived: boolean;
+  audioReceived:  boolean;
+  // After stop — audio saved
+  audioUploading: boolean;
+  savedAudio:     AudioRecord | null;   // just-uploaded audio
+  audioQueue:     AudioRecord[];        // all pending audios (no reportId yet)
   // Transcription
   isTranscribing: boolean;
-  error: string | null;
-  result: RecordingResult | null;
+  error:          string | null;
+  result:         RecordingResult | null;
   // Actions
-  startMicRecording: (examId: string) => Promise<void>;
-  togglePause: () => void;
-  stopRecording: () => void;
+  startMicRecording:      (examId: string) => Promise<void>;
+  togglePause:            () => void;
+  stopRecording:          () => void;
   startSmartphoneSession: (examId: string) => Promise<void>;
-  transcribeFile: (examId: string, file: File) => Promise<void>;
-  cancelRecording: () => void;
-  clearResult: () => void;
-  clearError: () => void;
+  transcribeFile:         (examId: string, file: File) => Promise<void>;
+  transcribeById:         (id: string, examId: string) => Promise<void>; // re-transcribe from server (risk fallback)
+  cancelRecording:        () => void;
+  clearResult:            () => void;
+  clearSavedAudio:        () => void;
+  clearError:             () => void;
+  refreshQueue:           () => void;
 }
 
 const RecordingContext = createContext<RecordingContextType | null>(null);
@@ -56,6 +65,9 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
   const [mobileConnected, setMobileConnected] = useState(false);
   const [socketConnected, setSocketConnected] = useState(false);
   const [audioReceived,   setAudioReceived]   = useState(false);
+  const [audioUploading,  setAudioUploading]  = useState(false);
+  const [savedAudio,      setSavedAudio]      = useState<AudioRecord | null>(null);
+  const [audioQueue,      setAudioQueue]      = useState<AudioRecord[]>([]);
   const [isTranscribing,  setIsTranscribing]  = useState(false);
   const [error,           setError]           = useState<string | null>(null);
   const [result,          setResult]          = useState<RecordingResult | null>(null);
@@ -63,6 +75,9 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef   = useRef<Blob[]>([]);
   const timerRef         = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pendingBlobRef   = useRef<Blob | null>(null);   // kept in memory after stop
+  const pendingEidRef    = useRef<string | null>(null);
+  const pendingMRef      = useRef<RecMéthode>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const socketRef        = useRef<any>(null);
 
@@ -75,7 +90,7 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
   };
 
-  // ── Reset hardware state (keeps result intact) ─────────────────────────────
+  // ── Reset hardware ─────────────────────────────────────────────────────────
   const resetHardware = useCallback(() => {
     stopTimer();
     if (mediaRecorderRef.current) {
@@ -96,27 +111,70 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
     setAudioReceived(false);
   }, []);
 
-  // ── Transcribe ─────────────────────────────────────────────────────────────
-  const doTranscribe = useCallback(async (
-    blob: Blob, eid: string, m: RecMéthode
-  ) => {
-    resetHardware();
+  // ── Load audio queue (risk fallback — pending audios without a report) ──────
+  const refreshQueue = useCallback(() => {
+    getAudios().then(all => setAudioQueue(all.filter(a => !a.reportId))).catch(() => {});
+  }, []);
+
+  useEffect(() => { refreshQueue(); }, [refreshQueue]);
+  useEffect(() => { if (savedAudio) refreshQueue(); }, [savedAudio, refreshQueue]);
+
+  // ── Core transcription ─────────────────────────────────────────────────────
+  const doTranscribe = useCallback(async (blob: Blob, eid: string, m: RecMéthode, aid: string | null) => {
     setIsTranscribing(true);
     setError(null);
     try {
       const text = await transcribeAudio(blob);
-      setResult({ examId: eid, text, méthode: m });
+      setResult({ examId: eid, text, méthode: m, audioId: aid });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur de transcription.");
     } finally {
       setIsTranscribing(false);
     }
-  }, [resetHardware]);
+  }, []);
+
+  // ── Upload then auto-transcribe ────────────────────────────────────────────
+  const doUpload = useCallback(async (blob: Blob, eid: string, m: RecMéthode, duration: number) => {
+    resetHardware();
+    pendingBlobRef.current = blob;
+    pendingEidRef.current  = eid;
+    pendingMRef.current    = m;
+    setAudioUploading(true);
+    setError(null);
+    let savedId: string | null = null;
+    try {
+      const saved = await uploadAudio(eid, blob, duration);
+      setSavedAudio(saved);
+      savedId = saved._id;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur lors de la sauvegarde audio.");
+      setAudioUploading(false);
+      return; // don't transcribe if upload failed
+    }
+    setAudioUploading(false);
+    // Auto-transcribe immediately using in-memory blob
+    await doTranscribe(blob, eid, m, savedId);
+  }, [resetHardware, doTranscribe]);
+
+  // ── Public: re-transcribe a queued audio from server (risk fallback) ───────
+  const transcribeById = useCallback(async (id: string, eid: string) => {
+    setIsTranscribing(true);
+    setError(null);
+    try {
+      const blob = await fetchAudioBlob(id);
+      const text = await transcribeAudio(blob);
+      setResult({ examId: eid, text, méthode: null, audioId: id });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur de transcription.");
+    } finally {
+      setIsTranscribing(false);
+    }
+  }, []);
 
   // ── Browser mic ────────────────────────────────────────────────────────────
   const startMicRecording = async (eid: string) => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream   = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus" : "audio/webm";
       const recorder = new MediaRecorder(stream, { mimeType });
@@ -129,6 +187,7 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
       setSeconds(0);
       setIsRecording(true);
       setIsPaused(false);
+      setSavedAudio(null);
       startTimer();
     } catch {
       setError("Impossible d'accéder au microphone. Vérifiez les permissions.");
@@ -148,10 +207,12 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Stop → upload (no auto-transcribe)
   const stopRecording = () => {
     const recorder = mediaRecorderRef.current;
-    const eid = examId;
-    const m   = méthode;
+    const eid      = examId;
+    const m        = méthode;
+    const dur      = seconds;
     if (!recorder || !eid) return;
     stopTimer();
     setIsRecording(false);
@@ -159,13 +220,17 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
       const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType });
       try { recorder.stream.getTracks().forEach(t => t.stop()); } catch { /* */ }
       mediaRecorderRef.current = null;
-      doTranscribe(blob, eid, m);
+      doUpload(blob, eid, m, dur);
     };
     recorder.stop();
   };
 
   const cancelRecording = useCallback(() => {
     resetHardware();
+    pendingBlobRef.current = null;
+    pendingEidRef.current  = null;
+    pendingMRef.current    = null;
+    setSavedAudio(null);
     setExamId(null);
     setMéthode(null);
     setError(null);
@@ -178,22 +243,18 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
     setMobileUrl(url);
     setExamId(eid);
     setMéthode("smartphone");
+    setSavedAudio(null);
 
     const { io } = await import("socket.io-client");
     const socket = io(SOCKET_URL, {
       reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
-      transports: ["websocket", "polling"],
+      reconnectionDelay:    1000,
+      transports:           ["websocket", "polling"],
     });
     socketRef.current = socket;
 
-    socket.on("connect", () => {
-      setSocketConnected(true);
-      socket.emit("desktop:join", { sessionId: sid });
-    });
-    socket.on("session:status", ({ mobileConnected: mc }: { mobileConnected: boolean }) => {
-      setMobileConnected(mc);
-    });
+    socket.on("connect",       () => { setSocketConnected(true); socket.emit("desktop:join", { sessionId: sid }); });
+    socket.on("session:status", ({ mobileConnected: mc }: { mobileConnected: boolean }) => setMobileConnected(mc));
     socket.on("mobile:connected",    () => setMobileConnected(true));
     socket.on("mobile:disconnected", () => setMobileConnected(false));
     socket.on("recording:start",     () => { setIsRecording(true); startTimer(); });
@@ -203,27 +264,39 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
       setAudioReceived(true);
       socket.disconnect();
       socketRef.current = null;
-      doTranscribe(blob, eid, "smartphone");
+      doUpload(blob, eid, "smartphone", seconds);
     });
-    socket.on("disconnect", () => {
-      setSocketConnected(false);
-      setMobileConnected(false);
-    });
+    socket.on("disconnect", () => { setSocketConnected(false); setMobileConnected(false); });
   };
 
-  // ── Import file ────────────────────────────────────────────────────────────
+  // ── Import file — upload then show list (no auto-transcribe) ───────────────
   const transcribeFile = async (eid: string, file: File) => {
     setExamId(eid);
     setMéthode(null);
-    await doTranscribe(file, eid, null);
+    setSavedAudio(null);
+    const dur = 0;
+    pendingBlobRef.current = file;
+    pendingEidRef.current  = eid;
+    pendingMRef.current    = null;
+    setAudioUploading(true);
+    setError(null);
+    try {
+      const saved = await uploadAudio(eid, file, dur);
+      setSavedAudio(saved);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur lors de la sauvegarde audio.");
+    } finally {
+      setAudioUploading(false);
+    }
   };
 
-  const clearResult = useCallback(() => {
-    setResult(null);
-    setExamId(null);
-    setMéthode(null);
+  const clearResult     = useCallback(() => { setResult(null); setExamId(null); setMéthode(null); }, []);
+  const clearSavedAudio = useCallback(() => {
+    setSavedAudio(null);
+    pendingBlobRef.current = null;
+    pendingEidRef.current  = null;
+    pendingMRef.current    = null;
   }, []);
-
   const clearError = () => setError(null);
 
   useEffect(() => {
@@ -237,10 +310,12 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
     <RecordingContext.Provider value={{
       isRecording, isPaused, seconds, examId, méthode,
       sessionId, mobileUrl, mobileConnected, socketConnected, audioReceived,
+      audioUploading, savedAudio, audioQueue,
       isTranscribing, error, result,
       startMicRecording, togglePause, stopRecording,
       startSmartphoneSession, transcribeFile,
-      cancelRecording, clearResult, clearError,
+      transcribeById,
+      cancelRecording, clearResult, clearSavedAudio, clearError, refreshQueue,
     }}>
       {children}
     </RecordingContext.Provider>

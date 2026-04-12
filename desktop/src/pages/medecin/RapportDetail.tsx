@@ -5,6 +5,7 @@ import { getReport, createReport, updateReport } from "@/services/reportsService
 import { CheckCircle, Edit3, Save, FileText, Sparkles, Check, X, Loader2, ArrowLeft, BookOpen, Pencil } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRecording } from "@/contexts/RecordingContext";
 import { checkText, loadDictionary, isDictionaryReady, getDictionaryCount } from "@/lib/spellChecker";
 import type { Suggestion } from "@/lib/spellChecker";
 
@@ -81,9 +82,10 @@ export default function RapportDetail() {
   const { id }       = useParams();
   const location     = useLocation();
   const navigate     = useNavigate();
-  const { user }     = useAuth();
+  const { user }          = useAuth();
+  const { refreshQueue }  = useRecording();
 
-  const fromState = location.state as { ID_Exam?: string; transcription?: string; _restore?: object } | null;
+  const fromState = location.state as { ID_Exam?: string; transcription?: string; audioId?: string; _restore?: object } | null;
   const isNew     = id === "new";
 
   /* ── Report fields ── */
@@ -127,6 +129,19 @@ export default function RapportDetail() {
         setDictLoading(false);
       });
     }
+  }, []);
+
+  /* ── Auto-save as draft when arriving from transcription ── */
+  useEffect(() => {
+    if (!isNew || !fromState?.transcription) return;
+    createReport({ ID_Exam: examId || "—", content: contenu, status: "draft", audioId: fromState?.audioId })
+      .then(r => {
+        refreshQueue(); // audio now has reportId → remove from sidebar queue
+        navigate(`/rapport/${r._id}`, { replace: true, state: { ...fromState } });
+      })
+      .catch(() => { /* silent — user can still save manually */ });
+  // Only run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ── Load existing report ── */

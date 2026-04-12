@@ -74,6 +74,20 @@ def _append_to_global_csv(report: Dict[str, Any], doctor: Dict[str, Any]) -> Non
 
 @csrf_exempt
 @jwt_required(roles={"doctor", "admin", "adminIT"})
+def check_exam_id(request: HttpRequest) -> JsonResponse:
+    """GET /api/reports/check-exam-id/?id=XXX — returns {"available": true/false}"""
+    if request.method != "GET":
+        return JsonResponse({"detail": "Method not allowed."}, status=405)
+    exam_id = request.GET.get("id", "").strip()
+    if not exam_id:
+        return JsonResponse({"detail": "id param required."}, status=400)
+    reports_col = get_collection("reports")
+    taken = reports_col.find_one({"ID_Exam": exam_id}) is not None
+    return JsonResponse({"available": not taken})
+
+
+@csrf_exempt
+@jwt_required(roles={"doctor", "admin", "adminIT"})
 def list_or_create_reports(request: HttpRequest) -> JsonResponse:
     reports_col = get_collection("reports")
 
@@ -156,17 +170,31 @@ def list_or_create_reports(request: HttpRequest) -> JsonResponse:
         if status not in {"draft", "validated", "saved"}:
             return JsonResponse({"detail": "Invalid status."}, status=400)
 
+        audio_id = data.get("audioId") or None
+
         now = utcnow.isoformat()
         doc = {
             "doctorId": user.id,
             "ID_Exam": exam_id_str,
             "content": content,
             "status": status,
+            "audioId": audio_id,
             "createdAt": now,
             "updatedAt": now,
         }
         inserted = reports_col.insert_one(doc)
         created = reports_col.find_one({"_id": inserted.inserted_id})
+
+        # Link audio → report
+        if audio_id:
+            try:
+                audios_col = get_collection("audios")
+                audios_col.update_one(
+                    {"_id": ObjectId(audio_id)},
+                    {"$set": {"reportId": str(inserted.inserted_id)}}
+                )
+            except Exception:
+                pass
 
         # If report is saved (final archival), push to CSV.
         if created and created.get("status") == "saved":

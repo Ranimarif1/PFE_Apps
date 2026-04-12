@@ -4,7 +4,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { getReports, type Report } from "@/services/reportsService";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { Eye, Search } from "lucide-react";
+import { Eye, Search, FileAudio } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -113,6 +113,7 @@ export default function Historique() {
                 )}
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Statut</th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Audio</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Action</th>
               </tr>
             </thead>
@@ -137,6 +138,11 @@ export default function Historique() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
+                    {r.audioId
+                      ? <span className="flex items-center gap-1 text-xs text-primary"><FileAudio size={13} /> Oui</span>
+                      : <span className="text-xs text-muted-foreground">—</span>}
+                  </td>
+                  <td className="px-6 py-4">
                     <button onClick={() => navigate(`/rapport/${r._id}`)}
                       className="flex items-center gap-1.5 text-primary hover:text-primary/80 text-xs font-medium">
                       <Eye size={13} /> Voir
@@ -146,7 +152,7 @@ export default function Historique() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={showDoctorCol ? 5 : 4} className="px-6 py-10 text-center text-muted-foreground">
+                  <td colSpan={showDoctorCol ? 6 : 5} className="px-6 py-10 text-center text-muted-foreground">
                     Aucun rapport trouvé.
                   </td>
                 </tr>
