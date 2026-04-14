@@ -15,15 +15,23 @@ export async function getUsers(): Promise<BackendUserRecord[]> {
   return data.results;
 }
 
+export interface UpdateStatusResult {
+  user: BackendUserRecord;
+  mail_warning?: string;
+}
+
 export async function updateUserStatus(
   userId: string,
-  status: "pending" | "validated" | "refused"
-): Promise<BackendUserRecord> {
-  const data = await api.put<{ user: BackendUserRecord }>(
+  status: "pending" | "validated" | "refused",
+  reason?: string
+): Promise<UpdateStatusResult> {
+  const body: Record<string, string> = { status };
+  if (reason) body.reason = reason;
+  const data = await api.put<UpdateStatusResult>(
     `/api/auth/users/${userId}/status`,
-    { status }
+    body
   );
-  return data.user;
+  return data;
 }
 
 export async function deleteUser(userId: string): Promise<void> {

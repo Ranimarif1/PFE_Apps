@@ -60,6 +60,36 @@ def register(request: HttpRequest) -> JsonResponse:
     }
     inserted = users_col.insert_one(user_doc)
     created = users_col.find_one({"_id": inserted.inserted_id})
+
+    # ── Notify all admins & adminIT accounts of the new registration ──
+    try:
+        admins = list(users_col.find(
+            {"role": {"$in": ["admin", "adminIT"]}, "status": "validated"},
+            {"email": 1}
+        ))
+        admin_emails = [a["email"] for a in admins if a.get("email")]
+        if admin_emails:
+            full_name = f"{prenom} {nom}".strip() or email
+            send_mail(
+                subject="Nouvelle demande d'inscription — ReportEase",
+                message=(
+                    f"Bonjour,\n\n"
+                    f"Une nouvelle demande d'inscription vient d'être soumise sur ReportEase.\n\n"
+                    f"Nom complet : {full_name}\n"
+                    f"Email       : {email}\n"
+                    f"Rôle        : {role}\n\n"
+                    f"Veuillez vous connecter à la plateforme pour valider ou refuser ce compte :\n"
+                    f"{settings.FRONTEND_URL}/admin/dashboard\n\n"
+                    f"— L'équipe ReportEase\n"
+                    f"CHU Fattouma-Bourguiba de Monastir"
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=admin_emails,
+                fail_silently=True,
+            )
+    except Exception:
+        pass  # Never block registration because of a mail failure
+
     return JsonResponse({"user": serialize_document(created)}, status=201)
 
 
@@ -144,6 +174,8 @@ def update_user_status(request: HttpRequest, user_id: str) -> JsonResponse:
     if new_status not in {"pending", "validated", "refused"}:
         return JsonResponse({"detail": "Invalid status."}, status=400)
 
+    reason = (data.get("reason") or "").strip()
+
     users_col = get_collection("users")
     try:
         oid = ObjectId(user_id)
@@ -155,7 +187,55 @@ def update_user_status(request: HttpRequest, user_id: str) -> JsonResponse:
         return JsonResponse({"detail": "User not found."}, status=404)
 
     updated = users_col.find_one({"_id": oid})
-    return JsonResponse({"user": serialize_document(updated)})
+
+    # ── Send decision email to the user ──
+    mail_error: str | None = None
+    if new_status in {"validated", "refused"}:
+        try:
+            full_name = f"{updated.get('prenom', '')} {updated.get('nom', '')}".strip() or updated["email"]
+            if new_status == "validated":
+                send_mail(
+                    subject="Votre compte ReportEase a été validé ✓",
+                    message=(
+                        f"Bonjour {full_name},\n\n"
+                        f"Votre demande d'inscription sur ReportEase a été examinée et votre compte a été validé.\n\n"
+                        f"Vous pouvez maintenant vous connecter à la plateforme :\n"
+                        f"{settings.FRONTEND_URL}/login\n\n"
+                        f"Bienvenue au service de radiologie du CHU Fattouma-Bourguiba de Monastir.\n\n"
+                        f"— L'équipe ReportEase"
+                    ),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[updated["email"]],
+                    fail_silently=False,
+                )
+            else:
+                reason_section = (
+                    f"\nMotif du refus :\n{reason}\n"
+                    if reason else
+                    "\nAucun motif spécifique n'a été indiqué. Vous pouvez contacter l'administration pour plus d'informations.\n"
+                )
+                send_mail(
+                    subject="Votre demande d'inscription — ReportEase",
+                    message=(
+                        f"Bonjour {full_name},\n\n"
+                        f"Après examen de votre dossier, nous avons le regret de vous informer que votre demande "
+                        f"d'inscription sur ReportEase n'a pas pu être acceptée.\n"
+                        f"{reason_section}\n"
+                        f"Pour toute question, veuillez contacter l'administration du service de radiologie.\n\n"
+                        f"— L'équipe ReportEase\n"
+                        f"CHU Fattouma-Bourguiba de Monastir"
+                    ),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[updated["email"]],
+                    fail_silently=False,
+                )
+        except Exception as exc:
+            mail_error = str(exc)
+
+    response: dict = {"user": serialize_document(updated)}
+    if mail_error:
+        response["mail_warning"] = f"Statut mis à jour, mais l'email n'a pas pu être envoyé : {mail_error}"
+    return JsonResponse(response)
 
 
 @csrf_exempt
