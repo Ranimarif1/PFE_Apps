@@ -218,7 +218,8 @@ export default function RapportDetail() {
     const newStatus = action === "draft" ? "draft" : action === "validate" ? "validated" : "saved";
     try {
       if (isNew) {
-        await createReport({ ID_Exam: examId, content: contenu, status: newStatus });
+        await createReport({ ID_Exam: examId, content: contenu, status: newStatus, audioId: fromState?.audioId });
+        refreshQueue();
       } else if (id) {
         await updateReport(id, { content: contenu, status: newStatus });
       }

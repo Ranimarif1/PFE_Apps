@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { getReports, type Report } from "@/services/reportsService";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { Eye, Search, FileAudio } from "lucide-react";
+import { Eye, Search, FileAudio, ArrowUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -25,7 +25,10 @@ export default function Historique() {
   const isAdmin = user?.rôle === "admin";
 
   const [filterStatut, setFilterStatut] = useState("tous");
-  const [filterDate, setFilterDate] = useState("");
+  const [filterYear, setFilterYear] = useState("");
+  const [filterMonth, setFilterMonth] = useState("");
+  const [filterDay, setFilterDay] = useState("");
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [searchId, setSearchId] = useState("");
   const [viewMode, setViewMode] = useState<"all" | "mine">(isAdmin ? "all" : "mine");
 
@@ -38,15 +41,59 @@ export default function Historique() {
     ? reports.filter(r => r.isOwn)
     : reports;
 
-  const filtered = visibleReports.filter(r => {
-    if (filterStatut !== "tous" && r.status !== filterStatut) return false;
-    if (filterDate) {
-      const reportDate = new Date(r.createdAt).toISOString().slice(0, 10);
-      if (reportDate !== filterDate) return false;
-    }
-    if (searchId && !r.ID_Exam.toLowerCase().includes(searchId.toLowerCase())) return false;
-    return true;
-  });
+  const availableYears = useMemo(() => {
+    const years = new Set(visibleReports.map(r => new Date(r.createdAt).getFullYear().toString()));
+    return Array.from(years).sort((a, b) => Number(b) - Number(a));
+  }, [visibleReports]);
+
+  const availableDays = useMemo(() => {
+    if (!filterYear || !filterMonth) return [];
+    const days = new Set(
+      visibleReports
+        .filter(r => {
+          const d = new Date(r.createdAt);
+          return (
+            d.getFullYear().toString() === filterYear &&
+            String(d.getMonth() + 1).padStart(2, "0") === filterMonth
+          );
+        })
+        .map(r => String(new Date(r.createdAt).getDate()).padStart(2, "0"))
+    );
+    return Array.from(days).sort();
+  }, [visibleReports, filterYear, filterMonth]);
+
+  const hasActiveFilters = filterStatut !== "tous" || filterYear || filterMonth || filterDay || searchId;
+
+  const clearFilters = () => {
+    setFilterStatut("tous");
+    setFilterYear("");
+    setFilterMonth("");
+    setFilterDay("");
+    setSearchId("");
+  };
+
+  const filtered = useMemo(() => {
+    const result = visibleReports.filter(r => {
+      if (filterStatut !== "tous" && r.status !== filterStatut) return false;
+      if (filterYear) {
+        const d = new Date(r.createdAt);
+        if (d.getFullYear().toString() !== filterYear) return false;
+        if (filterMonth) {
+          if (String(d.getMonth() + 1).padStart(2, "0") !== filterMonth) return false;
+          if (filterDay) {
+            if (String(d.getDate()).padStart(2, "0") !== filterDay) return false;
+          }
+        }
+      }
+      if (searchId && !r.ID_Exam.toLowerCase().includes(searchId.toLowerCase())) return false;
+      return true;
+    });
+    result.sort((a, b) => {
+      const diff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      return sortOrder === "asc" ? diff : -diff;
+    });
+    return result;
+  }, [visibleReports, filterStatut, filterYear, filterMonth, filterDay, searchId, sortOrder]);
 
   const showDoctorCol = isAdmin && viewMode === "all";
 
@@ -87,7 +134,73 @@ export default function Historique() {
             ))}
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2 flex-wrap">
+            {/* Sort toggle */}
+            <button
+              onClick={() => setSortOrder(o => o === "desc" ? "asc" : "desc")}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-background text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+              title={sortOrder === "desc" ? "Plus récent en premier" : "Plus ancien en premier"}
+            >
+              <ArrowUpDown size={13} />
+              {sortOrder === "desc" ? "Plus récent" : "Plus ancien"}
+            </button>
+
+            {/* Year filter */}
+            <select
+              value={filterYear}
+              onChange={e => { setFilterYear(e.target.value); setFilterMonth(""); }}
+              className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              <option value="">Toutes les années</option>
+              {availableYears.map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+
+            {/* Month filter — only when year is selected */}
+            {filterYear && (
+              <select
+                value={filterMonth}
+                onChange={e => { setFilterMonth(e.target.value); setFilterDay(""); }}
+                className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="">Tous les mois</option>
+                {[
+                  ["01", "Janvier"], ["02", "Février"], ["03", "Mars"], ["04", "Avril"],
+                  ["05", "Mai"], ["06", "Juin"], ["07", "Juillet"], ["08", "Août"],
+                  ["09", "Septembre"], ["10", "Octobre"], ["11", "Novembre"], ["12", "Décembre"],
+                ].map(([val, label]) => (
+                  <option key={val} value={val}>{label}</option>
+                ))}
+              </select>
+            )}
+
+            {/* Day filter — only when year + month are selected */}
+            {filterYear && filterMonth && availableDays.length > 0 && (
+              <select
+                value={filterDay}
+                onChange={e => setFilterDay(e.target.value)}
+                className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="">Tous les jours</option>
+                {availableDays.map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            )}
+
+            {/* Clear filters */}
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-background text-sm text-muted-foreground hover:text-destructive hover:border-destructive/50 transition-all"
+                title="Supprimer les filtres"
+              >
+                <X size={13} /> Effacer
+              </button>
+            )}
+
+            {/* Search by exam ID */}
             <div className="relative">
               <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -98,8 +211,6 @@ export default function Historique() {
                 className="pl-8 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 w-52"
               />
             </div>
-            <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
-              className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
           </div>
         </div>
 
@@ -111,7 +222,10 @@ export default function Historique() {
                 {showDoctorCol && (
                   <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Médecin</th>
                 )}
-                <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date</th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide cursor-pointer select-none hover:text-foreground transition-colors"
+                  onClick={() => setSortOrder(o => o === "desc" ? "asc" : "desc")}>
+                  Date {sortOrder === "desc" ? "↓" : "↑"}
+                </th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Statut</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Audio</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Action</th>
