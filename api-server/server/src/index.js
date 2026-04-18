@@ -39,7 +39,7 @@ app.post('/api/session', (req, res) => {
 
   const localIP = getLocalIP();
   const mobileClientUrl = process.env.MOBILE_CLIENT_URL || `http://${localIP}:8080`;
-  const mobileUrl = `${mobileClientUrl}/mobile/record/${sessionId}`;
+  const mobileUrl = `${mobileClientUrl}/?sessionId=${sessionId}`;
 
   res.json({ sessionId, mobileUrl });
 });
@@ -54,5 +54,5 @@ const PORT = process.env.PORT || 4000;
 server.listen(PORT, '0.0.0.0', () => {
   const localIP = getLocalIP();
   console.log(`Socket server → http://localhost:${PORT}`);
-  console.log(`Mobile URL   → http://${localIP}:8080/mobile/record/<sessionId>`);
+  console.log(`Mobile URL   → ${process.env.MOBILE_CLIENT_URL || `http://${localIP}:8080`}/?sessionId=<sessionId>`);
 });

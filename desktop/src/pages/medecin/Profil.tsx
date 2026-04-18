@@ -1,8 +1,10 @@
 import { useState, useRef } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { Save, Camera } from "lucide-react";
+import { Save, Camera, CheckCircle2 } from "lucide-react";
 import { updateProfileApi } from "@/services/authService";
+import { cn } from "@/lib/utils";
+import { getStatusSurfaceClass } from "@/styles/statusSystem";
 
 function UserAvatar({ photo, genre, prénom, nom, size = 16 }: { photo: string; genre: string; prénom: string; nom: string; size?: number }) {
   if (photo) {
@@ -16,24 +18,24 @@ function UserAvatar({ photo, genre, prénom, nom, size = 16 }: { photo: string; 
   }
   if (genre === "femme") {
     return (
-      <div className={`w-${size} h-${size} rounded-2xl bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center`}>
+      <div className={`w-${size} h-${size} rounded-2xl flex items-center justify-center`} style={{ background: "rgba(244, 167, 185, 0.16)" }}>
         <svg viewBox="0 0 64 64" className="w-10 h-10" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="32" cy="20" r="12" fill="#f9a8d4" />
-          <path d="M12 56c0-11.046 8.954-20 20-20s20 8.954 20 20" fill="#f9a8d4" />
-          <circle cx="32" cy="20" r="10" fill="#fbcfe8" />
-          <ellipse cx="32" cy="56" rx="18" ry="10" fill="#f9a8d4" />
+          <circle cx="32" cy="20" r="12" fill="#F4A7B9" />
+          <path d="M12 56c0-11.046 8.954-20 20-20s20 8.954 20 20" fill="#F4A7B9" />
+          <circle cx="32" cy="20" r="10" fill="#F8C8D4" />
+          <ellipse cx="32" cy="56" rx="18" ry="10" fill="#F4A7B9" />
         </svg>
       </div>
     );
   }
   if (genre === "homme") {
     return (
-      <div className={`w-${size} h-${size} rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center`}>
+      <div className={`w-${size} h-${size} rounded-2xl flex items-center justify-center`} style={{ background: "rgba(143, 188, 230, 0.16)" }}>
         <svg viewBox="0 0 64 64" className="w-10 h-10" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="32" cy="20" r="12" fill="#93c5fd" />
-          <path d="M12 56c0-11.046 8.954-20 20-20s20 8.954 20 20" fill="#93c5fd" />
-          <circle cx="32" cy="20" r="10" fill="#bfdbfe" />
-          <ellipse cx="32" cy="56" rx="18" ry="10" fill="#93c5fd" />
+          <circle cx="32" cy="20" r="12" fill="#8FBCE6" />
+          <path d="M12 56c0-11.046 8.954-20 20-20s20 8.954 20 20" fill="#8FBCE6" />
+          <circle cx="32" cy="20" r="10" fill="#B9D4EE" />
+          <ellipse cx="32" cy="56" rx="18" ry="10" fill="#8FBCE6" />
         </svg>
       </div>
     );
@@ -99,9 +101,9 @@ export default function Profil() {
   return (
     <AppLayout title="Mon profil">
       <div className="max-w-lg mx-auto">
-        <div className="bg-card rounded-2xl border border-border shadow-card p-8">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="relative">
+        <div className="bg-card rounded-2xl border border-border shadow-card p-6">
+          <div className="flex items-center gap-4 mb-6 pb-6 border-b border-border">
+            <div className="relative shrink-0">
               <UserAvatar photo={photo} genre={user?.genre || ""} prénom={form.prénom} nom={form.nom} size={16} />
               <button
                 type="button"
@@ -113,10 +115,11 @@ export default function Profil() {
               </button>
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
             </div>
-            <div>
-              <p className="font-bold text-foreground text-lg">
+            <div className="min-w-0">
+              <p className="font-bold text-foreground text-[17px] leading-tight truncate">
                 Dr. {form.prénom} {form.nom}
               </p>
+              <p className="text-xs text-muted-foreground mt-1">Radiologue · {form.email}</p>
             </div>
           </div>
 
@@ -156,8 +159,8 @@ export default function Profil() {
               <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 text-destructive text-sm">{error}</div>
             )}
             {saved && (
-              <div className="bg-success/10 border border-success/30 rounded-xl px-4 py-3 text-success text-sm">
-                ✅ Profil mis à jour avec succès.
+              <div className={cn("px-4 py-3 text-sm text-[#2F5A46] flex items-center gap-2", getStatusSurfaceClass("resolved"))}>
+                <CheckCircle2 size={16} /> Profil mis à jour avec succès.
               </div>
             )}
 

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { Brain, Upload, Rocket, CheckCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { getStatusBadgeClass, getStatusLabel, getStatusSurfaceClass } from "@/styles/statusSystem";
 
 const mockModèles = [
   { id: "m1", version: "v2.4.1", date: "2024-01-10", uploadéPar: "Admin IT", actif: true },
@@ -52,7 +54,7 @@ export default function AdminITModele() {
             </div>
           )}
           {uploaded && (
-            <div className="mt-4 flex items-center gap-2 bg-success/10 border border-success/30 rounded-xl px-4 py-3 text-success text-sm">
+            <div className={cn("mt-4 flex items-center gap-2 px-4 py-3 text-sm text-[#4D7F67]", getStatusSurfaceClass("resolved"))}>
               <CheckCircle size={16} /> Modèle v2.5.0 uploadé avec succès.
             </div>
           )}
@@ -79,9 +81,9 @@ export default function AdminITModele() {
                   <td className="px-6 py-4 text-muted-foreground">{m.uploadéPar}</td>
                   <td className="px-6 py-4">
                     {m.actif ? (
-                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-success/10 text-success">✅ Actif</span>
+                      <span className={getStatusBadgeClass("resolved")}>{getStatusLabel("resolved", "generic")}</span>
                     ) : (
-                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground">Inactif</span>
+                      <span className={getStatusBadgeClass("archived")}>{getStatusLabel("archived", "generic")}</span>
                     )}
                   </td>
                   <td className="px-6 py-4">

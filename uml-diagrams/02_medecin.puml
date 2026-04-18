@@ -1,0 +1,98 @@
+@startuml RadioAI_Medecin
+!theme plain
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam UsecaseBackgroundColor #EBF5FB
+skinparam UsecaseBorderColor #2980B9
+skinparam ArrowColor #2C3E50
+
+title Cas d'Utilisation — Medecin
+
+actor "Medecin" as M #AED6F1
+
+rectangle "RadioAI — Espace Medecin" {
+
+  package "Authentification" {
+    usecase "Se connecter"               as UC_Login
+    usecase "Verifier statut compte"     as UC_Status
+    usecase "Consulter son profil"       as UC_Profil
+    usecase "Modifier son profil"        as UC_EditProfil
+    usecase "Changer son mot de passe"   as UC_ChangePwd
+  }
+
+  package "Tableau de Bord" {
+    usecase "Voir les KPIs 30 jours"     as UC_KPIs
+    usecase "Voir rapports recents"      as UC_RecentReports
+    usecase "Voir tableau de bord"       as UC_Dashboard
+  }
+
+  package "Gestion des Rapports" {
+    usecase "Creer un rapport"           as UC_CreateReport
+    usecase "Saisir ID d'examen"         as UC_ExamID
+    usecase "Verifier unicite ID examen" as UC_CheckID
+    usecase "Enregistrer audio micro"    as UC_RecordAudio
+    usecase "Uploader fichier audio"     as UC_UploadAudio
+    usecase "Transcrire l'audio"         as UC_Transcribe
+    usecase "Rediger le contenu"         as UC_WriteContent
+    usecase "Sauvegarder en brouillon"   as UC_SaveDraft
+    usecase "Valider le rapport"         as UC_ValidateReport
+    usecase "Finaliser le rapport"       as UC_FinalizeReport
+    usecase "Modifier un rapport"        as UC_EditReport
+    usecase "Consulter l'historique"     as UC_History
+  }
+
+  package "Reclamations" {
+    usecase "Soumettre une reclamation"  as UC_Complaint
+    usecase "Suivre mes reclamations"    as UC_TrackComplaint
+  }
+
+  package "Enregistrement Mobile" {
+    usecase "Acceder via mobile"         as UC_Mobile
+    usecase "Enregistrer audio mobile"   as UC_MobileRecord
+  }
+}
+
+' ─── Associations ─────────────────────────────────────────
+M --> UC_Login
+M --> UC_Profil
+M --> UC_Dashboard
+M --> UC_CreateReport
+M --> UC_History
+M --> UC_Complaint
+M --> UC_TrackComplaint
+M --> UC_Mobile
+
+' ─── Include / Extend ─────────────────────────────────────
+UC_Login      ..> UC_Status         : <<include>>
+UC_Profil     ..> UC_EditProfil     : <<extend>>
+UC_Profil     ..> UC_ChangePwd      : <<extend>>
+UC_Dashboard  ..> UC_RecentReports  : <<include>>
+UC_Dashboard  ..> UC_KPIs           : <<include>>
+
+UC_CreateReport ..> UC_ExamID       : <<include>>
+UC_ExamID       ..> UC_CheckID      : <<include>>
+UC_CreateReport ..> UC_WriteContent : <<include>>
+UC_CreateReport ..> UC_RecordAudio  : <<extend>>
+UC_CreateReport ..> UC_UploadAudio  : <<extend>>
+UC_RecordAudio  ..> UC_Transcribe   : <<extend>>
+UC_UploadAudio  ..> UC_Transcribe   : <<extend>>
+UC_CreateReport ..> UC_SaveDraft    : <<extend>>
+UC_CreateReport ..> UC_ValidateReport : <<extend>>
+UC_ValidateReport ..> UC_FinalizeReport : <<extend>>
+
+UC_History    ..> UC_EditReport     : <<extend>>
+
+UC_Mobile     ..> UC_MobileRecord   : <<include>>
+UC_MobileRecord ..> UC_Transcribe   : <<extend>>
+
+note right of UC_ValidateReport
+  Statuts du rapport :
+  draft → validated → saved
+end note
+
+note right of UC_Transcribe
+  Moteur : Whisper-Medical-FR
+  (correction orthographique incluse)
+end note
+
+@enduml

@@ -284,7 +284,7 @@ export default function NouveauRapport() {
                     ) : recording.isRecording || recording.isPaused ? (
                       <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="space-y-6">
                         <div className={cn("w-24 h-24 rounded-full mx-auto flex items-center justify-center transition-all",
-                          recording.isPaused ? "bg-amber-500" : "gradient-hero animate-pulse-ring")}>
+                          recording.isPaused ? "bg-[#8FBCE6]" : "gradient-hero animate-pulse-ring")}>
                           <Mic className="w-10 h-10 text-white" />
                         </div>
                         <p className="font-mono text-3xl font-bold text-foreground">{fmt(recording.seconds)}</p>
@@ -295,7 +295,7 @@ export default function NouveauRapport() {
                         <div className="flex items-center justify-center gap-3">
                           <button onClick={recording.togglePause}
                             className={cn("flex items-center gap-2 font-semibold px-5 py-2.5 rounded-xl transition-all text-sm",
-                              recording.isPaused ? "gradient-hero text-white hover:opacity-90" : "bg-amber-500 hover:bg-amber-600 text-white")}>
+                              recording.isPaused ? "gradient-hero text-white hover:opacity-90" : "bg-[#8FBCE6] hover:bg-[#7AACD9] text-white")}>
                             {recording.isPaused ? <><Play size={15} /> Reprendre</> : <><Pause size={15} /> Pause</>}
                           </button>
                           <button onClick={recording.stopRecording}
@@ -374,7 +374,7 @@ export default function NouveauRapport() {
                       <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto">
                         <CheckCircle className="w-8 h-8 text-success" />
                       </div>
-                      <p className="text-success font-semibold">Audio reçu depuis votre smartphone ✅</p>
+                      <p className="text-success font-semibold">Audio reçu depuis votre smartphone</p>
                       {recording.audioUploading && (
                         <div className="flex items-center gap-2 justify-center text-primary">
                           <CloudUpload className="animate-bounce" size={18} />

@@ -4,18 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getUsers, updateUserStatus, deleteUser, changeUserRole, type BackendUserRecord } from "@/services/usersService";
 import { Check, X, Trash2, AlertTriangle, UserRoundCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const STATUS_MAP: Record<string, string> = {
-  pending: "en_attente",
-  validated: "validé",
-  refused: "refusé",
-};
-
-const BADGE: Record<string, string> = {
-  pending: "bg-warning/10 text-warning",
-  validated: "bg-success/10 text-success",
-  refused: "bg-destructive/10 text-destructive",
-};
+import { getStatusBadgeClass, getStatusLabel, getActiveFilterTabClass, INACTIVE_TAB_CLASS } from "@/styles/statusSystem";
 
 export default function AdminUtilisateurs() {
   const queryClient = useQueryClient();
@@ -57,16 +46,16 @@ export default function AdminUtilisateurs() {
   return (
     <AppLayout title="Gestion des utilisateurs">
       <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
-        <div className="px-6 py-4 border-b border-border flex gap-2 flex-wrap">
+        <div className="px-6 pt-4 border-b border-border flex gap-6 flex-wrap">
           {[
             { key: "tous", label: "Tous" },
-            { key: "pending", label: `🟡 En attente${pending > 0 ? ` (${pending})` : ""}` },
-            { key: "validated", label: "✅ Validés" },
-            { key: "refused", label: "❌ Refusés" },
+            { key: "pending", label: `En attente${pending > 0 ? ` (${pending})` : ""}` },
+            { key: "validated", label: "Validés" },
+            { key: "refused", label: "Refusés" },
           ].map(({ key, label }) => (
             <button key={key} onClick={() => setActiveTab(key)}
-              className={cn("px-4 py-2 rounded-xl text-sm font-medium transition-all",
-                activeTab === key ? "gradient-hero text-white" : "bg-muted text-muted-foreground hover:bg-muted/80")}>
+              className={cn("pb-3 -mb-px text-sm transition-all",
+                activeTab === key ? getActiveFilterTabClass(key) : INACTIVE_TAB_CLASS)}>
               {label}
             </button>
           ))}
@@ -87,8 +76,8 @@ export default function AdminUtilisateurs() {
                   <td className="px-6 py-4 font-medium text-foreground">{u.nom || "—"}</td>
                   <td className="px-6 py-4 text-muted-foreground">{u.email}</td>
                   <td className="px-6 py-4">
-                    <span className={cn("text-xs font-medium px-2.5 py-1 rounded-full capitalize", BADGE[u.status] ?? "bg-muted text-muted-foreground")}>
-                      {STATUS_MAP[u.status] ?? u.status}
+                    <span className={cn(getStatusBadgeClass(u.status), "capitalize")}>
+                      {getStatusLabel(u.status, "user")}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-muted-foreground">
@@ -100,12 +89,12 @@ export default function AdminUtilisateurs() {
                         <>
                           <button onClick={() => statusMutation.mutate({ id: u._id, status: "validated" })}
                             disabled={statusMutation.isPending}
-                            className="w-8 h-8 bg-success/10 text-success rounded-lg flex items-center justify-center hover:bg-success/20 disabled:opacity-50 transition-colors" title="Accepter">
+                            className="w-8 h-8 bg-[rgba(143,211,179,0.14)] text-[#4D7F67] rounded-lg flex items-center justify-center hover:bg-[rgba(143,211,179,0.22)] disabled:opacity-50 transition-colors" title="Accepter">
                             <Check size={14} />
                           </button>
                           <button onClick={() => statusMutation.mutate({ id: u._id, status: "refused" })}
                             disabled={statusMutation.isPending}
-                            className="w-8 h-8 bg-destructive/10 text-destructive rounded-lg flex items-center justify-center hover:bg-destructive/20 disabled:opacity-50 transition-colors" title="Refuser">
+                            className="w-8 h-8 bg-[rgba(227,140,140,0.14)] text-[#8E5555] rounded-lg flex items-center justify-center hover:bg-[rgba(227,140,140,0.22)] disabled:opacity-50 transition-colors" title="Refuser">
                             <X size={14} />
                           </button>
                         </>
@@ -117,7 +106,7 @@ export default function AdminUtilisateurs() {
                             <UserRoundCheck size={14} />
                           </button>
                           <button onClick={() => setConfirmDelete(u)}
-                            className="w-8 h-8 bg-destructive/10 text-destructive rounded-lg flex items-center justify-center hover:bg-destructive/20 transition-colors" title="Supprimer définitivement">
+                            className="w-8 h-8 bg-[rgba(227,140,140,0.14)] text-[#8E5555] rounded-lg flex items-center justify-center hover:bg-[rgba(227,140,140,0.22)] transition-colors" title="Supprimer définitivement">
                             <Trash2 size={14} />
                           </button>
                         </>

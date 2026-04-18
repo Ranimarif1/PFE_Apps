@@ -4,8 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
   LayoutDashboard, History, MessageSquare, User,
-  Users, Download, Brain, LogOut, Sun, Moon,
-  ChevronLeft, ChevronRight, TrendingUp,
+  Users, Brain, LogOut, Sun, Moon,
+  ChevronLeft, ChevronRight,
   AlertCircle, Plus, FileAudio, Sparkles, Loader2, Database,
 } from "lucide-react";
 import { useState } from "react";
@@ -35,11 +35,11 @@ function AudioQueue({ collapsed }: { collapsed: boolean }) {
     return (
       <div className="mx-2 mb-2 relative">
         <div className="w-full flex items-center justify-center p-2 rounded-lg"
-          style={{ background: "rgba(76,201,192,0.08)" }}
+          style={{ background: "rgba(74,123,190,0.08)" }}
           title={`${audioQueue.length} audio(s) en attente`}>
-          <FileAudio size={15} style={{ color: "#4cc9c0" }} />
+          <FileAudio size={15} style={{ color: "#4A7BBE" }} />
           <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center"
-            style={{ background: "#4cc9c0", color: "#0d2137" }}>
+            style={{ background: "#4A7BBE", color: "#ffffff" }}>
             {audioQueue.length}
           </span>
         </div>
@@ -48,15 +48,15 @@ function AudioQueue({ collapsed }: { collapsed: boolean }) {
   }
 
   return (
-    <div className="mx-2 mb-2 rounded-xl overflow-hidden border" style={{ borderColor: "rgba(76,201,192,0.2)", background: "rgba(76,201,192,0.05)" }}>
+    <div className="mx-2 mb-2 rounded-xl overflow-hidden border" style={{ borderColor: "rgba(74,123,190,0.15)", background: "rgba(74,123,190,0.05)" }}>
       <button onClick={() => setOpen(o => !o)}
         className="w-full flex items-center gap-2 px-3 py-2 text-left">
-        <FileAudio size={13} style={{ color: "#4cc9c0" }} />
-        <span className="text-[11px] font-bold tracking-wide flex-1" style={{ color: "#4cc9c0" }}>
+        <FileAudio size={13} style={{ color: "#4A7BBE" }} />
+        <span className="text-[11px] font-bold tracking-wide flex-1" style={{ color: "#4A7BBE" }}>
           AUDIOS EN ATTENTE
         </span>
         <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-          style={{ background: "rgba(76,201,192,0.2)", color: "#4cc9c0" }}>
+          style={{ background: "rgba(74,123,190,0.15)", color: "#4A7BBE" }}>
           {audioQueue.length}
         </span>
       </button>
@@ -70,12 +70,12 @@ function AudioQueue({ collapsed }: { collapsed: boolean }) {
                 const busy = transcribingId === audio._id || isTranscribing;
                 return (
                   <div key={audio._id} className="rounded-lg p-2 flex items-center gap-2"
-                    style={{ background: "rgba(255,255,255,0.04)" }}>
+                    style={{ background: "rgba(15,23,42,0.04)" }}>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-mono font-semibold truncate" style={{ color: "rgba(255,255,255,0.8)" }}>
+                      <p className="text-[11px] font-mono font-semibold truncate" style={{ color: "#1E293B" }}>
                         {audio.examId}
                       </p>
-                      <p className="text-[9px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+                      <p className="text-[9px]" style={{ color: "#64748B" }}>
                         {audio.duration > 0 ? fmt(audio.duration) : "—"} · {new Date(audio.createdAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}
                       </p>
                     </div>
@@ -83,7 +83,7 @@ function AudioQueue({ collapsed }: { collapsed: boolean }) {
                       onClick={() => handleTranscribe(audio._id, audio.examId)}
                       disabled={!!busy}
                       className="shrink-0 flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-md disabled:opacity-40 transition-all"
-                      style={{ background: "rgba(76,201,192,0.15)", color: "#4cc9c0" }}
+                      style={{ background: "rgba(74,123,190,0.12)", color: "#4A7BBE" }}
                     >
                       {transcribingId === audio._id
                         ? <><Loader2 size={10} className="animate-spin" /> …</>
@@ -130,13 +130,6 @@ const adminSections: Section[] = [
       { to: "/admin/profil",       icon: User,            label: "Mon profil"       },
     ],
   },
-  {
-    label: "SYSTÈME",
-    links: [
-      { to: "/admin/statistiques", icon: TrendingUp, label: "Statistiques" },
-      { to: "/admin/export",       icon: Download,   label: "Export CSV"   },
-    ],
-  },
 ];
 
 // ── Admin IT sections ──────────────────────────────────────────────────────────
@@ -177,13 +170,12 @@ function NavLink({ to, icon: Icon, label, collapsed }: NavItem & { collapsed: bo
         style={
           active
             ? {
-                background: 'rgba(0,201,167,0.12)',
-                color: '#4cc9c0',
-                borderLeft: '2.5px solid #4cc9c0',
-                marginLeft: '-8px',
-                paddingLeft: collapsed ? '8px' : '19px',
+                background: 'rgba(74,123,190,0.12)',
+                color: '#4A7BBE',
+                borderLeft: '2.5px solid #4A7BBE',
+                paddingLeft: collapsed ? '8px' : '11px',
               }
-            : { color: 'rgba(255,255,255,0.58)' }
+            : { color: '#475569' }
         }
         title={collapsed ? label : undefined}
       >
@@ -217,7 +209,7 @@ function SectionBlock({ section, collapsed, first }: { section: Section; collaps
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="px-3 pt-2 pb-1 text-[9px] font-bold tracking-widest uppercase"
-            style={{ color: 'rgba(255,255,255,0.25)', letterSpacing: '0.13em' }}
+            style={{ color: '#94A3B8', letterSpacing: '0.13em' }}
           >
             {section.label}
           </motion.p>
@@ -257,7 +249,7 @@ export function Sidebar() {
     >
       {/* ── Logo ── */}
       <div className={cn("flex items-center gap-3 px-4 py-4 border-b border-sidebar-border", collapsed && "justify-center px-2")}>
-        <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0">
+        <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 ring-1 ring-[#4A7BBE]/20">
           <img src="/ReportEase.png" alt="ReportEase" className="w-full h-full object-cover" />
         </div>
         <AnimatePresence>
@@ -268,8 +260,8 @@ export function Sidebar() {
               exit={{ opacity: 0, width: 0 }}
               className="overflow-hidden"
             >
-              <p className="text-white font-semibold text-[13px] whitespace-nowrap leading-tight">ReportEase</p>
-              <p className="whitespace-nowrap text-[9px] font-semibold tracking-widest" style={{ color: '#4cc9c0', letterSpacing: '0.09em' }}>
+              <p className="font-bold text-[15px] whitespace-nowrap leading-tight tracking-tight text-[#0F172A]">ReportEase</p>
+              <p className="whitespace-nowrap text-[9px] font-semibold mt-0.5" style={{ color: '#4A7BBE', letterSpacing: '0.12em' }}>
                 {subtitle}
               </p>
             </motion.div>
@@ -300,7 +292,7 @@ export function Sidebar() {
               "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] hover:bg-sidebar-accent transition-all",
               collapsed && "justify-center px-2"
             )}
-            style={{ color: 'rgba(255,255,255,0.45)' }}
+            style={{ color: '#64748B' }}
             title={collapsed ? (theme === "dark" ? "Mode clair" : "Mode sombre") : undefined}
           >
             {theme === "dark" ? <Sun size={15} className="shrink-0" /> : <Moon size={15} className="shrink-0" />}
@@ -316,17 +308,20 @@ export function Sidebar() {
 
         {/* User row */}
         <div className={cn("flex items-center gap-2.5 px-3 py-3", collapsed && "justify-center px-2")}>
-          <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 border"
-            style={{ background: 'rgba(76,201,192,0.15)', borderColor: 'rgba(76,201,192,0.3)', color: '#4cc9c0' }}>
-            {user?.prénom?.[0]}{user?.nom?.[0]}
+          <div className="w-7 h-7 rounded-full shrink-0 border overflow-hidden flex items-center justify-center text-[10px] font-bold"
+            style={{ background: 'rgba(74,123,190,0.12)', borderColor: 'rgba(74,123,190,0.25)', color: '#4A7BBE' }}>
+            {user?.photo
+              ? <img src={user.photo} alt="" className="w-full h-full object-cover" />
+              : <>{user?.prénom?.[0]}{user?.nom?.[0]}</>
+            }
           </div>
           <AnimatePresence>
             {!collapsed && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="overflow-hidden min-w-0 flex-1">
-                <p className="text-[11px] font-medium whitespace-nowrap truncate" style={{ color: 'rgba(255,255,255,0.65)' }}>
+                <p className="text-[11px] font-medium whitespace-nowrap truncate" style={{ color: '#334155' }}>
                   {isMédecin ? `Dr. ${user?.prénom} ${user?.nom}` : `${user?.prénom} ${user?.nom}`}
                 </p>
-                <p className="text-[9px] whitespace-nowrap" style={{ color: 'rgba(255,255,255,0.28)' }}>
+                <p className="text-[9px] whitespace-nowrap" style={{ color: '#94A3B8' }}>
                   {isAdmin ? "Administrateur" : isMédecin ? "Radiologue" : "Admin IT"}
                 </p>
               </motion.div>

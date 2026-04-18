@@ -1,0 +1,118 @@
+@startuml RadioAI_AdminIT
+!theme plain
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam UsecaseBackgroundColor #FEF9E7
+skinparam UsecaseBorderColor #D4AC0D
+skinparam ArrowColor #2C3E50
+
+title Cas d'Utilisation — Administrateur IT
+
+actor "Administrateur IT" as IT #F9E79F
+actor "Systeme Email"     as Email  #FDFEFE
+actor "Modele Whisper"    as Whisper #FADBD8
+
+rectangle "RadioAI — Espace Administrateur IT" {
+
+  package "Authentification" {
+    usecase "Se connecter sans validation" as UC_Login
+    usecase "Consulter son profil"         as UC_Profil
+    usecase "Modifier son profil"          as UC_EditProfil
+  }
+
+  package "Tableau de Bord IT" {
+    usecase "Voir tableau de bord"         as UC_Dashboard
+    usecase "Voir stats dataset IA"        as UC_DatasetStats
+    usecase "Voir resume reclamations"     as UC_ComplaintSummary
+  }
+
+  package "Gestion des Administrateurs" {
+    usecase "Lister les administrateurs"   as UC_ListAdmins
+    usecase "Supprimer un administrateur"  as UC_DeleteAdmin
+    usecase "Retrograder Admin en Medecin" as UC_DemoteAdmin
+  }
+
+  package "Gestion des Inscriptions" {
+    usecase "Consulter inscriptions en attente" as UC_PendingUsers
+    usecase "Approuver une inscription"    as UC_Approve
+    usecase "Refuser une inscription"      as UC_Reject
+    usecase "Envoyer notification email"   as UC_Email
+  }
+
+  package "Reclamations" {
+    usecase "Voir toutes les reclamations" as UC_ViewAll
+    usecase "Changer statut reclamation"   as UC_UpdateStatus
+    usecase "Ajouter une reponse"          as UC_AddResponse
+    usecase "Marquer comme resolue"        as UC_Resolve
+  }
+
+  package "Modele IA & Entrainement" {
+    usecase "Consulter donnees entrainement" as UC_TrainingData
+    usecase "Filtrer par statut all/saved"   as UC_FilterDataset
+    usecase "Telecharger dataset ZIP"        as UC_DownloadZIP
+    usecase "Gerer les versions du modele"   as UC_ManageModel
+    usecase "Declencher reentrainement"      as UC_Retrain
+  }
+
+  package "Exports" {
+    usecase "Exporter CSV global"            as UC_ExportCSV
+  }
+}
+
+' ─── Associations AdminIT ────────────────────────────────
+IT --> UC_Login
+IT --> UC_Profil
+IT --> UC_Dashboard
+IT --> UC_ListAdmins
+IT --> UC_DeleteAdmin
+IT --> UC_DemoteAdmin
+IT --> UC_PendingUsers
+IT --> UC_Approve
+IT --> UC_Reject
+IT --> UC_ViewAll
+IT --> UC_UpdateStatus
+IT --> UC_TrainingData
+IT --> UC_DownloadZIP
+IT --> UC_ManageModel
+IT --> UC_ExportCSV
+
+' ─── Acteurs secondaires ────────────────────────────────
+Email  <-- UC_Approve
+Email  <-- UC_Reject
+Whisper <-- UC_Retrain
+
+' ─── Include / Extend ───────────────────────────────────
+UC_Profil       ..> UC_EditProfil       : <<extend>>
+UC_Dashboard    ..> UC_DatasetStats     : <<include>>
+UC_Dashboard    ..> UC_ComplaintSummary : <<include>>
+UC_Approve      ..> UC_Email            : <<include>>
+UC_Reject       ..> UC_Email            : <<include>>
+UC_DemoteAdmin  ..> UC_Email            : <<include>>
+UC_UpdateStatus ..> UC_AddResponse      : <<extend>>
+UC_UpdateStatus ..> UC_Resolve          : <<extend>>
+UC_Resolve      ..> UC_AddResponse      : <<include>>
+UC_TrainingData ..> UC_FilterDataset    : <<extend>>
+UC_TrainingData ..> UC_DownloadZIP      : <<include>>
+UC_DownloadZIP  ..> UC_Retrain          : <<extend>>
+UC_ManageModel  ..> UC_Retrain          : <<extend>>
+UC_ManageModel  ..> UC_TrainingData     : <<include>>
+
+note right of UC_Login
+  L'AdminIT peut se connecter
+  sans validation prealable
+end note
+
+note right of UC_DownloadZIP
+  Contenu ZIP :
+  fichiers audio (.wav/.webm)
+  + transcriptions (.txt)
+  + metadata (dataset.csv)
+end note
+
+note bottom of UC_Retrain
+  Alimente Whisper-Medical-FR
+  avec nouvelles paires
+  audio/transcription
+end note
+
+@enduml

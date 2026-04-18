@@ -8,21 +8,21 @@ type State = "connecting" | "ready" | "recording" | "uploading" | "done" | "erro
 
 // All styles inline — no Tailwind/CSS variables needed on mobile
 const s = {
-  page:    { minHeight: "100vh", background: "#f0f5fc", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", padding: "24px", fontFamily: "Inter, -apple-system, sans-serif" },
-  card:    { background: "#ffffff", borderRadius: "20px", padding: "32px 24px", maxWidth: "360px", width: "100%", boxShadow: "0 8px 32px rgba(10,60,140,0.12)", textAlign: "center" as const },
-  logo:    { width: "64px", height: "64px", borderRadius: "16px", background: "linear-gradient(135deg,#0a6ef5,#00c9a7)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: "28px" },
-  title:   { fontSize: "22px", fontWeight: 700, color: "#0d1f3c", margin: "0 0 4px" },
-  sub:     { fontSize: "13px", color: "#6b7fa3", margin: "0 0 24px" },
-  btn:     { width: "110px", height: "110px", borderRadius: "50%", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto", fontSize: "48px", boxShadow: "0 8px 24px rgba(10,110,245,0.35)" },
-  btnRec:  { background: "linear-gradient(135deg,#0a6ef5,#00c9a7)" },
-  btnStop: { background: "#ef4444" },
-  timer:   { fontSize: "42px", fontWeight: 700, color: "#ef4444", fontVariantNumeric: "tabular-nums" as const, margin: "0 0 16px" },
-  hint:    { fontSize: "13px", color: "#6b7fa3", margin: "12px 0 0" },
-  spinner: { width: "48px", height: "48px", border: "4px solid #e2e8f0", borderTopColor: "#0a6ef5", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" },
-  ok:      { width: "72px", height: "72px", borderRadius: "50%", background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: "36px" },
-  err:     { width: "72px", height: "72px", borderRadius: "50%", background: "#fee2e2", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: "36px" },
-  errMsg:  { fontSize: "13px", color: "#6b7fa3", margin: "8px 0 0", lineHeight: 1.5 },
-  badge:   { display: "inline-block", background: "#dcfce7", color: "#16a34a", borderRadius: "20px", padding: "6px 14px", fontSize: "12px", fontWeight: 600, margin: "0 0 20px" },
+  page:    { minHeight: "100vh", background: "#F7F8FA", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", padding: "24px", fontFamily: "Inter, -apple-system, sans-serif" },
+  card:    { background: "#ffffff", borderRadius: "20px", padding: "32px 24px", maxWidth: "360px", width: "100%", boxShadow: "0 8px 32px rgba(80, 59, 44, 0.12)", textAlign: "center" as const, border: "1px solid rgba(199, 191, 178, 0.4)" },
+  logo:    { width: "64px", height: "64px", borderRadius: "16px", background: "linear-gradient(135deg,#4A7BBE,#6B97D0)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: "28px" },
+  title:   { fontSize: "22px", fontWeight: 700, color: "#1A1410", margin: "0 0 4px" },
+  sub:     { fontSize: "13px", color: "#7A6E61", margin: "0 0 24px" },
+  btn:     { width: "110px", height: "110px", borderRadius: "50%", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto", fontSize: "48px", boxShadow: "0 8px 24px rgba(74, 123, 190, 0.28)" },
+  btnRec:  { background: "linear-gradient(135deg,#4A7BBE,#6B97D0)" },
+  btnStop: { background: "#E38C8C" },
+  timer:   { fontSize: "42px", fontWeight: 700, color: "#8E5555", fontVariantNumeric: "tabular-nums" as const, margin: "0 0 16px" },
+  hint:    { fontSize: "13px", color: "#7A6E61", margin: "12px 0 0" },
+  spinner: { width: "48px", height: "48px", border: "4px solid #e2e8f0", borderTopColor: "#4A7BBE", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" },
+  ok:      { width: "72px", height: "72px", borderRadius: "50%", background: "rgba(143, 211, 179, 0.16)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: "36px" },
+  err:     { width: "72px", height: "72px", borderRadius: "50%", background: "rgba(227, 140, 140, 0.16)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: "36px" },
+  errMsg:  { fontSize: "13px", color: "#7A6E61", margin: "8px 0 0", lineHeight: 1.5 },
+  badge:   { display: "inline-block", background: "rgba(143, 211, 179, 0.16)", color: "#4D7F67", borderRadius: "20px", padding: "6px 14px", fontSize: "12px", fontWeight: 600, margin: "0 0 20px" },
 };
 
 export default function MobileRecord() {
@@ -148,7 +148,7 @@ export default function MobileRecord() {
           {state === "connecting" && (
             <>
               <div style={s.spinner} />
-              <p style={{ color: "#0a6ef5", fontWeight: 600, margin: 0 }}>Connexion au serveur…</p>
+              <p style={{ color: "#4A7BBE", fontWeight: 600, margin: 0 }}>Connexion au serveur…</p>
               <p style={s.errMsg}>{SOCKET_URL}</p>
             </>
           )}
@@ -176,7 +176,7 @@ export default function MobileRecord() {
           {state === "uploading" && (
             <>
               <div style={s.spinner} />
-              <p style={{ color: "#0a6ef5", fontWeight: 600, margin: 0 }}>Envoi de l'audio…</p>
+              <p style={{ color: "#4A7BBE", fontWeight: 600, margin: 0 }}>Envoi de l'audio…</p>
             </>
           )}
 

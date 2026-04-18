@@ -5,6 +5,8 @@ export interface Report {
   doctorId: string;
   ID_Exam: string;
   content: string;
+  originalContent?: string;   // raw STT transcription, used for accuracy comparison
+  accuracy?: number;          // 0..1 similarity ratio computed at validation
   status: "draft" | "validated" | "saved";
   audioId?: string;
   createdAt: string;
@@ -33,6 +35,17 @@ export async function createReport(payload: {
 
 export async function checkExamId(id: string): Promise<{ available: boolean }> {
   return api.get<{ available: boolean }>(`/api/reports/check-exam-id/?id=${encodeURIComponent(id)}`);
+}
+
+export interface ReportStats {
+  draft: number;
+  validated: number;
+  saved: number;
+  total: number;
+}
+
+export async function getReportStats(): Promise<ReportStats> {
+  return api.get<ReportStats>("/api/reports/stats/");
 }
 
 export async function updateReport(

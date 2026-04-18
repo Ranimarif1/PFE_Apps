@@ -4,15 +4,7 @@ import { getTrainingData, fetchAudioBlob, downloadTrainingZip, type TrainingEntr
 import { useQuery } from "@tanstack/react-query";
 import { FileAudio, FileText, Search, Download, Loader2, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const STATUS_BADGE: Record<string, string> = {
-  saved:     "bg-success/10 text-success",
-  validated: "bg-primary/10 text-primary",
-  draft:     "bg-warning/10 text-warning",
-};
-const STATUS_LABELS: Record<string, string> = {
-  saved: "enregistré", validated: "validé", draft: "brouillon",
-};
+import { getStatusBadgeClass, getStatusLabel, getActiveFilterTabClass, INACTIVE_TAB_CLASS } from "@/styles/statusSystem";
 
 const fmt = (s: number) =>
   `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
@@ -74,12 +66,12 @@ export default function AdminITTraining() {
         {/* Header stats */}
         <div className="grid grid-cols-3 gap-4">
           {[
-            { label: "Paires Audio|Texte", value: entries.length, icon: Database, color: "text-primary" },
-            { label: "Validés / Enregistrés", value: entries.filter(e => e.status !== "draft").length, icon: FileAudio, color: "text-success" },
-            { label: "Durée totale", value: fmt(entries.reduce((s, e) => s + (e.duration || 0), 0)), icon: FileText, color: "text-amber-500" },
-          ].map(({ label, value, icon: Icon, color }) => (
+            { label: "Paires Audio|Texte", value: entries.length, icon: Database, iconBg: "rgba(143,188,230,0.14)", iconColor: "#4C6F91" },
+            { label: "Validés / Enregistrés", value: entries.filter(e => e.status !== "draft").length, icon: FileAudio, iconBg: "rgba(143,211,179,0.14)", iconColor: "#4D7F67" },
+            { label: "Durée totale", value: fmt(entries.reduce((s, e) => s + (e.duration || 0), 0)), icon: FileText, iconBg: "rgba(217,119,6,0.12)", iconColor: "#D97706" },
+          ].map(({ label, value, icon: Icon, iconBg, iconColor }) => (
             <div key={label} className="bg-card rounded-xl border border-border shadow-card p-5 flex items-center gap-4">
-              <div className={cn("w-10 h-10 rounded-lg bg-muted flex items-center justify-center", color)}>
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: iconBg, color: iconColor }}>
                 <Icon size={18} />
               </div>
               <div>
@@ -97,12 +89,12 @@ export default function AdminITTraining() {
               <FileAudio size={16} className="text-primary" /> Dataset Audio|Texte
             </h3>
 
-            <div className="flex gap-2 ml-4">
+            <div className="flex gap-5 ml-4 -mb-[17px]">
               {["tous", "draft", "validated", "saved"].map(s => (
                 <button key={s} onClick={() => setFilterStatus(s)}
-                  className={cn("px-3 py-1 rounded-lg text-xs font-medium transition-all capitalize",
-                    filterStatus === s ? "gradient-hero text-white" : "bg-muted text-muted-foreground hover:bg-muted/80")}>
-                  {s === "tous" ? "Tous" : STATUS_LABELS[s]}
+                  className={cn("pb-3 text-xs transition-all capitalize",
+                    filterStatus === s ? getActiveFilterTabClass(s) : INACTIVE_TAB_CLASS)}>
+                  {s === "tous" ? "Tous" : getStatusLabel(s, "report")}
                 </button>
               ))}
             </div>
@@ -158,9 +150,8 @@ export default function AdminITTraining() {
                           {entry.duration > 0 ? fmt(entry.duration) : "—"}
                         </td>
                         <td className="px-5 py-3">
-                          <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full capitalize",
-                            STATUS_BADGE[entry.status] ?? "bg-muted text-muted-foreground")}>
-                            {STATUS_LABELS[entry.status] ?? entry.status}
+                          <span className={cn(getStatusBadgeClass(entry.status), "capitalize")}>
+                            {getStatusLabel(entry.status, "report")}
                           </span>
                         </td>
                         <td className="px-5 py-3 max-w-xs">
@@ -181,7 +172,7 @@ export default function AdminITTraining() {
                             </button>
                             <button onClick={() => handleDownloadText(entry)}
                               title="Télécharger la transcription"
-                              className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-all">
+                              className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-all" style={{ background: "rgba(74,123,190,0.10)", color: "#4A7BBE" }}>
                               <FileText size={11} /> Texte
                             </button>
                           </div>

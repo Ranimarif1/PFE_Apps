@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { getComplaints, type Complaint } from "@/services/complaintsService";
 import { getReports, type Report } from "@/services/reportsService";
@@ -6,7 +6,7 @@ import { getTrainingData, type TrainingEntry } from "@/services/audioService";
 import { useQuery } from "@tanstack/react-query";
 import {
   MessageSquare, Clock, CheckCircle,
-  LayoutGrid, Activity, Server,
+  LayoutGrid, Server,
   Database, FileAudio, FileText,
 } from "lucide-react";
 import {
@@ -15,21 +15,11 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { DASHBOARD_ACCENTS, type DashboardAccent } from "@/styles/dashboardAccents";
+import { getStatusBadgeClass, getStatusLabel } from "@/styles/statusSystem";
 
 const fmtDuration = (s: number) =>
   `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
-
-/* ─── helpers ─────────────────────────────────────────────────────────────── */
-const COMPLAINT_LABEL: Record<string, string> = {
-  pending:     "En attente",
-  in_progress: "En cours",
-  resolved:    "Traitée",
-};
-const COMPLAINT_CLS: Record<string, string> = {
-  pending:     "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
-  in_progress: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-  resolved:    "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
-};
 
 function buildWeeklyData(complaints: Complaint[]) {
   const map: Record<string, number> = {};
@@ -48,19 +38,29 @@ function buildWeeklyData(complaints: Complaint[]) {
 }
 
 /* ─── KPI card ─────────────────────────────────────────────────────────────── */
-function Kpi({ value, label, delta, iconBg, icon: Icon, valueColor }: {
+function Kpi({ value, label, delta, accent, icon: Icon }: {
   value: number | string; label: string; delta?: string;
-  iconBg: string; icon: React.ElementType; valueColor?: string;
+  accent: DashboardAccent; icon: React.ElementType;
 }) {
   return (
-    <div className="bg-card flex items-center gap-3 px-5 py-4">
-      <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", iconBg)}>
-        <Icon size={16} />
+    <div
+      className="dashboard-kpi relative overflow-hidden flex items-center gap-4 px-5 py-5"
+      style={
+        {
+          "--kpi-border": accent.base,
+          "--kpi-bg": accent.tint,
+          "--kpi-bg-hover": accent.tintHover,
+        } as CSSProperties
+      }
+    >
+      <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+        style={{ background: accent.soft, color: accent.text }}>
+        <Icon size={19} />
       </div>
       <div>
-        <p className={cn("text-2xl font-semibold leading-none tracking-tight", valueColor ?? "text-foreground")}>{value}</p>
-        <p className="text-xs text-muted-foreground mt-1">{label}</p>
-        {delta && <p className="text-[10px] mt-0.5 font-medium text-muted-foreground">{delta}</p>}
+        <p className="text-2xl font-bold leading-none tracking-tight" style={{ color: accent.text }}>{value}</p>
+        <p className="text-xs text-muted-foreground mt-1 font-medium">{label}</p>
+        {delta && <p className="text-[10px] mt-0.5 text-muted-foreground">{delta}</p>}
       </div>
     </div>
   );
@@ -75,14 +75,14 @@ function Tab({ active, onClick, icon: Icon, label, count }: {
       onClick={onClick}
       className={cn(
         "flex items-center gap-1.5 px-4 py-3.5 text-xs font-medium border-b-2 transition-colors whitespace-nowrap",
-        active ? "border-teal-600 text-foreground font-semibold" : "border-transparent text-muted-foreground hover:text-foreground"
+        active ? "border-primary text-foreground font-semibold" : "border-transparent text-muted-foreground hover:text-foreground"
       )}
     >
       <Icon size={13} />
       {label}
       {count !== undefined && (
         <span className={cn("px-1.5 py-0.5 rounded-full text-[10px] font-semibold border",
-          active ? "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-700"
+          active ? "bg-[rgba(143,211,179,0.14)] text-[#4D7F67] border-[rgba(143,211,179,0.4)]"
                  : "bg-muted text-muted-foreground border-border")}>
           {count}
         </span>
@@ -141,30 +141,31 @@ export default function AdminITDashboard() {
 
   return (
     <AppLayout title="Tableau de bord">
+      <div className="flex flex-col min-h-full max-w-full overflow-hidden">
 
       {/* ══ KPI strip ══════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-border border-b border-border -mx-6 -mt-6">
-        <Kpi value={total}      label="Total réclamations"  iconBg="bg-blue-100 dark:bg-blue-900/30 text-blue-700"    icon={MessageSquare} delta={`${total} reçues`} />
-        <Kpi value={pending}    label="En attente"           iconBg="bg-amber-100 dark:bg-amber-900/30 text-amber-600" icon={Clock}         valueColor={pending > 0 ? "text-amber-600" : undefined} />
-        <Kpi value={inProgress} label="En cours"             iconBg="bg-purple-100 dark:bg-purple-900/30 text-purple-600" icon={MessageSquare} />
-        <Kpi value={resolved}   label="Traitées"             iconBg="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700" icon={CheckCircle} delta={total > 0 ? `${Math.round((resolved/total)*100)}% du total` : undefined} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 divide-y sm:divide-x sm:divide-y-0 divide-border border border-border rounded-xl bg-card overflow-hidden">
+        <Kpi value={total}      label="Total réclamations"  accent={DASHBOARD_ACCENTS.info}      icon={MessageSquare} delta={`${total} reçues`} />
+        <Kpi value={pending}    label="En attente"          accent={DASHBOARD_ACCENTS.highlight} icon={Clock}         delta={pending > 0 ? `${pending} à traiter` : "Aucune en attente"} />
+        <Kpi value={inProgress} label="En cours"            accent={DASHBOARD_ACCENTS.info}      icon={MessageSquare} delta={inProgress > 0 ? `${inProgress} en traitement` : undefined} />
+        <Kpi value={resolved}   label="Traitées"            accent={DASHBOARD_ACCENTS.positive}  icon={CheckCircle}   delta={total > 0 ? `${Math.round((resolved/total)*100)}% du total` : undefined} />
       </div>
 
       {/* ══ Tabs bar ═══════════════════════════════════════════════════════ */}
-      <div className="flex items-center gap-0 border-b border-border -mx-6 px-2 bg-card">
-        <Tab active={tab === "apercu"}  onClick={() => setTab("apercu")}  icon={LayoutGrid} label="Aperçu"  />
+      <div className="mt-4 flex items-center gap-0 border border-border rounded-xl px-2 bg-card overflow-x-auto">
+        <Tab active={tab === "apercu"}  onClick={() => setTab("apercu")}  icon={LayoutGrid} label="Statistiques"  />
         <Tab active={tab === "systeme"} onClick={() => setTab("systeme")} icon={Server}     label="Système" />
       </div>
 
       {/* ══ Content ════════════════════════════════════════════════════════ */}
-      <div className="pt-5">
+      <div className="pt-4">
 
         {/* ── Aperçu ─────────────────────────────────────────────────────── */}
         {tab === "apercu" && (
           <div className="space-y-4">
 
             {/* Row 1: chart + répartition */}
-            <div className="grid lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
               {/* Weekly line chart */}
               <div className="lg:col-span-3 bg-card border border-border rounded-xl">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-border">
@@ -178,7 +179,7 @@ export default function AdminITDashboard() {
                       <XAxis dataKey="date" tick={{ fontSize: 9 }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fontSize: 9 }} axisLine={false} tickLine={false} allowDecimals={false} />
                       <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "11px" }} />
-                      <Line type="monotone" dataKey="value" stroke="#4cc9c0" strokeWidth={1.5} dot={false} />
+                      <Line type="monotone" dataKey="value" stroke={DASHBOARD_ACCENTS.info.base} strokeWidth={1.5} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -190,9 +191,9 @@ export default function AdminITDashboard() {
                   <span className="text-sm font-medium text-foreground">Répartition des réclamations</span>
                 </div>
                 <div className="p-4 space-y-1">
-                  <HBar label="En attente" value={pending}    total={total} color="#f5a828" />
-                  <HBar label="En cours"   value={inProgress} total={total} color="#8b5cf6" />
-                  <HBar label="Traitées"   value={resolved}   total={total} color="#4cc9c0" />
+                  <HBar label="En attente" value={pending}    total={total} color={DASHBOARD_ACCENTS.highlight.base} />
+                  <HBar label="En cours"   value={inProgress} total={total} color={DASHBOARD_ACCENTS.info.base} />
+                  <HBar label="Traitées"   value={resolved}   total={total} color={DASHBOARD_ACCENTS.positive.base} />
                   <div className="pt-4 mt-2 border-t border-border flex flex-col gap-2">
                     <div className="flex justify-between text-xs">
                       <span className="text-muted-foreground">Total réclamations</span>
@@ -215,9 +216,9 @@ export default function AdminITDashboard() {
                 <span className="text-sm font-medium text-foreground flex items-center gap-2">
                   <Database size={14} className="text-primary" /> Dataset d'entraînement
                 </span>
-                <button onClick={() => navigate("/adminit/training")} className="text-xs text-teal-600 hover:underline">Voir tout →</button>
+                <button onClick={() => navigate("/adminit/training")} className="text-xs text-primary hover:underline">Voir tout →</button>
               </div>
-              <div className="grid grid-cols-3 divide-x divide-border">
+              <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border">
                 <div className="px-5 py-4 flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
                     <Database size={15} />
@@ -237,7 +238,7 @@ export default function AdminITDashboard() {
                   </div>
                 </div>
                 <div className="px-5 py-4 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "rgba(74,123,190,0.10)", color: "#4A7BBE" }}>
                     <FileText size={15} />
                   </div>
                   <div>
@@ -249,12 +250,12 @@ export default function AdminITDashboard() {
             </div>
 
             {/* Row 3: recent complaints + actions + services */}
-            <div className="grid lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Réclamations récentes */}
               <div className="lg:col-span-2 bg-card border border-border rounded-xl">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                   <span className="text-sm font-medium text-foreground">Réclamations récentes</span>
-                  <button onClick={() => navigate("/adminit/reclamations")} className="text-xs text-teal-600 hover:underline">Voir tout →</button>
+                  <button onClick={() => navigate("/adminit/reclamations")} className="text-xs text-primary hover:underline">Voir tout →</button>
                 </div>
                 {recent5.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
@@ -269,8 +270,8 @@ export default function AdminITDashboard() {
                           <p className="text-xs font-medium text-foreground">{c.title ?? "—"}</p>
                           <p className="text-[10px] text-muted-foreground truncate">{c.description ?? "Sans description"}</p>
                         </div>
-                        <span className={cn("text-[10px] px-2 py-0.5 rounded font-semibold shrink-0", COMPLAINT_CLS[c.status] ?? "bg-muted text-muted-foreground")}>
-                          {COMPLAINT_LABEL[c.status] ?? c.status}
+                        <span className={cn(getStatusBadgeClass(c.status), "shrink-0")}>
+                          {getStatusLabel(c.status, "complaint")}
                         </span>
                       </div>
                     ))}
@@ -286,12 +287,12 @@ export default function AdminITDashboard() {
                 <div className="p-4 flex flex-col gap-2">
                   <button onClick={() => navigate("/adminit/reclamations")}
                     className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-sm text-foreground transition-colors text-left">
-                    <MessageSquare size={14} className="text-teal-600" />
+                    <MessageSquare size={14} className="text-primary" />
                     Gérer les réclamations →
                   </button>
                   <button onClick={() => navigate("/adminit/admins")}
                     className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-sm text-foreground transition-colors text-left">
-                    <CheckCircle size={14} className="text-blue-600" />
+                    <CheckCircle size={14} className="text-primary" />
                     Comptes administrateurs →
                   </button>
                   <button onClick={() => navigate("/adminit/training")}
@@ -307,7 +308,7 @@ export default function AdminITDashboard() {
                   <div className="flex flex-col gap-1.5">
                     {services.map(s => (
                       <div key={s.name} className="flex items-center gap-2">
-                        <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", s.ok ? "bg-emerald-500 animate-pulse" : "bg-red-500")} />
+                        <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", s.ok ? "bg-[#8FD3B3] animate-pulse" : "bg-[#E38C8C]")} />
                         <span className="text-xs text-foreground">{s.name}</span>
                         <span className="ml-auto text-[10px] text-muted-foreground">{s.port}</span>
                       </div>
@@ -335,14 +336,14 @@ export default function AdminITDashboard() {
                 { name: "Modèle IA",    port: "v2.4.1", ok: true,  detail: "Transcription médicale" },
               ].map(s => (
                 <div key={s.name} className="bg-card border border-border rounded-xl px-5 py-4 flex items-center gap-4">
-                  <div className={cn("w-3 h-3 rounded-full shrink-0", s.ok ? "bg-emerald-500 animate-pulse" : "bg-red-500")} />
+                  <div className={cn("w-3 h-3 rounded-full shrink-0", s.ok ? "bg-[#8FD3B3] animate-pulse" : "bg-[#E38C8C]")} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground">{s.name}</p>
                     <p className="text-xs text-muted-foreground">{s.detail}</p>
                   </div>
                   <span className={cn("text-[10px] px-2 py-1 rounded font-semibold",
-                    s.ok ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                          : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400")}>
+                    s.ok ? "bg-[rgba(143,211,179,0.14)] text-[#4D7F67]"
+                          : "bg-[rgba(227,140,140,0.14)] text-[#8E5555]")}>
                     {s.ok ? "En ligne" : "Hors ligne"}
                   </span>
                 </div>
@@ -350,7 +351,7 @@ export default function AdminITDashboard() {
             </div>
 
             {/* Model info + transcriptions */}
-            <div className="grid lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
               <div className="bg-card border border-border rounded-xl">
                 <div className="px-4 py-3 border-b border-border">
                   <span className="text-sm font-medium text-foreground">Modèle IA — Informations</span>
@@ -392,6 +393,7 @@ export default function AdminITDashboard() {
             </div>
           </div>
         )}
+      </div>
       </div>
     </AppLayout>
   );

@@ -2,27 +2,20 @@ import { useState, useEffect, useCallback, useLayoutEffect, useRef } from "react
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { getReport, createReport, updateReport } from "@/services/reportsService";
-import { CheckCircle, Edit3, Save, FileText, Sparkles, Check, X, Loader2, ArrowLeft, BookOpen, Pencil } from "lucide-react";
+import { CheckCircle, Edit3, Save, FileText, Sparkles, Check, X, Loader2, ArrowLeft, BookOpen, Pencil, Mic, Ruler, Stethoscope, type LucideIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRecording } from "@/contexts/RecordingContext";
 import { checkText, loadDictionary, isDictionaryReady, getDictionaryCount } from "@/lib/spellChecker";
 import type { Suggestion } from "@/lib/spellChecker";
-
-/* ── Status helpers ── */
-const STATUS_LABELS: Record<string, string> = { draft: "brouillon", validated: "validé", saved: "enregistré" };
-const STATUS_BADGE: Record<string, string> = {
-  saved:     "bg-success/10 text-success",
-  validated: "bg-primary/10 text-primary",
-  draft:     "bg-warning/10 text-warning",
-};
+import { getStatusBadgeClass, getStatusLabel } from "@/styles/statusSystem";
 
 /* ── Suggestion type styling ── */
-const TYPE_STYLE: Record<string, { label: string; icon: string; classes: string }> = {
-  stt:     { label: "STT",       icon: "🎙️", classes: "bg-pink-100 dark:bg-pink-500/15 text-pink-700 dark:text-pink-400" },
-  ortho:   { label: "Ortho",     icon: "✏️", classes: "bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400" },
-  accord:  { label: "Accord",    icon: "📐", classes: "bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400" },
-  medical: { label: "Médical",   icon: "🏥", classes: "bg-violet-100 dark:bg-violet-500/15 text-violet-700 dark:text-violet-400" },
+const TYPE_STYLE: Record<string, { label: string; Icon: LucideIcon; classes: string }> = {
+  stt:     { label: "STT",     Icon: Mic,         classes: "bg-[rgba(100,116,139,0.22)] text-[#334155] border border-[rgba(100,116,139,0.4)]" },
+  ortho:   { label: "Ortho",   Icon: Pencil,      classes: "bg-[rgba(217,119,6,0.22)] text-[#7C4A08] border border-[rgba(217,119,6,0.5)]" },
+  accord:  { label: "Accord",  Icon: Ruler,       classes: "bg-[rgba(143,188,230,0.25)] text-[#2F4C6E] border border-[rgba(143,188,230,0.5)]" },
+  medical: { label: "Médical", Icon: Stethoscope, classes: "bg-[rgba(143,211,179,0.25)] text-[#2F5A46] border border-[rgba(143,211,179,0.5)]" },
 };
 
 /* ── Auto-resizing textarea ── */
@@ -283,19 +276,22 @@ export default function RapportDetail() {
             <div className="bg-card rounded-xl border border-border shadow-card p-6">
               <div className="flex items-center gap-2 mb-4">
                 {!isNew && status && (
-                  <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full capitalize ${STATUS_BADGE[status] ?? "bg-muted text-muted-foreground"}`}>
-                    {STATUS_LABELS[status] ?? status}
+                  <span className={`${getStatusBadgeClass(status)} capitalize`}>
+                    {getStatusLabel(status, "report")}
                   </span>
                 )}
 
                 {/* Dictionary status badge */}
-                <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                  dictReady
-                    ? "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
-                    : dictLoading
-                      ? "bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400"
-                      : "bg-muted text-muted-foreground"
-                }`}>
+                <span
+                  className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${!dictReady && !dictLoading ? "bg-muted text-muted-foreground" : ""}`}
+                  style={
+                    dictReady
+                      ? { background: "rgba(143,211,179,0.14)", color: "#4D7F67" }
+                      : dictLoading
+                        ? { background: "rgba(143,188,230,0.14)", color: "#4C6F91" }
+                        : undefined
+                  }
+                >
                   {dictLoading ? (
                     <><Loader2 size={10} className="animate-spin" /> Chargement dictionnaire…</>
                   ) : dictReady ? (
@@ -368,7 +364,7 @@ export default function RapportDetail() {
                       <button
                         onClick={analyzeText}
                         disabled={loadingSuggestions}
-                        className="flex items-center gap-1.5 text-sm font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                        className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50" style={{ background: "rgba(74,123,190,0.10)", color: "#4A7BBE" }}
                       >
                         {loadingSuggestions ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
                         {loadingSuggestions ? "Analyse..." : "Re-analyser"}
@@ -429,8 +425,8 @@ export default function RapportDetail() {
                     <div className="bg-card rounded-xl border border-border shadow-card p-5 w-[340px]">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center">
-                            <Sparkles size={14} className="text-amber-600 dark:text-amber-400" />
+                          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "rgba(74,123,190,0.10)" }}>
+                            <Sparkles size={14} style={{ color: "#4A7BBE" }} />
                           </div>
                           <div>
                             <h4 className="font-semibold text-sm text-foreground">MedCorrect</h4>
@@ -473,8 +469,8 @@ export default function RapportDetail() {
                               ).map(([type, count]) => {
                                 const ts = TYPE_STYLE[type] || TYPE_STYLE.ortho;
                                 return (
-                                  <span key={type} className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${ts.classes}`}>
-                                    {ts.icon}{count}
+                                  <span key={type} className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${ts.classes}`}>
+                                    <ts.Icon size={9} /> {count}
                                   </span>
                                 );
                               })}
@@ -498,15 +494,15 @@ export default function RapportDetail() {
                                 >
                                   {/* Type badge + confidence */}
                                   <div className="flex items-center gap-1.5 mb-1.5">
-                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${ts.classes}`}>
-                                      {ts.icon} {ts.label}
+                                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${ts.classes}`}>
+                                      <ts.Icon size={10} /> {ts.label}
                                     </span>
                                     {s.confidence && (
                                       <div className="flex items-center gap-1 ml-auto">
                                         <div className="w-8 h-1 rounded-full bg-border overflow-hidden">
                                           <div
                                             className={`h-full rounded-full ${
-                                              s.confidence > 0.85 ? "bg-success" : s.confidence > 0.6 ? "bg-amber-500" : "bg-destructive"
+                                              s.confidence > 0.85 ? "bg-[#8FD3B3]" : s.confidence > 0.6 ? "bg-[#F59E0B]" : "bg-[#E38C8C]"
                                             }`}
                                             style={{ width: `${s.confidence * 100}%` }}
                                           />

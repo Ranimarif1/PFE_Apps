@@ -6,7 +6,12 @@ import StatusBadge from '../components/StatusBadge';
 import ConnectionBanner from '../components/ConnectionBanner';
 import '../styles/RecordPage.css';
 
-const sessionId = new URLSearchParams(window.location.search).get('sessionId');
+// Support both URL formats:
+//   ?sessionId=<uuid>          (current format)
+//   /mobile/record/<uuid>      (legacy path format)
+const sessionId =
+  new URLSearchParams(window.location.search).get('sessionId') ||
+  (/\/([0-9a-f-]{36})$/i.exec(window.location.pathname)?.[1] ?? null);
 
 export default function RecordPage() {
   const { connected, error: socketError, emit } = useSocket(sessionId);
@@ -71,7 +76,9 @@ export default function RecordPage() {
   if (!sessionId) {
     return (
       <div className="rp-center">
-        <div className="rp-center__icon">🩻</div>
+        <div className="rp-center__icon">
+        <img src="/ReportEase.png" alt="ReportEase" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      </div>
         <p className="rp-error-big">Session manquante</p>
         <p className="rp-hint">Scannez le QR code depuis l'application bureau pour accéder à cette page.</p>
       </div>
@@ -88,9 +95,15 @@ export default function RecordPage() {
 
       {/* ── App header ─────────────────────────────────────── */}
       <div className="rp-app-header">
-        <div className="rp-logo">🩻</div>
-        <h1 className="rp-app-name">RadioAI Mobile</h1>
-        <p className="rp-app-subtitle">Service Radiologie</p>
+        <div className="rp-brand">
+          <div className="rp-logo">
+            <img src="/ReportEase.png" alt="ReportEase" className="rp-logo__img" />
+          </div>
+          <div className="rp-brand__text">
+            <h1 className="rp-app-name">ReportEase</h1>
+            <p className="rp-app-subtitle">Service Radiologie</p>
+          </div>
+        </div>
 
         <div className="rp-session-card">
           <span className={`rp-session-dot ${connected ? '' : 'rp-session-dot--offline'}`} />

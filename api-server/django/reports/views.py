@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import datetime as dt
+import difflib
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from bson import ObjectId
 from django.conf import settings
@@ -12,6 +13,20 @@ from django.views.decorators.csrf import csrf_exempt
 
 from core.auth import CurrentUser, jwt_required
 from core.mongo import get_collection, serialize_document
+
+
+def _compute_accuracy(original: Optional[str], final: Optional[str]) -> Optional[float]:
+    """
+    Similarity ratio between the raw STT transcription and the validated content.
+    Returns a float in [0, 1] or None if we can't compute.
+    """
+    if not original or not final:
+        return None
+    a = original.strip()
+    b = final.strip()
+    if not a or not b:
+        return None
+    return round(difflib.SequenceMatcher(None, a, b).ratio(), 4)
 
 
 def _parse_body(request: HttpRequest) -> Dict[str, Any]:
@@ -70,6 +85,25 @@ def _append_to_global_csv(report: Dict[str, Any], doctor: Dict[str, Any]) -> Non
                 (report.get("content") or "").replace("\n", " ").strip(),
             ]
         )
+
+
+@csrf_exempt
+@jwt_required(roles={"admin", "adminIT"})
+def report_stats(request: HttpRequest) -> JsonResponse:
+    """GET /api/reports/stats/ — aggregate counts across ALL reports (admin only)."""
+    if request.method != "GET":
+        return JsonResponse({"detail": "Method not allowed."}, status=405)
+    reports_col = get_collection("reports")
+    pipeline = [
+        {"$group": {"_id": "$status", "count": {"$sum": 1}}},
+    ]
+    result = {doc["_id"]: doc["count"] for doc in reports_col.aggregate(pipeline)}
+    return JsonResponse({
+        "draft":     result.get("draft",     0),
+        "validated": result.get("validated", 0),
+        "saved":     result.get("saved",     0),
+        "total":     sum(result.values()),
+    })
 
 
 @csrf_exempt
@@ -171,17 +205,24 @@ def list_or_create_reports(request: HttpRequest) -> JsonResponse:
             return JsonResponse({"detail": "Invalid status."}, status=400)
 
         audio_id = data.get("audioId") or None
+        original_content = data.get("originalContent") or None
 
         now = utcnow.isoformat()
         doc = {
             "doctorId": user.id,
             "ID_Exam": exam_id_str,
             "content": content,
+            "originalContent": original_content,
             "status": status,
             "audioId": audio_id,
             "createdAt": now,
             "updatedAt": now,
         }
+        # If the report is created directly as "validated", compute accuracy now
+        if status == "validated":
+            acc = _compute_accuracy(original_content, content)
+            if acc is not None:
+                doc["accuracy"] = acc
         inserted = reports_col.insert_one(doc)
         created = reports_col.find_one({"_id": inserted.inserted_id})
 
@@ -233,6 +274,7 @@ def get_or_update_report(request: HttpRequest, report_id: str):
         data = _parse_body(request)
         content = data.get("content", report.get("content", ""))
         new_status = data.get("status", report.get("status", "draft"))
+        old_status = report.get("status", "draft")
 
         if new_status not in {"draft", "validated", "saved"}:
             return JsonResponse({"detail": "Invalid status."}, status=400)
@@ -242,6 +284,19 @@ def get_or_update_report(request: HttpRequest, report_id: str):
             "status": new_status,
             "updatedAt": dt.datetime.utcnow().isoformat(),
         }
+
+        # Back-fill originalContent if it was missing and caller provides it.
+        if not report.get("originalContent") and data.get("originalContent"):
+            update_doc["originalContent"] = data["originalContent"]
+
+        # Compute accuracy when transitioning into "validated" for the first time
+        # or when content changes while already validated.
+        if new_status == "validated" and (old_status != "validated" or content != report.get("content")):
+            original = update_doc.get("originalContent") or report.get("originalContent")
+            acc = _compute_accuracy(original, content)
+            if acc is not None:
+                update_doc["accuracy"] = acc
+
         reports_col.update_one({"_id": oid}, {"$set": update_doc})
         updated = reports_col.find_one({"_id": oid})
 

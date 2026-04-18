@@ -6,18 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { Eye, Search, FileAudio, ArrowUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const STATUS_LABELS: Record<string, string> = {
-  draft: "brouillon",
-  validated: "validé",
-  saved: "enregistré",
-};
-
-const STATUS_BADGES: Record<string, string> = {
-  draft: "bg-warning/10 text-warning",
-  validated: "bg-primary/10 text-primary",
-  saved: "bg-success/10 text-success",
-};
+import { getStatusBadgeClass, getStatusLabel, getActiveFilterTabClass, INACTIVE_TAB_CLASS } from "@/styles/statusSystem";
 
 export default function Historique() {
   const navigate = useNavigate();
@@ -119,7 +108,7 @@ export default function Historique() {
           )}
 
           {/* Status filter */}
-          <div className="flex gap-2">
+          <div className="flex gap-5">
             {[
               { key: "tous", label: "tous" },
               { key: "draft", label: "brouillon" },
@@ -127,8 +116,8 @@ export default function Historique() {
               { key: "saved", label: "enregistré" },
             ].map(({ key, label }) => (
               <button key={key} onClick={() => setFilterStatut(key)}
-                className={cn("px-3 py-1.5 rounded-lg text-sm font-medium transition-all capitalize",
-                  filterStatut === key ? "gradient-hero text-white" : "bg-muted text-muted-foreground hover:bg-muted/80")}>
+                className={cn("pb-3 -mb-px text-sm transition-all capitalize",
+                  filterStatut === key ? getActiveFilterTabClass(key) : INACTIVE_TAB_CLASS)}>
                 {label}
               </button>
             ))}
@@ -247,8 +236,8 @@ export default function Historique() {
                     {new Date(r.createdAt).toLocaleDateString("fr-FR")}
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_BADGES[r.status] ?? "bg-muted text-muted-foreground"}`}>
-                      {STATUS_LABELS[r.status] ?? r.status}
+                    <span className={cn(getStatusBadgeClass(r.status), "capitalize")}>
+                      {getStatusLabel(r.status, "report")}
                     </span>
                   </td>
                   <td className="px-6 py-4">

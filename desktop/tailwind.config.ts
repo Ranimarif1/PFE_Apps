@@ -3,6 +3,10 @@ import type { Config } from "tailwindcss";
 export default {
   darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  safelist: [
+    "status-tone-success", "status-tone-info", "status-tone-warning", "status-tone-error", "status-tone-neutral",
+    "status-surface-success", "status-surface-info", "status-surface-warning", "status-surface-error", "status-surface-neutral",
+  ],
   prefix: "",
   theme: {
     container: {
@@ -54,14 +58,14 @@ export default {
           foreground: "hsl(var(--warning-foreground))",
         },
         bg: {
-          base:    '#e8eef6',
-          surface: 'rgba(255,255,255,0.65)',
-          dark:    '#1a2c4e',
+          base:    '#F7F8FA',
+          surface: 'rgba(255,255,255,0.92)',
+          dark:    '#0D1119',
         },
-        'accent-blue': '#0a6ef5',
-        'accent-teal': '#00c9a7',
-        'text-primary': '#0d1f3c',
-        'text-muted':   '#5a7090',
+        'brand':        '#4A7BBE',
+        'brand-light':  '#6B97D0',
+        'text-primary': '#0B0D12',
+        'text-muted':   '#5C6573',
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

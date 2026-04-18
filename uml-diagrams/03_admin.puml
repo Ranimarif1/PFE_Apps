@@ -1,0 +1,103 @@
+@startuml RadioAI_Admin
+!theme plain
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam UsecaseBackgroundColor #EAFAF1
+skinparam UsecaseBorderColor #27AE60
+skinparam ArrowColor #2C3E50
+
+title Cas d'Utilisation — Administrateur
+
+actor "Administrateur" as A #A9DFBF
+actor "Medecin"        as M #AED6F1
+actor "Systeme Email"  as Email #FDFEFE
+
+rectangle "RadioAI — Espace Administrateur" {
+
+  package "Authentification" {
+    usecase "Se connecter"              as UC_Login
+    usecase "Consulter son profil"      as UC_Profil
+    usecase "Modifier son profil"       as UC_EditProfil
+  }
+
+  package "Tableau de Bord Admin" {
+    usecase "Voir tableau de bord"      as UC_Dashboard
+    usecase "Voir statistiques rapports" as UC_Stats
+    usecase "Voir file d'attente inscriptions" as UC_Queue
+  }
+
+  package "Gestion des Utilisateurs" {
+    usecase "Lister les medecins"       as UC_ListDoctors
+    usecase "Approuver une inscription" as UC_Approve
+    usecase "Refuser une inscription"   as UC_Reject
+    usecase "Supprimer un medecin"      as UC_DeleteDoctor
+    usecase "Promouvoir en Admin"       as UC_Promote
+    usecase "Envoyer notification email" as UC_Email
+  }
+
+  package "Gestion des Rapports" {
+    usecase "Consulter rapports finalises" as UC_ViewReports
+    usecase "Consulter ses propres rapports" as UC_OwnReports
+    usecase "Creer un rapport"          as UC_CreateReport
+  }
+
+  package "Statistiques & Exports" {
+    usecase "Voir statistiques globales" as UC_GlobalStats
+    usecase "Exporter CSV global"        as UC_ExportCSV
+    usecase "Filtrer les statistiques"   as UC_FilterStats
+  }
+
+  package "Reclamations" {
+    usecase "Consulter reclamations medecins" as UC_ViewComplaints
+    usecase "Soumettre reclamation vers AdminIT" as UC_CreateComplaint
+  }
+}
+
+' ─── Associations Admin ──────────────────────────────────
+A --> UC_Login
+A --> UC_Profil
+A --> UC_Dashboard
+A --> UC_ListDoctors
+A --> UC_Approve
+A --> UC_Reject
+A --> UC_DeleteDoctor
+A --> UC_Promote
+A --> UC_ViewReports
+A --> UC_OwnReports
+A --> UC_CreateReport
+A --> UC_GlobalStats
+A --> UC_ExportCSV
+A --> UC_ViewComplaints
+A --> UC_CreateComplaint
+
+' ─── Acteurs secondaires ─────────────────────────────────
+M --> UC_CreateReport
+Email <-- UC_Approve
+Email <-- UC_Reject
+
+' ─── Include / Extend ────────────────────────────────────
+UC_Profil      ..> UC_EditProfil    : <<extend>>
+UC_Dashboard   ..> UC_Stats         : <<include>>
+UC_Dashboard   ..> UC_Queue         : <<include>>
+UC_Approve     ..> UC_Email         : <<include>>
+UC_Reject      ..> UC_Email         : <<include>>
+UC_Promote     ..> UC_Email         : <<include>>
+UC_GlobalStats ..> UC_FilterStats   : <<extend>>
+UC_ExportCSV   ..> UC_GlobalStats   : <<include>>
+
+note right of UC_ViewReports
+  Acces limite aux rapports
+  avec statut saved uniquement
+end note
+
+note right of UC_Approve
+  Email automatique envoye
+  au medecin (approbation/refus)
+end note
+
+note bottom of UC_ExportCSV
+  Format : CSV
+  id_exam | medecin | date | heure | transcription
+end note
+
+@enduml

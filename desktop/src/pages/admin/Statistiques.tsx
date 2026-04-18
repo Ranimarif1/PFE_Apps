@@ -6,43 +6,36 @@ import { generateChartData } from "@/data/MockData";
 import { Users, FileText, CheckCircle, Clock } from "lucide-react";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend,
+  Tooltip, ResponsiveContainer, Cell, PieChart, Pie,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { getStatusBadgeClass, getStatusLabel } from "@/styles/statusSystem";
 
 const chartData  = generateChartData(30);
 const chartData7 = generateChartData(7);
 
-const TEAL   = "#4cc9c0";
-const AMBER  = "#f5a828";
-const BLUE   = "#3b82f6";
-const PURPLE = "#8b5cf6";
-const RED    = "#ef4444";
+/* ─── Chart palette — aligned with calendar markers ─── */
+const INFO      = "#4A7BBE";   // darkest calendar blue
+const HIGHLIGHT = "#D97706";   // calendar "today" orange
+const POSITIVE  = "#059669";   // emerald that pairs with blue + orange
+const CARAMEL   = "#4A7BBE";   // kept name for backcompat; same as INFO
+const BRICK     = "#DC2626";   // semantic red for charts
 
 /* ─── KPI ─── */
-function Kpi({ value, label, icon: Icon, iconBg, sub }: {
-  value: number | string; label: string; icon: React.ElementType; iconBg: string; sub?: string;
+function Kpi({ value, label, icon: Icon, iconBg, iconColor, sub }: {
+  value: number | string; label: string; icon: React.ElementType; iconBg: string; iconColor: string; sub?: string;
 }) {
   return (
     <div className="bg-card border border-border rounded-xl flex items-center gap-4 px-5 py-4">
-      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", iconBg)}>
+      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+           style={{ background: iconBg, color: iconColor }}>
         <Icon size={18} />
       </div>
       <div>
         <p className="text-2xl font-semibold leading-none tracking-tight text-foreground">{value}</p>
         <p className="text-xs text-muted-foreground mt-1">{label}</p>
-        {sub && <p className="text-[10px] text-teal-600 mt-0.5 font-medium">{sub}</p>}
+        {sub && <p className="text-[10px] text-primary mt-0.5 font-medium">{sub}</p>}
       </div>
-    </div>
-  );
-}
-
-/* ─── Section heading ─── */
-function SectionTitle({ title, sub }: { title: string; sub?: string }) {
-  return (
-    <div className="mb-3">
-      <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-      {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -68,9 +61,9 @@ export default function AdminStatistiques() {
   ].filter(d => d.value > 0);
 
   const rptPieData = [
-    { name: "Validés",     value: validRpts  || 0 },
-    { name: "Brouillons",  value: draftRpts  || 0 },
-    { name: "Enregistrés", value: savedRpts  || 0 },
+    { name: "Validés",     value: validRpts || 0 },
+    { name: "Brouillons",  value: draftRpts || 0 },
+    { name: "Enregistrés", value: savedRpts || 0 },
   ];
 
   const weekBar = chartData7.map((d, i) => ({ ...d, label: ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"][i] }));
@@ -78,29 +71,29 @@ export default function AdminStatistiques() {
   return (
     <AppLayout title="Statistiques">
       {/* ── KPIs ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Kpi value={doctors.length}  label="Total médecins"  icon={Users}       iconBg="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700" sub={`↑ ${validated} validés`} />
-        <Kpi value={pending}         label="En attente"       icon={Clock}       iconBg="bg-amber-100 dark:bg-amber-900/30 text-amber-600"       sub={pending > 0 ? "Nécessite action" : "Aucun en attente"} />
-        <Kpi value={totalRpts}       label="Total rapports"   icon={FileText}    iconBg="bg-blue-100 dark:bg-blue-900/30 text-blue-700"          />
-        <Kpi value={validRpts}       label="Rapports validés" icon={CheckCircle} iconBg="bg-teal-100 dark:bg-teal-900/30 text-teal-700"          sub={totalRpts > 0 ? `${Math.round((validRpts/totalRpts)*100)}% du total` : undefined} />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+        <Kpi value={doctors.length}  label="Total médecins"  icon={Users}       iconBg="bg-[rgba(143,188,230,0.14)] text-[#4C6F91]"  sub={`↑ ${validated} validés`} />
+        <Kpi value={pending}         label="En attente"       icon={Clock}       iconBg="bg-[rgba(245,158,11,0.14)] text-[#92400E]"  sub={pending > 0 ? "Nécessite action" : "Aucun en attente"} />
+        <Kpi value={totalRpts}       label="Total rapports"   icon={FileText}    iconBg="bg-primary/10 text-primary"      />
+        <Kpi value={validRpts}       label="Rapports validés" icon={CheckCircle} iconBg="bg-[rgba(143,211,179,0.14)] text-[#4D7F67]"  sub={totalRpts > 0 ? `${Math.round((validRpts/totalRpts)*100)}% du total` : undefined} />
       </div>
 
       {/* ── Activity charts ── */}
-      <div className="grid lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid lg:grid-cols-3 gap-3 mb-3">
         {/* 30-day line */}
         <div className="lg:col-span-2 bg-card border border-border rounded-xl">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border">
             <span className="text-sm font-medium text-foreground">Rapports — 30 derniers jours</span>
             <span className="text-[10px] bg-muted border border-border rounded px-2 py-0.5 text-muted-foreground">30j</span>
           </div>
-          <div className="p-4">
-            <ResponsiveContainer width="100%" height={160}>
+          <div className="px-3 py-2">
+            <ResponsiveContainer width="100%" height={110}>
               <LineChart data={chartData} margin={{ top: 4, right: 0, left: -24, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
                 <XAxis dataKey="date" tick={{ fontSize: 9 }} interval={4} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 9 }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "11px" }} />
-                <Line type="monotone" dataKey="rapports" stroke={TEAL} strokeWidth={1.8} dot={false} />
+                <Line type="monotone" dataKey="rapports" stroke={CARAMEL} strokeWidth={1.8} dot={false} activeDot={{ r: 3, fill: INFO }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -108,53 +101,53 @@ export default function AdminStatistiques() {
 
         {/* 7-day bar */}
         <div className="bg-card border border-border rounded-xl">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border">
             <span className="text-sm font-medium text-foreground">Cette semaine</span>
             <span className="text-[10px] bg-muted border border-border rounded px-2 py-0.5 text-muted-foreground">7j</span>
           </div>
-          <div className="p-4">
-            <ResponsiveContainer width="100%" height={160}>
+          <div className="px-3 py-2">
+            <ResponsiveContainer width="100%" height={110}>
               <BarChart data={weekBar} margin={{ top: 4, right: 0, left: -24, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 9 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 9 }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "11px" }} />
-                <Bar dataKey="rapports" radius={[4, 4, 0, 0]} fill={BLUE} />
+                <Bar dataKey="rapports" radius={[4, 4, 0, 0]} fill={INFO} opacity={0.85} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
       </div>
 
-      {/* ── Pie charts ── */}
-      <div className="grid lg:grid-cols-2 gap-4 mb-6">
+      {/* ── Pies + Summary in a single row ── */}
+      <div className="grid lg:grid-cols-3 gap-3">
         {/* Médecins pie */}
         <div className="bg-card border border-border rounded-xl">
-          <div className="px-4 py-3 border-b border-border">
+          <div className="px-3 py-2 border-b border-border">
             <span className="text-sm font-medium text-foreground">Répartition des médecins</span>
           </div>
-          <div className="p-4 flex items-center gap-4">
-            <ResponsiveContainer width="50%" height={160}>
+          <div className="px-3 py-2 flex items-center gap-3">
+            <ResponsiveContainer width="45%" height={120}>
               <PieChart>
-                <Pie data={userPieData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} dataKey="value" paddingAngle={3}>
-                  {userPieData.map((_, i) => <Cell key={i} fill={[TEAL, AMBER, RED][i]} />)}
+                <Pie data={userPieData} cx="50%" cy="50%" innerRadius={30} outerRadius={50} dataKey="value" paddingAngle={3}>
+                  {userPieData.map((_, i) => <Cell key={i} fill={[POSITIVE, HIGHLIGHT, BRICK][i]} />)}
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5 flex-1 min-w-0">
               {[
-                { label: "Validés",    value: validated, color: TEAL  },
-                { label: "En attente", value: pending,   color: AMBER },
-                { label: "Refusés",    value: refused,   color: RED   },
+                { label: "Validés",    value: validated, color: POSITIVE   },
+                { label: "En attente", value: pending,   color: HIGHLIGHT },
+                { label: "Refusés",    value: refused,   color: BRICK     },
               ].map(item => (
                 <div key={item.label} className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: item.color }} />
-                  <span className="text-xs text-muted-foreground">{item.label}</span>
-                  <strong className="ml-auto pl-4 text-sm text-foreground">{item.value}</strong>
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: item.color }} />
+                  <span className="text-[11px] text-muted-foreground">{item.label}</span>
+                  <strong className="ml-auto text-xs text-foreground">{item.value}</strong>
                 </div>
               ))}
-              <div className="pt-2 border-t border-border text-xs text-muted-foreground">
-                Total: <strong className="text-foreground">{doctors.length}</strong> médecins
+              <div className="pt-1.5 mt-0.5 border-t border-border text-[10px] text-muted-foreground">
+                Total: <strong className="text-foreground">{doctors.length}</strong>
               </div>
             </div>
           </div>
@@ -162,68 +155,71 @@ export default function AdminStatistiques() {
 
         {/* Rapports pie */}
         <div className="bg-card border border-border rounded-xl">
-          <div className="px-4 py-3 border-b border-border">
+          <div className="px-3 py-2 border-b border-border">
             <span className="text-sm font-medium text-foreground">Répartition des rapports</span>
           </div>
-          <div className="p-4 flex items-center gap-4">
-            <ResponsiveContainer width="50%" height={160}>
+          <div className="px-3 py-2 flex items-center gap-3">
+            <ResponsiveContainer width="45%" height={120}>
               <PieChart>
                 <Pie data={rptPieData.filter(d => d.value > 0).length > 0 ? rptPieData : [{ name: "Aucun", value: 1 }]}
-                  cx="50%" cy="50%" innerRadius={40} outerRadius={65} dataKey="value" paddingAngle={3}>
-                  {rptPieData.map((_, i) => <Cell key={i} fill={[TEAL, AMBER, PURPLE][i]} />)}
+                  cx="50%" cy="50%" innerRadius={30} outerRadius={50} dataKey="value" paddingAngle={3}>
+                  {rptPieData.map((_, i) => <Cell key={i} fill={[POSITIVE, HIGHLIGHT, CARAMEL][i]} />)}
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5 flex-1 min-w-0">
               {[
-                { label: "Validés",     value: validRpts,  color: TEAL   },
-                { label: "Brouillons",  value: draftRpts,  color: AMBER  },
-                { label: "Enregistrés", value: savedRpts,  color: PURPLE },
+                { label: "Validés",     value: validRpts, color: POSITIVE  },
+                { label: "Brouillons",  value: draftRpts, color: HIGHLIGHT },
+                { label: "Enregistrés", value: savedRpts, color: CARAMEL   },
               ].map(item => (
                 <div key={item.label} className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: item.color }} />
-                  <span className="text-xs text-muted-foreground">{item.label}</span>
-                  <strong className="ml-auto pl-4 text-sm text-foreground">{item.value}</strong>
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: item.color }} />
+                  <span className="text-[11px] text-muted-foreground">{item.label}</span>
+                  <strong className="ml-auto text-xs text-foreground">{item.value}</strong>
                 </div>
               ))}
-              <div className="pt-2 border-t border-border text-xs text-muted-foreground">
-                Total: <strong className="text-foreground">{totalRpts}</strong> rapports
+              <div className="pt-1.5 mt-0.5 border-t border-border text-[10px] text-muted-foreground">
+                Total: <strong className="text-foreground">{totalRpts}</strong>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Summary table ── */}
-      <SectionTitle title="Résumé par statut médecin" />
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-muted/50 border-b border-border">
-              {["Statut", "Nombre", "Pourcentage", "Tendance"].map(h => (
-                <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {[
-              { label: "Validés",    value: validated, color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400", trend: "↑ actif" },
-              { label: "En attente", value: pending,   color: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",         trend: pending > 0 ? "! action requise" : "—" },
-              { label: "Refusés",    value: refused,   color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",                 trend: "—" },
-            ].map(row => (
-              <tr key={row.label} className="hover:bg-muted/30 transition-colors">
-                <td className="px-4 py-3">
-                  <span className={cn("text-[11px] px-2.5 py-1 rounded font-semibold", row.color)}>{row.label}</span>
-                </td>
-                <td className="px-4 py-3 text-sm font-semibold text-foreground">{row.value}</td>
-                <td className="px-4 py-3 text-sm text-muted-foreground">
-                  {doctors.length > 0 ? `${Math.round((row.value / doctors.length) * 100)}%` : "—"}
-                </td>
-                <td className="px-4 py-3 text-xs text-muted-foreground">{row.trend}</td>
+        {/* Summary table */}
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="px-3 py-2 border-b border-border">
+            <span className="text-sm font-medium text-foreground">Résumé médecins</span>
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-muted/30 border-b border-border">
+                {["Statut", "Nb", "%"].map(h => (
+                  <th key={h} className="text-left px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {[
+                { key: "validated", value: validated },
+                { key: "pending",   value: pending   },
+                { key: "refused",   value: refused   },
+              ].map(row => (
+                <tr key={row.key} className="hover:bg-muted/30 transition-colors">
+                  <td className="px-3 py-1.5">
+                    <span className={cn(getStatusBadgeClass(row.key), "text-[10px]")}>
+                      {getStatusLabel(row.key, "user")}
+                    </span>
+                  </td>
+                  <td className="px-3 py-1.5 text-xs font-semibold text-foreground">{row.value}</td>
+                  <td className="px-3 py-1.5 text-xs text-muted-foreground">
+                    {doctors.length > 0 ? `${Math.round((row.value / doctors.length) * 100)}%` : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </AppLayout>
   );

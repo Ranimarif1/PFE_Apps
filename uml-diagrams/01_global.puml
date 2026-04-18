@@ -1,0 +1,118 @@
+@startuml RadioAI_Global
+!theme plain
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam ArrowColor #2C3E50
+skinparam ActorBorderColor #2C3E50
+skinparam UsecaseBorderColor #2980B9
+skinparam UsecaseBackgroundColor #EBF5FB
+skinparam NoteBackgroundColor #FDFEFE
+skinparam NoteBorderColor #BDC3C7
+
+title Diagramme de Cas d'Utilisation — RadioAI (Vue Globale)
+
+' ─── Acteurs ───────────────────────────────────────────────
+actor "Visiteur"          as Visiteur  #LightGray
+actor "Medecin"           as Medecin   #AED6F1
+actor "Administrateur"    as Admin     #A9DFBF
+actor "Administrateur IT" as AdminIT   #F9E79F
+
+' ─── Systeme ──────────────────────────────────────────────
+rectangle "RadioAI" {
+
+  package "Authentification" {
+    usecase "S'inscrire"                  as UC_Register
+    usecase "Se connecter"                as UC_Login
+    usecase "Reinitialiser mot de passe"  as UC_ResetPwd
+    usecase "Consulter son profil"        as UC_Profil
+  }
+
+  package "Gestion des Rapports" {
+    usecase "Creer un rapport"            as UC_CreateReport
+    usecase "Enregistrer un audio"        as UC_RecordAudio
+    usecase "Transcrire un audio"         as UC_Transcribe
+    usecase "Consulter les rapports"      as UC_ViewReports
+    usecase "Modifier un rapport"         as UC_EditReport
+    usecase "Finaliser un rapport"        as UC_FinalizeReport
+    usecase "Voir l'historique"           as UC_History
+  }
+
+  package "Gestion des Utilisateurs" {
+    usecase "Valider une inscription"     as UC_ApproveUser
+    usecase "Gerer les medecins"          as UC_ManageDoctors
+    usecase "Gerer les administrateurs"   as UC_ManageAdmins
+    usecase "Changer le role"             as UC_ChangeRole
+  }
+
+  package "Statistiques & Exports" {
+    usecase "Consulter les statistiques"  as UC_Stats
+    usecase "Exporter les rapports CSV"   as UC_ExportCSV
+    usecase "Telecharger dataset IA"      as UC_DownloadDataset
+  }
+
+  package "Reclamations" {
+    usecase "Soumettre une reclamation"   as UC_CreateComplaint
+    usecase "Consulter ses reclamations"  as UC_ViewComplaints
+    usecase "Resoudre une reclamation"    as UC_ResolveComplaint
+  }
+
+  package "Modele IA" {
+    usecase "Gerer donnees entrainement"  as UC_TrainingData
+    usecase "Gerer le modele Whisper"     as UC_ManageModel
+  }
+
+}
+
+' ─── Associations Visiteur ─────────────────────────────────
+Visiteur --> UC_Register
+Visiteur --> UC_Login
+Visiteur --> UC_ResetPwd
+
+' ─── Associations Medecin ──────────────────────────────────
+Medecin --> UC_Login
+Medecin --> UC_Profil
+Medecin --> UC_CreateReport
+Medecin --> UC_ViewReports
+Medecin --> UC_History
+Medecin --> UC_CreateComplaint
+Medecin --> UC_ViewComplaints
+
+' ─── Associations Admin ────────────────────────────────────
+Admin --> UC_Login
+Admin --> UC_Profil
+Admin --> UC_ViewReports
+Admin --> UC_Stats
+Admin --> UC_ExportCSV
+Admin --> UC_ApproveUser
+Admin --> UC_ManageDoctors
+Admin --> UC_ChangeRole
+Admin --> UC_ViewComplaints
+Admin --> UC_CreateComplaint
+
+' ─── Associations AdminIT ──────────────────────────────────
+AdminIT --> UC_Login
+AdminIT --> UC_Profil
+AdminIT --> UC_Stats
+AdminIT --> UC_ExportCSV
+AdminIT --> UC_ManageAdmins
+AdminIT --> UC_ApproveUser
+AdminIT --> UC_ResolveComplaint
+AdminIT --> UC_ViewComplaints
+AdminIT --> UC_TrainingData
+AdminIT --> UC_DownloadDataset
+AdminIT --> UC_ManageModel
+
+' ─── Relations include / extend ────────────────────────────
+UC_CreateReport   ..> UC_RecordAudio      : <<extend>>
+UC_CreateReport   ..> UC_Transcribe       : <<extend>>
+UC_Transcribe     ..> UC_RecordAudio      : <<include>>
+UC_FinalizeReport ..> UC_EditReport       : <<include>>
+UC_FinalizeReport ..> UC_ExportCSV        : <<include>>
+UC_TrainingData   ..> UC_DownloadDataset  : <<include>>
+UC_ApproveUser    ..> UC_ChangeRole       : <<include>>
+
+note top of UC_ApproveUser : Declenche un\nemail de notification
+note right of UC_Transcribe : Moteur Whisper-Medical-FR
+note bottom of UC_FinalizeReport : Statut : draft → validated → saved
+
+@enduml

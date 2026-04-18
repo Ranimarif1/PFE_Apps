@@ -8,26 +8,30 @@
   letter-spacing: 0.06em;
 }
 
+/* idle */
 .sb-badge--grey {
-  background: hsl(210 25% 94%);
-  color: hsl(215 20% 50%);
-  border: 1px solid hsl(210 25% 88%);
+  background: rgba(166,120,88,0.08);
+  color: #8C7D72;
+  border: 1px solid rgba(166,120,88,0.20);
 }
 
-.sb-badge--yellow {
-  background: hsl(38 95% 50% / 0.12);
-  color: hsl(38 80% 35%);
-  border: 1px solid hsl(38 95% 50% / 0.4);
-}
-
+/* recording */
 .sb-badge--red {
-  background: hsl(0 75% 55% / 0.1);
-  color: hsl(0 65% 45%);
-  border: 1px solid hsl(0 75% 55% / 0.35);
+  background: rgba(154,56,54,0.10);
+  color: #9A3836;
+  border: 1px solid rgba(154,56,54,0.30);
 }
 
+/* paused */
+.sb-badge--yellow {
+  background: rgba(206,134,144,0.12);
+  color: #893941;
+  border: 1px solid rgba(206,134,144,0.35);
+}
+
+/* stopped / ready to send */
 .sb-badge--green {
-  background: hsl(145 65% 40% / 0.1);
-  color: hsl(145 55% 32%);
-  border: 1px solid hsl(145 65% 40% / 0.35);
+  background: rgba(119,127,93,0.12);
+  color: #5E6623;
+  border: 1px solid rgba(119,127,93,0.30);
 }

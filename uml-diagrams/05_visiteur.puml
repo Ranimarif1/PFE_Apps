@@ -1,0 +1,75 @@
+@startuml RadioAI_Visiteur
+!theme plain
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam UsecaseBackgroundColor #F4F6F7
+skinparam UsecaseBorderColor #7F8C8D
+skinparam ArrowColor #2C3E50
+
+title Cas d'Utilisation — Visiteur (Non Authentifie)
+
+actor "Visiteur"       as V   #LightGray
+actor "Systeme Email"  as Email #FDFEFE
+actor "Administrateur" as A   #A9DFBF
+actor "AdminIT"        as IT  #F9E79F
+
+rectangle "RadioAI — Acces Public" {
+
+  package "Inscription" {
+    usecase "Acceder a la page d'accueil"      as UC_Home
+    usecase "S'inscrire"                       as UC_Register
+    usecase "Remplir formulaire d'inscription" as UC_FillForm
+    usecase "Recevoir confirmation email"      as UC_ConfirmEmail
+    usecase "Attendre validation Admin"        as UC_Wait
+  }
+
+  package "Connexion" {
+    usecase "Se connecter"                     as UC_Login
+    usecase "Etre redirige selon le role"      as UC_Redirect
+  }
+
+  package "Recuperation de mot de passe" {
+    usecase "Demander reinitialisation"        as UC_ForgotPwd
+    usecase "Recevoir lien par email"          as UC_PwdEmail
+    usecase "Saisir nouveau mot de passe"      as UC_ResetPwd
+    usecase "Valider le token de reset"        as UC_ValidateToken
+  }
+}
+
+' ─── Associations ────────────────────────────────────────
+V --> UC_Home
+V --> UC_Register
+V --> UC_Login
+V --> UC_ForgotPwd
+
+' ─── Include / Extend ───────────────────────────────────
+UC_Register  ..> UC_FillForm      : <<include>>
+UC_FillForm  ..> UC_ConfirmEmail  : <<include>>
+UC_FillForm  ..> UC_Wait          : <<include>>
+UC_Login     ..> UC_Redirect      : <<include>>
+UC_ForgotPwd ..> UC_PwdEmail      : <<include>>
+UC_PwdEmail  ..> UC_ResetPwd      : <<include>>
+UC_ResetPwd  ..> UC_ValidateToken : <<include>>
+
+' ─── Acteurs secondaires ────────────────────────────────
+Email <-- UC_ConfirmEmail
+Email <-- UC_PwdEmail
+A     --> UC_Wait
+IT    --> UC_Wait
+
+note right of UC_Wait
+  Compte cree avec statut pending
+  Admin/AdminIT recoit notification
+  Statuts possibles :
+  validated (peut se connecter)
+  refused (acces refuse)
+end note
+
+note right of UC_Redirect
+  Redirection selon le role :
+  Medecin → /dashboard
+  Admin → /admin/dashboard
+  AdminIT → /adminit/dashboard
+end note
+
+@enduml

@@ -3,18 +3,8 @@ import { AppLayout } from "@/components/AppLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getComplaints, createComplaint, type Complaint } from "@/services/complaintsService";
 import { cn } from "@/lib/utils";
-
-const statusBadge = (s: string) => ({
-  pending: "bg-warning/10 text-warning border border-warning/30",
-  in_progress: "bg-primary/10 text-primary border border-primary/30",
-  resolved: "bg-success/10 text-success border border-success/30",
-}[s] || "bg-muted text-muted-foreground");
-
-const statusLabel = (s: string) => ({
-  pending: "🟡 En attente",
-  in_progress: "🔵 En cours de traitement",
-  resolved: "🟢 Traitée",
-}[s] || s);
+import { getStatusBadgeClass, getStatusLabel, getStatusSurfaceClass } from "@/styles/statusSystem";
+import { CheckCircle2 } from "lucide-react";
 
 export default function Reclamations() {
   const queryClient = useQueryClient();
@@ -61,8 +51,8 @@ export default function Reclamations() {
                 placeholder="Décrivez le problème en détail..." />
             </div>
             {submitted && (
-              <div className="bg-success/10 border border-success/30 rounded-xl px-4 py-3 text-success text-sm">
-                ✅ Réclamation soumise avec succès.
+              <div className="bg-success/10 border border-success/30 rounded-xl px-4 py-3 text-success text-sm flex items-center gap-2">
+                <CheckCircle2 size={16} /> Réclamation soumise avec succès.
               </div>
             )}
             {mutation.isError && (
@@ -92,14 +82,14 @@ export default function Reclamations() {
                     {new Date(r.createdAt).toLocaleDateString("fr-FR")}
                   </p>
                 </div>
-                <span className={cn("text-xs font-medium px-3 py-1 rounded-full shrink-0", statusBadge(r.status))}>
-                  {statusLabel(r.status)}
+                <span className={cn(getStatusBadgeClass(r.status), "shrink-0")}>
+                  {getStatusLabel(r.status, "complaint")}
                 </span>
               </div>
               <p className="text-sm text-muted-foreground">{r.description}</p>
               {r.response && (
-                <div className="mt-3 bg-success/5 border border-success/20 rounded-xl p-3">
-                  <p className="text-xs font-semibold text-success mb-1">Réponse de l'Admin IT :</p>
+                <div className={cn("mt-3 p-3", getStatusSurfaceClass("resolved"))}>
+                  <p className="text-xs font-semibold text-[#4D7F67] mb-1">Réponse de l'Admin IT :</p>
                   <p className="text-sm text-foreground">{r.response}</p>
                 </div>
               )}

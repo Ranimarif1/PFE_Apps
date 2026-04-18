@@ -1,17 +1,17 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, type CSSProperties } from "react";
+import { Link } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
-import { useAuth } from "@/contexts/AuthContext";
 import { getReports, type Report } from "@/services/reportsService";
 import { useQuery } from "@tanstack/react-query";
 import {
-  FileText, CheckCircle, Clock, Eye, Plus, LayoutGrid,
-  Activity, History, Mic, Search,
+  FileText, CheckCircle, Clock, Plus,
+  History, Mic, Pencil, Ruler, Stethoscope, Sparkles,
 } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell,
 } from "recharts";
-import { cn } from "@/lib/utils";
+import { DASHBOARD_ACCENTS, type DashboardAccent } from "@/styles/dashboardAccents";
 
 /* ─── helpers ─────────────────────────────────────────────────────────────── */
 function buildChartData(reports: Report[], days = 30) {
@@ -28,77 +28,107 @@ function buildChartData(reports: Report[], days = 30) {
   });
   return Object.entries(map).map(([date, rapports]) => ({ date, rapports }));
 }
-function rptLabel(s: string) {
-  return { draft: "Brouillon", validated: "Validé", saved: "Enregistré" }[s] ?? s;
-}
-function rptCls(s: string) {
-  return {
-    draft:     "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
-    validated: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-    saved:     "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
-  }[s] ?? "bg-muted text-muted-foreground";
-}
+/* ─── Report calendar ─────────────────────────────────────────────────────── */
+function ReportCalendar({ reports }: { reports: Report[] }) {
+  const [viewDate, setViewDate] = useState(new Date());
+  const year  = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const today = new Date();
 
-/* ─── KPI card ─────────────────────────────────────────────────────────────── */
-function Kpi({ value, label, delta, iconBg, icon: Icon, valueColor }: {
-  value: number | string; label: string; delta?: string;
-  iconBg: string; icon: React.ElementType; valueColor?: string;
-}) {
+  const dayCounts: Record<string, number> = {};
+  reports.forEach(r => {
+    const d = new Date(r.createdAt);
+    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    dayCounts[key] = (dayCounts[key] || 0) + 1;
+  });
+
+  const firstDow    = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrev  = new Date(year, month, 0).getDate();
+
+  type Cell = { day: number; type: 'prev' | 'cur' | 'next' };
+  const cells: Cell[] = [];
+  for (let i = firstDow - 1; i >= 0; i--)
+    cells.push({ day: daysInPrev - i, type: 'prev' });
+  for (let d = 1; d <= daysInMonth; d++)
+    cells.push({ day: d, type: 'cur' });
+  while (cells.length % 7 !== 0)
+    cells.push({ day: cells.length - daysInMonth - firstDow + 1, type: 'next' });
+
+  const maxCount = Math.max(...Object.values(dayCounts), 1);
+  const monthLabel = viewDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+
   return (
-    <div className="bg-card flex items-center gap-3 px-5 py-4">
-      <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", iconBg)}>
-        <Icon size={16} />
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <button onClick={() => setViewDate(new Date(year, month - 1))}
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors border border-border text-base leading-none">
+          ‹
+        </button>
+        <span className="text-sm font-semibold text-foreground capitalize">{monthLabel}</span>
+        <button onClick={() => setViewDate(new Date(year, month + 1))}
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors border border-border text-base leading-none">
+          ›
+        </button>
       </div>
-      <div>
-        <p className={cn("text-2xl font-semibold leading-none tracking-tight", valueColor ?? "text-foreground")}>{value}</p>
-        <p className="text-xs text-muted-foreground mt-1">{label}</p>
-        {delta && (
-          <p className="text-[10px] mt-0.5 font-medium"
-            style={{ color: delta.startsWith("↑") ? "#16a34a" : "#6b7280" }}>
-            {delta}
-          </p>
-        )}
+
+      <div className="grid grid-cols-7 mb-1">
+        {["Di","Lu","Ma","Me","Je","Ve","Sa"].map((d, i) => (
+          <div key={i} className="text-center text-[10px] text-muted-foreground font-medium py-1">{d}</div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-7">
+        {cells.map(({ day, type }, i) => {
+          const isCur   = type === 'cur';
+          const key     = isCur ? `${year}-${month}-${day}` : '';
+          const count   = dayCounts[key] || 0;
+          const isTod   = isCur && today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
+          const hasRpt  = isCur && count > 0;
+          const opacity = hasRpt ? Math.min(0.25 + (count / maxCount) * 0.6, 0.9) : 0;
+
+          return (
+            <div key={i} className="flex items-center justify-center py-0.5">
+              <div className="w-7 h-7 flex items-center justify-center rounded-lg relative"
+                style={{
+                  background: isTod ? '#D97706' : hasRpt ? `rgba(74,123,190,${opacity})` : 'transparent',
+                  color: isTod ? '#fff' : hasRpt ? (opacity > 0.5 ? '#fff' : 'var(--accent-info-text)') : isCur ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
+                  opacity: isCur ? 1 : 0.35,
+                }}>
+                <span className="text-xs font-medium leading-none">{day}</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-/* ─── Tab button ───────────────────────────────────────────────────────────── */
-function Tab({ active, onClick, icon: Icon, label, count }: {
-  active: boolean; onClick: () => void; icon: React.ElementType; label: string; count?: number;
+/* ─── KPI card ─────────────────────────────────────────────────────────────── */
+function Kpi({ value, label, delta, accent, icon: Icon }: {
+  value: number | string; label: string; delta?: string;
+  accent: DashboardAccent; icon: React.ElementType;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-1.5 px-4 py-3.5 text-xs font-medium border-b-2 transition-colors whitespace-nowrap",
-        active ? "border-teal-600 text-foreground font-semibold" : "border-transparent text-muted-foreground hover:text-foreground"
-      )}
+    <div
+      className="dashboard-kpi relative overflow-hidden flex items-center gap-3 px-4 py-3"
+      style={
+        {
+          "--kpi-border": accent.base,
+          "--kpi-bg": accent.tint,
+          "--kpi-bg-hover": accent.tintHover,
+        } as CSSProperties
+      }
     >
-      <Icon size={13} />
-      {label}
-      {count !== undefined && (
-        <span className={cn("px-1.5 py-0.5 rounded-full text-[10px] font-semibold border",
-          active ? "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-700"
-                 : "bg-muted text-muted-foreground border-border")}>
-          {count}
-        </span>
-      )}
-    </button>
-  );
-}
-
-/* ─── Horizontal bar ───────────────────────────────────────────────────────── */
-function HBar({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
-  const pct = total > 0 ? (value / total) * 100 : 0;
-  return (
-    <div className="mb-3">
-      <div className="flex justify-between mb-1">
-        <span className="text-xs text-muted-foreground">{label}</span>
-        <span className="text-xs font-semibold text-foreground">{value}</span>
+      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+        style={{ background: accent.soft, color: accent.text }}>
+        <Icon size={17} />
       </div>
-      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+      <div>
+        <p className="text-xl font-bold leading-none tracking-tight" style={{ color: accent.text }}>{value}</p>
+        <p className="text-xs text-muted-foreground mt-0.5 font-medium">{label}</p>
+        {delta && <p className="text-[10px] mt-0.5 text-muted-foreground">{delta}</p>}
       </div>
     </div>
   );
@@ -108,11 +138,6 @@ function HBar({ label, value, total, color }: { label: string; value: number; to
    MAIN COMPONENT
 ══════════════════════════════════════════════════════════════════════════════ */
 export default function Dashboard() {
-  const { user }  = useAuth();
-  const navigate  = useNavigate();
-  const [tab, setTab]       = useState<"apercu" | "rapports" | "activite">("apercu");
-  const [search, setSearch] = useState("");
-
   const { data: reports = [] } = useQuery<Report[]>({ queryKey: ["reports"], queryFn: getReports });
 
   /* ── computed ── */
@@ -122,49 +147,38 @@ export default function Dashboard() {
   const saved     = reports.filter(r => r.status === "saved").length;
   const last      = reports[0];
 
-  /* ── filtered for rapports tab ── */
-  const filtered = search
-    ? reports.filter(r => r.ID_Exam.toLowerCase().includes(search.toLowerCase()))
-    : reports;
-
-  /* ── recent 5 for apercu ── */
-  const recent5 = reports.slice(0, 5);
+  /* ── AI Assistant stats ── */
+  const dictated    = reports.filter(r => r.audioId).length;
+  const manual      = total - dictated;
+  const dictatedPct = total > 0 ? Math.round((dictated / total) * 100) : 0;
+  const minsSaved   = dictated * 4;   // conservative ~4 min saved per dictation
 
   return (
     <AppLayout title="Tableau de bord">
+      <div className="flex flex-col min-h-full max-w-full overflow-hidden">
 
       {/* ══ KPI strip ══════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-border border-b border-border -mx-6 -mt-6">
-        <Kpi value={total}     label="Total rapports"         iconBg="bg-blue-100 dark:bg-blue-900/30 text-blue-700"    icon={FileText}    delta={`↑ +${total} au total`} />
-        <Kpi value={validated} label="Validés"                iconBg="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700" icon={CheckCircle} delta={`↑ ${validated} validés`} />
-        <Kpi value={drafts}    label="Brouillons"             iconBg="bg-amber-100 dark:bg-amber-900/30 text-amber-600"  icon={Clock}       valueColor={drafts > 0 ? "text-amber-600" : undefined} />
-        <Kpi value={last?.ID_Exam ?? "—"} label="Dernière transcription" iconBg="bg-purple-100 dark:bg-purple-900/30 text-purple-600" icon={Mic} />
-      </div>
-
-      {/* ══ Tabs bar ═══════════════════════════════════════════════════════ */}
-      <div className="flex items-center gap-0 border-b border-border -mx-6 px-2 bg-card">
-        <Tab active={tab === "apercu"}   onClick={() => setTab("apercu")}   icon={LayoutGrid} label="Aperçu"    />
-        <Tab active={tab === "rapports"} onClick={() => setTab("rapports")} icon={History}    label="Rapports" count={total} />
-        <Tab active={tab === "activite"} onClick={() => setTab("activite")} icon={Activity}   label="Activité" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 divide-y sm:divide-x sm:divide-y-0 divide-border border border-border rounded-xl bg-card overflow-hidden">
+        <Kpi value={total}     label="Total rapports"          accent={DASHBOARD_ACCENTS.info}      icon={FileText}    delta={`${total} rapports créés`} />
+        <Kpi value={validated} label="Validés"                 accent={DASHBOARD_ACCENTS.positive}  icon={CheckCircle} delta={total > 0 ? `${Math.round((validated/total)*100)}% du total` : undefined} />
+        <Kpi value={drafts}    label="Brouillons"              accent={DASHBOARD_ACCENTS.highlight} icon={Clock}       delta={drafts > 0 ? "À compléter" : "Aucun brouillon"} />
+        <Kpi value={last?.ID_Exam ?? "—"} label="Dernière transcription" accent={DASHBOARD_ACCENTS.highlight} icon={Mic} />
       </div>
 
       {/* ══ Content ════════════════════════════════════════════════════════ */}
-      <div className="pt-5">
+      <div className="pt-3">
+        <div className="space-y-3">
 
-        {/* ── Aperçu ─────────────────────────────────────────────────────── */}
-        {tab === "apercu" && (
-          <div className="space-y-4">
-
-            {/* Row 1: chart + répartition */}
-            <div className="grid lg:grid-cols-5 gap-4">
+          {/* Row 1: chart + calendar */}
+          <div className="grid grid-cols-1 xl:grid-cols-5 gap-3 items-stretch">
               {/* Activity chart */}
-              <div className="lg:col-span-3 bg-card border border-border rounded-xl">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <div className="lg:col-span-3 bg-card border border-border rounded-xl flex flex-col">
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-border shrink-0">
                   <span className="text-sm font-medium text-foreground">Activité — 30 derniers jours</span>
                   <span className="text-[10px] bg-muted border border-border rounded px-2 py-0.5 text-muted-foreground">rapports</span>
                 </div>
-                <div className="p-4">
-                  <ResponsiveContainer width="100%" height={140}>
+                <div className="p-3 flex-1 min-h-0">
+                  <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={buildChartData(reports)} margin={{ top: 0, right: 0, left: -24, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
                       <XAxis dataKey="date" tick={{ fontSize: 9 }} interval={4} axisLine={false} tickLine={false} />
@@ -173,231 +187,143 @@ export default function Dashboard() {
                         contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "11px" }}
                         cursor={{ stroke: "hsl(var(--muted))" }}
                       />
-                      <Line type="monotone" dataKey="rapports" stroke="#4cc9c0" strokeWidth={1.5} dot={false} />
+                      <Line
+                        type="monotone"
+                        dataKey="rapports"
+                        stroke={DASHBOARD_ACCENTS.info.base}
+                        strokeWidth={1.5}
+                        dot={false}
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              {/* Répartition statuts */}
+              {/* Calendrier */}
               <div className="lg:col-span-2 bg-card border border-border rounded-xl">
-                <div className="px-4 py-3 border-b border-border">
-                  <span className="text-sm font-medium text-foreground">Répartition des rapports</span>
+                <div className="px-4 py-2.5 border-b border-border">
+                  <span className="text-sm font-medium text-foreground">Calendrier des rapports</span>
                 </div>
-                <div className="p-4 space-y-1">
-                  <HBar label="Validés"    value={validated} total={total} color="#4cc9c0" />
-                  <HBar label="Brouillons" value={drafts}    total={total} color="#f5a828" />
-                  <HBar label="Enregistrés"value={saved}     total={total} color="#8b5cf6" />
-                  <div className="pt-4 mt-2 border-t border-border flex flex-col gap-2">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Total rapports</span>
-                      <span className="font-semibold text-foreground">{total}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Taux validation</span>
-                      <span className="font-semibold text-foreground">{total > 0 ? Math.round((validated / total) * 100) : 0}%</span>
-                    </div>
-                  </div>
+                <div className="px-4 py-2">
+                  <ReportCalendar reports={reports} />
                 </div>
               </div>
             </div>
 
-            {/* Row 2: recent + actions */}
-            <div className="grid lg:grid-cols-3 gap-4">
-              {/* Rapports récents */}
-              <div className="lg:col-span-2 bg-card border border-border rounded-xl">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-                  <span className="text-sm font-medium text-foreground">Rapports récents</span>
-                  <button onClick={() => setTab("rapports")} className="text-xs text-teal-600 hover:underline">Voir tout →</button>
+          {/* Row 2: pie + AI assistant + actions */}
+          <div className="grid grid-cols-1 lg:grid-cols-6 gap-3 items-stretch">
+              {/* Répartition statuts — pie */}
+              <div className="lg:col-span-2 bg-card border border-border rounded-xl flex flex-col">
+                <div className="px-4 py-2 border-b border-border shrink-0">
+                  <span className="text-sm font-medium text-foreground">Répartition des rapports</span>
                 </div>
-                {recent5.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-                    <FileText size={24} className="opacity-25 mb-2" />
-                    <p className="text-xs">Aucun rapport pour le moment</p>
-                    <Link to="/rapport/nouveau"
-                      className="mt-3 text-xs bg-teal-600 text-white px-3 py-1.5 rounded-lg hover:bg-teal-700 transition-colors">
-                      Créer mon premier rapport
-                    </Link>
+                <div className="p-2 flex items-center gap-2 flex-1 min-h-0">
+                  <div className="w-[40%] h-full flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={total > 0
+                            ? [
+                                { name: "Validés",     value: validated },
+                                { name: "Brouillons",  value: drafts    },
+                                { name: "Enregistrés", value: saved     },
+                              ].filter(d => d.value > 0)
+                            : [{ name: "Aucun", value: 1 }]
+                          }
+                          cx="50%" cy="50%" innerRadius="55%" outerRadius="95%" dataKey="value" paddingAngle={3}>
+                          {[DASHBOARD_ACCENTS.positive.base, DASHBOARD_ACCENTS.highlight.base, DASHBOARD_ACCENTS.info.base].map((c, i) => (
+                            <Cell key={i} fill={total > 0 ? c : "hsl(var(--muted))"} />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "11px" }} />
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
-                ) : (
-                  <div className="divide-y divide-border">
-                    {recent5.map(r => (
-                      <div key={r._id} className="flex items-center gap-3 px-4 py-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-mono font-medium text-foreground">{r.ID_Exam}</p>
-                          <p className="text-[10px] text-muted-foreground">{new Date(r.createdAt).toLocaleDateString("fr-FR")}</p>
-                        </div>
-                        <span className={cn("text-[10px] px-2 py-0.5 rounded font-semibold shrink-0", rptCls(r.status))}>
-                          {rptLabel(r.status)}
-                        </span>
-                        <button onClick={() => navigate(`/rapport/${r._id}`)}
-                          className="flex items-center gap-1 text-xs text-teal-600 hover:text-teal-700 font-medium transition-colors shrink-0">
-                          <Eye size={12} />
-                        </button>
+                  <div className="flex flex-col gap-1 flex-1 min-w-0 justify-center">
+                    {[
+                      { label: "Validés",     value: validated, color: DASHBOARD_ACCENTS.positive.base  },
+                      { label: "Brouillons",  value: drafts,    color: DASHBOARD_ACCENTS.highlight.base },
+                      { label: "Enregistrés", value: saved,     color: DASHBOARD_ACCENTS.info.base      },
+                    ].map(item => (
+                      <div key={item.label} className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: item.color }} />
+                        <span className="text-[11px] text-muted-foreground">{item.label}</span>
+                        <strong className="ml-auto text-xs text-foreground">{item.value}</strong>
                       </div>
                     ))}
                   </div>
-                )}
+                </div>
+              </div>
+
+              {/* Assistant IA — dictation coverage + category chips */}
+              <div className="lg:col-span-2 bg-card border border-border rounded-xl flex flex-col">
+                <div className="flex items-center justify-between px-4 py-2 border-b border-border shrink-0">
+                  <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-primary" /> Assistant IA
+                  </span>
+                  <span className="text-[10px] bg-muted border border-border rounded px-2 py-0.5 text-muted-foreground">{dictatedPct}% dictés</span>
+                </div>
+                <div className="p-2 flex flex-col gap-1.5 flex-1 min-h-0 justify-between">
+                  {/* Sub-stats */}
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <div className="bg-muted/40 border border-border rounded-lg px-2 py-1.5">
+                      <p className="text-[9px] text-muted-foreground uppercase tracking-wide font-semibold">Dictés</p>
+                      <p className="text-base font-semibold text-foreground">{dictated}</p>
+                    </div>
+                    <div className="bg-muted/40 border border-border rounded-lg px-2 py-1.5">
+                      <p className="text-[9px] text-muted-foreground uppercase tracking-wide font-semibold">Manuels</p>
+                      <p className="text-base font-semibold text-foreground">{manual}</p>
+                    </div>
+                    <div className="bg-muted/40 border border-border rounded-lg px-2 py-1.5">
+                      <p className="text-[9px] text-muted-foreground uppercase tracking-wide font-semibold">Gagné</p>
+                      <p className="text-base font-semibold text-foreground">~{minsSaved}<span className="text-[10px] font-normal text-muted-foreground"> m</span></p>
+                    </div>
+                  </div>
+
+                  {/* AI category chips */}
+                  <div className="flex flex-wrap gap-1">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[rgba(100,116,139,0.2)] text-[#334155] border border-[rgba(100,116,139,0.35)] dark:text-[#CBD5E1] dark:border-[rgba(148,163,184,0.4)]">
+                      <Mic size={9} /> STT
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[rgba(217,119,6,0.2)] text-[#7C4A08] border border-[rgba(217,119,6,0.4)] dark:text-[#FCD34D] dark:border-[rgba(245,158,11,0.45)]">
+                      <Pencil size={9} /> Ortho
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[rgba(74,123,190,0.22)] text-[#1E3A6B] border border-[rgba(74,123,190,0.45)] dark:text-[#93C5FD] dark:border-[rgba(94,151,232,0.45)]">
+                      <Ruler size={9} /> Accord
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[rgba(5,150,105,0.2)] text-[#065F46] border border-[rgba(5,150,105,0.4)] dark:text-[#6EE7B7] dark:border-[rgba(56,211,159,0.4)]">
+                      <Stethoscope size={9} /> Médical
+                    </span>
+                  </div>
+                </div>
               </div>
 
               {/* Actions rapides */}
-              <div className="bg-card border border-border rounded-xl">
-                <div className="px-4 py-3 border-b border-border">
+              <div className="lg:col-span-2 bg-card border border-border rounded-xl flex flex-col">
+                <div className="px-4 py-2.5 border-b border-border">
                   <span className="text-sm font-medium text-foreground">Actions rapides</span>
                 </div>
-                <div className="p-4 flex flex-col gap-2">
+                <div className="p-3 flex flex-col gap-1.5">
                   <Link to="/rapport/nouveau"
-                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-sm text-foreground transition-colors">
-                    <Plus size={14} className="text-teal-600" />
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-border bg-muted/40 hover:bg-muted text-sm text-foreground transition-colors">
+                    <Plus size={14} className="text-primary" />
                     Nouveau rapport →
                   </Link>
-                  <button onClick={() => setTab("rapports")}
-                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-sm text-foreground transition-colors text-left">
-                    <History size={14} className="text-blue-600" />
+                  <Link to="/historique"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-border bg-muted/40 hover:bg-muted text-sm text-foreground transition-colors">
+                    <History size={14} className="text-primary" />
                     Voir l'historique →
-                  </button>
+                  </Link>
                   <Link to="/reclamations"
-                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-sm text-foreground transition-colors">
-                    <FileText size={14} className="text-purple-600" />
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-border bg-muted/40 hover:bg-muted text-sm text-foreground transition-colors">
+                    <FileText size={14} className="text-muted-foreground" />
                     Soumettre une réclamation →
                   </Link>
                 </div>
-
-                {/* Today */}
-                <div className="px-4 py-3 border-t border-border">
-                  <p className="text-[10px] text-muted-foreground">Aujourd'hui</p>
-                  <p className="text-xs font-semibold text-foreground mt-0.5 capitalize">
-                    {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    Bonjour, Dr. {user?.prénom} {user?.nom}
-                  </p>
-                </div>
-              </div>
             </div>
           </div>
-        )}
-
-        {/* ── Rapports ─────────────────────────────────────────────────────── */}
-        {tab === "rapports" && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm font-semibold text-foreground">Mes rapports</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{total} comptes rendus radiologiques</p>
-              </div>
-              <Link to="/rapport/nouveau"
-                className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border transition-colors"
-                style={{ background: "#0c1220", color: "#4cc9c0", borderColor: "rgba(76,201,192,0.3)" }}>
-                <Plus size={11} /> Nouveau rapport
-              </Link>
-            </div>
-
-            {/* 3 mini stats */}
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              {[
-                { label: "Validés",     value: validated, color: "text-teal-600"   },
-                { label: "Brouillons",  value: drafts,    color: "text-amber-600"  },
-                { label: "Enregistrés", value: saved,     color: "text-purple-600" },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="bg-muted/50 border border-border rounded-xl py-3 px-4 text-center">
-                  <p className={cn("text-2xl font-semibold tracking-tight leading-none", color)}>{value}</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-1.5">{label}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Search */}
-            <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2 mb-4 bg-card">
-              <Search size={13} className="text-muted-foreground shrink-0" />
-              <input value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Rechercher par ID Examen..."
-                className="flex-1 text-xs bg-transparent text-foreground placeholder:text-muted-foreground outline-none" />
-            </div>
-
-            {/* Table */}
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
-              <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
-                <colgroup>
-                  <col style={{ width: "30%" }} /><col style={{ width: "25%" }} />
-                  <col style={{ width: "20%" }} /><col style={{ width: "15%" }} /><col style={{ width: "10%" }} />
-                </colgroup>
-                <thead>
-                  <tr className="bg-muted/50 border-b border-border">
-                    {["ID Examen", "Date", "Statut", "Score IA", "Action"].map(h => (
-                      <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {filtered.length === 0 && (
-                    <tr><td colSpan={5} className="px-4 py-12 text-center text-xs text-muted-foreground">
-                      <FileText size={20} className="opacity-25 mb-2 mx-auto" />
-                      Aucun rapport trouvé
-                    </td></tr>
-                  )}
-                  {filtered.map(r => (
-                    <tr key={r._id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs font-medium text-foreground">{r.ID_Exam}</td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(r.createdAt).toLocaleDateString("fr-FR")}</td>
-                      <td className="px-4 py-3">
-                        <span className={cn("text-[10px] px-2 py-0.5 rounded font-semibold", rptCls(r.status))}>
-                          {rptLabel(r.status)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground">—</td>
-                      <td className="px-4 py-3">
-                        <button onClick={() => navigate(`/rapport/${r._id}`)}
-                          className="flex items-center gap-1 text-xs text-teal-600 hover:text-teal-700 font-medium transition-colors">
-                          <Eye size={12} /> Voir
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* ── Activité ─────────────────────────────────────────────────────── */}
-        {tab === "activite" && (
-          <div>
-            <div className="mb-4">
-              <p className="text-sm font-semibold text-foreground">Journal d'activité</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Vos dernières actions sur la plateforme</p>
-            </div>
-            <div className="bg-card border border-border rounded-xl divide-y divide-border">
-              {reports.slice(0, 8).length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <Activity size={24} className="opacity-25 mb-2" />
-                  <p className="text-xs">Aucune activité récente</p>
-                </div>
-              ) : (
-                reports.slice(0, 8).map(r => (
-                  <div key={r._id} className="flex items-start gap-3 px-4 py-3.5">
-                    <div className={cn("w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5",
-                      r.status === "validated" ? "bg-emerald-100 dark:bg-emerald-900/30" :
-                      r.status === "draft"     ? "bg-amber-100 dark:bg-amber-900/30"    :
-                                                 "bg-blue-100 dark:bg-blue-900/30")}>
-                      <FileText size={13} className={
-                        r.status === "validated" ? "text-emerald-600" :
-                        r.status === "draft"     ? "text-amber-600"   : "text-blue-600"} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-foreground">Rapport {r.ID_Exam}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
-                        {new Date(r.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })} · {rptLabel(r.status)}
-                      </p>
-                    </div>
-                    <button onClick={() => navigate(`/rapport/${r._id}`)}
-                      className="text-[10px] text-teal-600 hover:underline shrink-0">Voir</button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
+        </div>
+      </div>
       </div>
     </AppLayout>
   );

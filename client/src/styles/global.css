@@ -5,29 +5,36 @@
 }
 
 :root {
-  /* ── Light mode – mirrors desktop's index.css palette ────────── */
-  --bg:            hsl(210, 20%, 98%);
-  --surface:       hsl(0, 0%, 100%);
-  --surface-muted: hsl(210, 25%, 97%);
-  --border:        hsl(210, 25%, 88%);
-  --text:          hsl(215, 40%, 12%);
-  --muted:         hsl(215, 20%, 50%);
+  /* ── Warm Linen — mirrors desktop palette ─────────────────────── */
+  --bg:            #F6F3EE;          /* warm cream */
+  --surface:       #ffffff;
+  --surface-muted: #f0ece6;          /* slightly warm grey */
+  --border:        hsl(30, 18%, 86%);/* warm beige */
+  --text:          #1A1410;          /* warm near-black */
+  --muted:         #8C7D72;          /* warm grey */
 
-  --primary:       hsl(210, 90%, 40%);
-  --primary-dark:  hsl(210, 90%, 33%);
-  --accent:        hsl(199, 80%, 48%);
+  --primary:       #A67858;          /* warm sandstone */
+  --primary-light: #C49572;          /* soft caramel */
+  --primary-dark:  #8a6040;
 
-  --danger:        hsl(0, 75%, 55%);
-  --danger-bg:     hsl(0, 75%, 55%, 0.12);
-  --success:       hsl(145, 65%, 40%);
-  --success-bg:    hsl(145, 65%, 40%, 0.1);
-  --warn:          hsl(38, 95%, 50%);
-  --warn-bg:       hsl(38, 95%, 50%, 0.12);
+  --danger:        #9A3836;
+  --danger-bg:     rgba(154, 56, 54, 0.10);
+  --success:       #5E6623;
+  --success-bg:    rgba(94, 102, 35, 0.10);
+  --warn:          #A67858;
+  --warn-bg:       rgba(166, 120, 88, 0.12);
 
-  --gradient-hero: linear-gradient(135deg, hsl(210, 90%, 40%), hsl(199, 80%, 48%));
-  --shadow-card:   0 2px 16px -4px hsl(210 60% 30% / 0.12);
-  --shadow-elevated: 0 8px 32px -8px hsl(210 60% 30% / 0.20);
-  --radius:        0.625rem;
+  /* Semantic accents matching desktop */
+  --steel:         #8DACBA;
+  --olive:         #777F5D;
+  --rose:          #CE8690;
+  --brick:         #9A3836;
+  --sage:          #CCD2AB;
+
+  --gradient-hero:   linear-gradient(135deg, #A67858 0%, #C49572 100%);
+  --shadow-card:     0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-elevated: 0 4px 16px rgba(166,120,88,0.18);
+  --radius:          0.75rem;
 }
 
 html, body, #root {

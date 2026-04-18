@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { Sun, Moon, Eye, EyeOff, Mic, ShieldCheck, Activity } from "lucide-react";
+import { Sun, Moon, Eye, EyeOff, Mic, ShieldCheck, Activity, Building2 } from "lucide-react";
 import { motion } from "framer-motion";
 import hospitalImg from "@/assets/téléchargement.jpeg";
 
@@ -41,7 +41,7 @@ export default function Login() {
           alt="Hôpital Fatouma Bourguiba Monastir"
           className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/85 via-primary/70 to-blue-900/80" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0D1119]/90 via-[#4A7BBE]/75 to-[#6B97D0]/60" />
 
         <div className="absolute inset-0 opacity-[0.07]">
           {[...Array(6)].map((_, i) => (
@@ -76,7 +76,7 @@ export default function Login() {
               <h1 className="text-[2.6rem] font-extrabold text-white leading-[1.15] mb-4 tracking-tight">
                 Transcription<br />
                 Médicale<br />
-                <span className="text-blue-200">Intelligente</span>
+                <span className="text-[#FDE68A]">Intelligente</span>
               </h1>
 
               <p className="text-white/65 text-base leading-relaxed mb-8 max-w-sm">
@@ -97,7 +97,7 @@ export default function Login() {
               { icon: ShieldCheck, title: "Sécurisé", desc: "JWT + RBAC certifié" },
             ].map(({ icon: Icon, title, desc }) => (
               <div key={title} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                <Icon className="w-5 h-5 text-blue-200 mb-2" />
+                <Icon className="w-5 h-5 text-[#FDE68A] mb-2" />
                 <p className="text-white text-sm font-semibold">{title}</p>
                 <p className="text-white/50 text-xs">{desc}</p>
               </div>
@@ -129,7 +129,7 @@ export default function Login() {
 
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
             <div className="hidden lg:flex items-center gap-2 mb-6">
-              <span className="text-xl">🏥</span>
+              <Building2 size={18} className="text-primary" />
               <p className="text-sm text-muted-foreground font-medium">
                 Hôpital Fattouma-Bourguiba de Monastir
               </p>
