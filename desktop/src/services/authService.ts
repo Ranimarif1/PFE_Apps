@@ -68,6 +68,14 @@ export async function registerApi(payload: {
   await api.post("/api/auth/register", payload);
 }
 
+export async function sendVerificationCodeApi(email: string): Promise<void> {
+  await api.post("/api/auth/send-verification-code", { email });
+}
+
+export async function verifyEmailCodeApi(email: string, code: string): Promise<void> {
+  await api.post("/api/auth/verify-email-code", { email, code });
+}
+
 export async function getMeApi(): Promise<User> {
   const raw = await api.get<BackendUser>("/api/auth/me");
   return mapUser(raw);

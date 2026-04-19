@@ -50,12 +50,12 @@ export default function AdminUtilisateurs() {
           {[
             { key: "tous", label: "Tous" },
             { key: "pending", label: `En attente${pending > 0 ? ` (${pending})` : ""}` },
-            { key: "validated", label: "Validés" },
+            { key: "validated", label: "Acceptés" },
             { key: "refused", label: "Refusés" },
           ].map(({ key, label }) => (
             <button key={key} onClick={() => setActiveTab(key)}
               className={cn("pb-3 -mb-px text-sm transition-all",
-                activeTab === key ? getActiveFilterTabClass(key) : INACTIVE_TAB_CLASS)}>
+                activeTab === key ? getActiveFilterTabClass(key, "user") : INACTIVE_TAB_CLASS)}>
               {label}
             </button>
           ))}
@@ -76,7 +76,7 @@ export default function AdminUtilisateurs() {
                   <td className="px-6 py-4 font-medium text-foreground">{u.nom || "—"}</td>
                   <td className="px-6 py-4 text-muted-foreground">{u.email}</td>
                   <td className="px-6 py-4">
-                    <span className={cn(getStatusBadgeClass(u.status), "capitalize")}>
+                    <span className={cn(getStatusBadgeClass(u.status, "user"), "capitalize")}>
                       {getStatusLabel(u.status, "user")}
                     </span>
                   </td>

@@ -132,7 +132,12 @@ export default function RapportDetail() {
         refreshQueue(); // audio now has reportId → remove from sidebar queue
         navigate(`/rapport/${r._id}`, { replace: true, state: { ...fromState } });
       })
-      .catch(() => { /* silent — user can still save manually */ });
+      .catch(() => {
+        // Auto-save failed (e.g. ID_Exam conflict). Resync the sidebar so the
+        // audio reappears if the backend still has no reportId linked — user
+        // can see what's pending and save manually.
+        refreshQueue();
+      });
   // Only run once on mount
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

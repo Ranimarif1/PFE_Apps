@@ -232,7 +232,7 @@ export default function AdminDashboard() {
   const statsTotal     = rptStats?.total     ?? 0;
 
   const userPieData = [
-    { name: "Validés",    value: validated || 1 },
+    { name: "Acceptés",   value: validated || 1 },
     { name: "En attente", value: pending   || 0 },
     { name: "Refusés",    value: refused   || 0 },
   ].filter(d => d.value > 0);
@@ -364,7 +364,7 @@ export default function AdminDashboard() {
                           {userPieData.map((_, i) => (
                             <Cell
                               key={i}
-                              fill={[DASHBOARD_ACCENTS.positive.base, DASHBOARD_ACCENTS.highlight.base, DASHBOARD_ACCENTS.info.base][i]}
+                              fill={["#4A7BBE", "#D97706", "#E38C8C"][i]}
                             />
                           ))}
                         </Pie>
@@ -373,9 +373,9 @@ export default function AdminDashboard() {
                   </div>
                   <div className="flex w-full flex-col gap-2 min-w-0">
                     {[
-                      { label: "Validés",    value: doctors.filter(u => u.status === "validated").length, color: DASHBOARD_ACCENTS.positive.base },
-                      { label: "En attente", value: doctors.filter(u => u.status === "pending").length,   color: DASHBOARD_ACCENTS.highlight.base },
-                      { label: "Refusés",    value: doctors.filter(u => u.status === "refused").length,   color: DASHBOARD_ACCENTS.info.base },
+                      { label: "Acceptés",   value: doctors.filter(u => u.status === "validated").length, color: "#4A7BBE" },
+                      { label: "En attente", value: doctors.filter(u => u.status === "pending").length,   color: "#D97706" },
+                      { label: "Refusés",    value: doctors.filter(u => u.status === "refused").length,   color: "#E38C8C" },
                     ].map(item => (
                       <div key={item.label} className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ background: item.color }} />
@@ -407,7 +407,7 @@ export default function AdminDashboard() {
                           {rptPieData.map((_, i) => (
                             <Cell
                               key={i}
-                              fill={[DASHBOARD_ACCENTS.info.base, DASHBOARD_ACCENTS.highlight.base, DASHBOARD_ACCENTS.positive.base][i]}
+                              fill={[DASHBOARD_ACCENTS.positive.base, "#D97706", DASHBOARD_ACCENTS.info.base][i]}
                             />
                           ))}
                         </Pie>
@@ -417,7 +417,7 @@ export default function AdminDashboard() {
                   <div className="flex w-full flex-col gap-2 min-w-0">
                     {[
                       { label: "Validés",     value: statsValidated, color: DASHBOARD_ACCENTS.positive.base },
-                      { label: "Brouillons",  value: statsDraft,     color: DASHBOARD_ACCENTS.highlight.base },
+                      { label: "Brouillons",  value: statsDraft,     color: "#D97706" },
                       { label: "Enregistrés", value: statsSaved,     color: DASHBOARD_ACCENTS.info.base },
                     ].map(item => (
                       <div key={item.label} className="flex items-center gap-2">
@@ -468,7 +468,7 @@ export default function AdminDashboard() {
             <div className="mb-4 inline-flex max-w-full gap-1 bg-muted border border-border rounded-lg p-1 overflow-x-auto">
               {([
                 { key: "all",       label: `Tous (${doctors.length})`         },
-                { key: "validated", label: `Validés (${validated})`            },
+                { key: "validated", label: `Acceptés (${validated})`           },
                 { key: "pending",   label: `En attente (${pending})`           },
                 { key: "refused",   label: `Refusés (${refused})`              },
               ] as const).map(({ key, label }) => (
@@ -526,7 +526,7 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground truncate">{doc.email}</td>
                       <td className="px-4 py-3">
-                        <span className={getStatusBadgeClass(doc.status)}>
+                        <span className={getStatusBadgeClass(doc.status, "user")}>
                           {getStatusLabel(doc.status, "user")}
                         </span>
                       </td>

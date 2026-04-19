@@ -5,16 +5,18 @@ import {
 import { createSession } from "@/services/sessionService";
 import { transcribeAudio } from "@/services/transcriptionService";
 import { uploadAudio, fetchAudioBlob, getAudios, type AudioRecord } from "@/services/audioService";
+import { createReport } from "@/services/reportsService";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:4000";
 
 export type RecMéthode = "navigateur" | "smartphone" | null;
 
 export interface RecordingResult {
-  examId:  string;
-  text:    string;
-  méthode: RecMéthode;
-  audioId: string | null;
+  examId:   string;
+  text:     string;
+  méthode:  RecMéthode;
+  audioId:  string | null;
+  reportId: string | null;  // draft report created right after transcription success
 }
 
 interface RecordingContextType {
@@ -125,7 +127,17 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       const text = await transcribeAudio(blob);
-      setResult({ examId: eid, text, méthode: m, audioId: aid });
+      // Immediately persist a draft report linked to the audio. This makes the
+      // "audios en attente" queue hold only failed transcriptions — successful
+      // ones are always backed by a report server-side.
+      let draftId: string | null = null;
+      try {
+        const content = `Indication: \n\nResultat: ${text}\n\nConclusion: `;
+        const r = await createReport({ ID_Exam: eid, content, status: "draft", audioId: aid ?? undefined });
+        draftId = r._id;
+        if (aid) setAudioQueue(q => q.filter(a => a._id !== aid));
+      } catch { /* draft save failed — RapportDetail fallback will retry */ }
+      setResult({ examId: eid, text, méthode: m, audioId: aid, reportId: draftId });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur de transcription.");
     } finally {
@@ -163,7 +175,17 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
     try {
       const blob = await fetchAudioBlob(id);
       const text = await transcribeAudio(blob);
-      setResult({ examId: eid, text, méthode: null, audioId: id });
+      // Same pattern as doTranscribe: create the draft server-side so the audio
+      // is linked and falls out of the queue. Only a failed transcription leaves
+      // the audio orphaned for retry.
+      let draftId: string | null = null;
+      try {
+        const content = `Indication: \n\nResultat: ${text}\n\nConclusion: `;
+        const r = await createReport({ ID_Exam: eid, content, status: "draft", audioId: id });
+        draftId = r._id;
+      } catch { /* draft save failed — RapportDetail fallback will retry */ }
+      setResult({ examId: eid, text, méthode: null, audioId: id, reportId: draftId });
+      setAudioQueue(q => q.filter(a => a._id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur de transcription.");
     } finally {

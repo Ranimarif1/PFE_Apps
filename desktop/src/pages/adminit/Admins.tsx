@@ -55,12 +55,12 @@ export default function AdminITAdmins() {
           {[
             { key: "tous", label: "Tous" },
             { key: "pending", label: `En attente${pending > 0 ? ` (${pending})` : ""}` },
-            { key: "validated", label: "Validés" },
+            { key: "validated", label: "Acceptés" },
             { key: "refused", label: "Refusés" },
           ].map(({ key, label }) => (
             <button key={key} onClick={() => setActiveTab(key)}
               className={cn("pb-3 -mb-px text-sm transition-all",
-                activeTab === key ? getActiveFilterTabClass(key) : INACTIVE_TAB_CLASS)}>
+                activeTab === key ? getActiveFilterTabClass(key, "user") : INACTIVE_TAB_CLASS)}>
               {label}
             </button>
           ))}
@@ -86,7 +86,7 @@ export default function AdminITAdmins() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={getStatusBadgeClass(a.status)}>
+                    <span className={getStatusBadgeClass(a.status, "user")}>
                       {getStatusLabel(a.status, "user")}
                     </span>
                   </td>

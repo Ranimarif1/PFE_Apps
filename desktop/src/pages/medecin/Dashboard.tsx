@@ -231,7 +231,7 @@ export default function Dashboard() {
                             : [{ name: "Aucun", value: 1 }]
                           }
                           cx="50%" cy="50%" innerRadius="55%" outerRadius="95%" dataKey="value" paddingAngle={3}>
-                          {[DASHBOARD_ACCENTS.positive.base, DASHBOARD_ACCENTS.highlight.base, DASHBOARD_ACCENTS.info.base].map((c, i) => (
+                          {[DASHBOARD_ACCENTS.positive.base, "#D97706", DASHBOARD_ACCENTS.info.base].map((c, i) => (
                             <Cell key={i} fill={total > 0 ? c : "hsl(var(--muted))"} />
                           ))}
                         </Pie>
@@ -242,7 +242,7 @@ export default function Dashboard() {
                   <div className="flex flex-col gap-1 flex-1 min-w-0 justify-center">
                     {[
                       { label: "Validés",     value: validated, color: DASHBOARD_ACCENTS.positive.base  },
-                      { label: "Brouillons",  value: drafts,    color: DASHBOARD_ACCENTS.highlight.base },
+                      { label: "Brouillons",  value: drafts,    color: "#D97706"                        },
                       { label: "Enregistrés", value: saved,     color: DASHBOARD_ACCENTS.info.base      },
                     ].map(item => (
                       <div key={item.label} className="flex items-center gap-2">

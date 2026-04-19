@@ -4,37 +4,83 @@
   padding: 0;
 }
 
+/* ═══════════════════════════════════════════
+   REPORTEASE — Mobile palette (mirrors desktop)
+   Primary: #4A7BBE  (medical trust blue)
+   Accent:  #D97706  (warm amber — sparingly)
+   BG:      #F7F8FA  (cool near-white)
+   ═══════════════════════════════════════════ */
 :root {
-  /* ── Warm Linen — mirrors desktop palette ─────────────────────── */
-  --bg:            #F6F3EE;          /* warm cream */
+  --bg:            #F7F8FA;
   --surface:       #ffffff;
-  --surface-muted: #f0ece6;          /* slightly warm grey */
-  --border:        hsl(30, 18%, 86%);/* warm beige */
-  --text:          #1A1410;          /* warm near-black */
-  --muted:         #8C7D72;          /* warm grey */
+  --surface-muted: #E8ECF1;
+  --border:        #E4E7EB;
+  --text:          #0B0D12;
+  --muted:         #5C6573;
 
-  --primary:       #A67858;          /* warm sandstone */
-  --primary-light: #C49572;          /* soft caramel */
-  --primary-dark:  #8a6040;
+  --primary:       #4A7BBE;
+  --primary-light: #6B97D0;
+  --primary-dark:  #3A61A0;
+  --primary-tint:  rgba(74, 123, 190, 0.10);
+  --primary-glow:  rgba(74, 123, 190, 0.28);
 
-  --danger:        #9A3836;
-  --danger-bg:     rgba(154, 56, 54, 0.10);
-  --success:       #5E6623;
-  --success-bg:    rgba(94, 102, 35, 0.10);
-  --warn:          #A67858;
-  --warn-bg:       rgba(166, 120, 88, 0.12);
+  --accent:        #D97706;
 
-  /* Semantic accents matching desktop */
-  --steel:         #8DACBA;
-  --olive:         #777F5D;
-  --rose:          #CE8690;
-  --brick:         #9A3836;
-  --sage:          #CCD2AB;
+  --danger:        #DC2626;
+  --danger-bg:     rgba(220, 38, 38, 0.10);
+  --danger-glow:   rgba(220, 38, 38, 0.35);
+  --success:       #059669;
+  --success-bg:    rgba(5, 150, 105, 0.10);
+  --warn:          #D97706;
+  --warn-bg:       rgba(217, 119, 6, 0.12);
 
-  --gradient-hero:   linear-gradient(135deg, #A67858 0%, #C49572 100%);
-  --shadow-card:     0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-elevated: 0 4px 16px rgba(166,120,88,0.18);
+  /* Paused state — muted red */
+  --paused:        #B45470;
+  --paused-glow:   rgba(180, 84, 112, 0.30);
+
+  --gradient-hero:   linear-gradient(135deg, #4A7BBE 0%, #6B97D0 100%);
+  --shadow-card:     0 1px 3px rgba(15,23,42,0.07), 0 2px 6px rgba(15,23,42,0.04);
+  --shadow-elevated: 0 4px 10px -2px rgba(15,23,42,0.10), 0 2px 6px -2px rgba(15,23,42,0.05);
+  --shadow-primary:  0 4px 16px rgba(74,123,190,0.32);
+  --shadow-primary-lg: 0 6px 20px rgba(74,123,190,0.4);
   --radius:          0.75rem;
+}
+
+/* ── Dark mode — cool navy, aligned with desktop ── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:            #0D1321;
+    --surface:       #161C2B;
+    --surface-muted: #1B2132;
+    --border:        #2A3244;
+    --text:          #E6EAF0;
+    --muted:         #9AA6B9;
+
+    --primary:       #5E97E8;
+    --primary-light: #93C5FD;
+    --primary-dark:  #4A7BBE;
+    --primary-tint:  rgba(94, 151, 232, 0.14);
+    --primary-glow:  rgba(94, 151, 232, 0.35);
+
+    --accent:        #F59E0B;
+
+    --danger:        #EC6A6A;
+    --danger-bg:     rgba(236, 106, 106, 0.14);
+    --danger-glow:   rgba(236, 106, 106, 0.4);
+    --success:       #38D39F;
+    --success-bg:    rgba(56, 211, 159, 0.12);
+    --warn:          #F59E0B;
+    --warn-bg:       rgba(245, 158, 11, 0.14);
+
+    --paused:        #E8A3B4;
+    --paused-glow:   rgba(232, 163, 180, 0.35);
+
+    --gradient-hero:   linear-gradient(135deg, #4A7BBE 0%, #2563EB 100%);
+    --shadow-card:     0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.25);
+    --shadow-elevated: 0 4px 10px -2px rgba(0,0,0,0.5), 0 2px 6px -2px rgba(0,0,0,0.3);
+    --shadow-primary:  0 4px 16px rgba(94,151,232,0.38);
+    --shadow-primary-lg: 0 6px 20px rgba(94,151,232,0.48);
+  }
 }
 
 html, body, #root {
@@ -44,7 +90,8 @@ html, body, #root {
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

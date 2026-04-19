@@ -6,18 +6,20 @@ import {
   LayoutDashboard, History, MessageSquare, User,
   Users, Brain, LogOut, Sun, Moon,
   ChevronLeft, ChevronRight,
-  AlertCircle, Plus, FileAudio, Sparkles, Loader2, Database,
+  AlertCircle, Plus, FileAudio, Sparkles, Loader2, Database, X,
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RecordingIndicator } from "@/components/RecordingIndicator";
 import { useRecording } from "@/contexts/RecordingContext";
+import { deleteAudio } from "@/services/audioService";
 
 // ── Audio Queue ────────────────────────────────────────────────────────────────
 function AudioQueue({ collapsed }: { collapsed: boolean }) {
   const recording = useRecording();
-  const { audioQueue, transcribeById, isTranscribing } = recording;
+  const { audioQueue, transcribeById, isTranscribing, refreshQueue } = recording;
   const [transcribingId, setTranscribingId] = useState<string | null>(null);
+  const [dismissingId, setDismissingId] = useState<string | null>(null);
   const [open, setOpen] = useState(true);
 
   if (audioQueue.length === 0) return null;
@@ -26,6 +28,16 @@ function AudioQueue({ collapsed }: { collapsed: boolean }) {
     setTranscribingId(id);
     await transcribeById(id, examId);
     setTranscribingId(null);
+  };
+
+  const handleDismiss = async (id: string) => {
+    if (!confirm("Supprimer cet audio de la file d'attente ?")) return;
+    setDismissingId(id);
+    try {
+      await deleteAudio(id);
+      refreshQueue();
+    } catch { /* ignore */ }
+    finally { setDismissingId(null); }
   };
 
   const fmt = (s: number) =>
@@ -81,13 +93,24 @@ function AudioQueue({ collapsed }: { collapsed: boolean }) {
                     </div>
                     <button
                       onClick={() => handleTranscribe(audio._id, audio.examId)}
-                      disabled={!!busy}
+                      disabled={!!busy || dismissingId === audio._id}
                       className="shrink-0 flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-md disabled:opacity-40 transition-all"
                       style={{ background: "rgba(74,123,190,0.12)", color: "#4A7BBE" }}
                     >
                       {transcribingId === audio._id
                         ? <><Loader2 size={10} className="animate-spin" /> …</>
                         : <><Sparkles size={10} /> Transcrire</>}
+                    </button>
+                    <button
+                      onClick={() => handleDismiss(audio._id)}
+                      disabled={!!busy || dismissingId === audio._id}
+                      title="Supprimer de la file"
+                      className="shrink-0 w-5 h-5 flex items-center justify-center rounded-md disabled:opacity-40 transition-all"
+                      style={{ color: "#94A3B8" }}
+                    >
+                      {dismissingId === audio._id
+                        ? <Loader2 size={10} className="animate-spin" />
+                        : <X size={11} />}
                     </button>
                   </div>
                 );

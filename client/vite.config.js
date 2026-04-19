@@ -16,7 +16,7 @@ function loadCert(ip) {
   return null;
 }
 
-const LAN_IP = process.env.VITE_LAN_IP || '172.16.40.82';
+const LAN_IP = process.env.VITE_LAN_IP || '192.168.1.31';
 const tlsFiles = loadCert(LAN_IP);
 
 export default defineConfig({

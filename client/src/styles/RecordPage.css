@@ -56,9 +56,9 @@
 
 .rp-app-subtitle {
   font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--primary-light);
-  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   margin-top: 2px;
 }
@@ -129,7 +129,7 @@
 }
 
 .rp-indicator--paused {
-  border-color: var(--rose);
+  border-color: var(--paused);
 }
 
 .rp-indicator__dot {
@@ -146,13 +146,13 @@
 }
 
 .rp-indicator--paused .rp-indicator__dot {
-  background: var(--rose);
+  background: var(--paused);
 }
 
 @keyframes pulse-ring {
-  0%   { box-shadow: 0 0 0 0   rgba(154,56,54,0.40); }
-  70%  { box-shadow: 0 0 0 20px rgba(154,56,54,0);    }
-  100% { box-shadow: 0 0 0 0   rgba(154,56,54,0);    }
+  0%   { box-shadow: 0 0 0 0    var(--danger-glow); }
+  70%  { box-shadow: 0 0 0 20px transparent;        }
+  100% { box-shadow: 0 0 0 0    transparent;        }
 }
 
 @keyframes pulse-dot {
@@ -202,17 +202,17 @@
 .rp-btn--start {
   background: var(--gradient-hero);
   color: #fff;
-  box-shadow: 0 4px 16px rgba(166,120,88,0.35);
+  box-shadow: var(--shadow-primary);
 }
 .rp-btn--start:hover:not(:disabled) {
-  box-shadow: 0 6px 20px rgba(166,120,88,0.45);
+  box-shadow: var(--shadow-primary-lg);
   opacity: 0.92;
 }
 
 .rp-btn--pause {
   background: var(--surface);
-  color: var(--rose);
-  border: 1.5px solid var(--rose);
+  color: var(--paused);
+  border: 1.5px solid var(--paused);
 }
 
 .rp-btn--stop {
@@ -237,10 +237,10 @@
   background: var(--gradient-hero);
   color: #fff;
   border-color: transparent;
-  box-shadow: 0 4px 16px rgba(166,120,88,0.35);
+  box-shadow: var(--shadow-primary);
 }
 .rp-btn--send-ready:hover:not(:disabled) {
-  box-shadow: 0 6px 20px rgba(166,120,88,0.45);
+  box-shadow: var(--shadow-primary-lg);
   opacity: 0.92;
 }
 
@@ -306,7 +306,7 @@
   border-color: transparent;
   color: #fff;
   transform: scale(0.96);
-  box-shadow: 0 0 0 14px rgba(166,120,88,0.18);
+  box-shadow: 0 0 0 14px var(--primary-tint);
 }
 
 .rp-btn-ptt:disabled {
@@ -317,7 +317,7 @@
 /* ── Error alert ─────────────────────────────────────────────── */
 .rp-error {
   background: var(--danger-bg);
-  border: 1px solid rgba(154,56,54,0.35);
+  border: 1px solid var(--danger-glow);
   border-radius: 10px;
   padding: 12px 16px;
   font-size: 0.84rem;

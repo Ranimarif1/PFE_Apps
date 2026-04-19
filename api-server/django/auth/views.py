@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import random
 import secrets
 from typing import Any, Dict
 
@@ -14,6 +15,14 @@ from django.views.decorators.csrf import csrf_exempt
 from core.auth import create_access_token, create_refresh_token, get_current_user, hash_password, verify_password
 from core.mongo import get_collection, serialize_document
 
+from .validators import validate_email_format, validate_password_strength
+
+
+# ── Email verification code settings ──────────────────────────────────────
+VERIFICATION_CODE_TTL_MIN = 10          # code expires 10 min after send
+VERIFICATION_RESEND_COOLDOWN_SEC = 30   # min seconds between resends
+VERIFIED_GRACE_PERIOD_MIN = 30          # user must register within 30 min of verifying
+
 
 def _parse_body(request: HttpRequest) -> Dict[str, Any]:
     try:
@@ -23,6 +32,119 @@ def _parse_body(request: HttpRequest) -> Dict[str, Any]:
         return data
     except Exception:
         return {}
+
+
+@csrf_exempt
+def send_verification_code(request: HttpRequest) -> JsonResponse:
+    """Generate a 5-digit code, store it, and email it to the user."""
+    if request.method != "POST":
+        return JsonResponse({"detail": "Method not allowed."}, status=405)
+
+    data = _parse_body(request)
+    email = (data.get("email") or "").strip().lower()
+
+    err = validate_email_format(email)
+    if err:
+        return JsonResponse({"detail": err}, status=400)
+
+    users_col = get_collection("users")
+    if users_col.find_one({"email": email}):
+        return JsonResponse({"detail": "Cet email est déjà enregistré."}, status=400)
+
+    codes_col = get_collection("email_verification_codes")
+    existing = codes_col.find_one({"email": email})
+
+    now = dt.datetime.utcnow()
+    if existing:
+        try:
+            last_sent = dt.datetime.fromisoformat(existing.get("last_sent_at", ""))
+        except Exception:
+            last_sent = None
+        if last_sent and (now - last_sent).total_seconds() < VERIFICATION_RESEND_COOLDOWN_SEC:
+            wait = int(VERIFICATION_RESEND_COOLDOWN_SEC - (now - last_sent).total_seconds())
+            return JsonResponse(
+                {"detail": f"Veuillez patienter {wait}s avant de redemander un code."},
+                status=429,
+            )
+
+    code = f"{random.randint(0, 99999):05d}"
+    expires_at = (now + dt.timedelta(minutes=VERIFICATION_CODE_TTL_MIN)).isoformat()
+
+    codes_col.update_one(
+        {"email": email},
+        {"$set": {
+            "email": email,
+            "code": code,
+            "expires_at": expires_at,
+            "last_sent_at": now.isoformat(),
+            "verified": False,
+            "verified_at": None,
+            "attempts": 0,
+        }},
+        upsert=True,
+    )
+
+    try:
+        send_mail(
+            subject="Votre code de vérification — ReportEase",
+            message=(
+                f"Bonjour,\n\n"
+                f"Votre code de vérification ReportEase est :\n\n"
+                f"    {code}\n\n"
+                f"Ce code est valable pendant {VERIFICATION_CODE_TTL_MIN} minutes.\n\n"
+                f"Si vous n'avez pas demandé ce code, ignorez cet email.\n\n"
+                f"— L'équipe ReportEase\n"
+                f"CHU Fattouma-Bourguiba de Monastir"
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+    except Exception as exc:
+        return JsonResponse({"detail": f"Erreur d'envoi de l'email : {exc}"}, status=500)
+
+    return JsonResponse({"detail": "Code envoyé."})
+
+
+@csrf_exempt
+def verify_email_code(request: HttpRequest) -> JsonResponse:
+    """Check a submitted 5-digit code and mark the email as verified."""
+    if request.method != "POST":
+        return JsonResponse({"detail": "Method not allowed."}, status=405)
+
+    data = _parse_body(request)
+    email = (data.get("email") or "").strip().lower()
+    code = (data.get("code") or "").strip()
+
+    if not email or not code:
+        return JsonResponse({"detail": "Email et code requis."}, status=400)
+
+    codes_col = get_collection("email_verification_codes")
+    doc = codes_col.find_one({"email": email})
+    if not doc:
+        return JsonResponse({"detail": "Aucun code trouvé. Veuillez redemander un code."}, status=400)
+
+    attempts = int(doc.get("attempts", 0))
+    if attempts >= 5:
+        return JsonResponse({"detail": "Trop de tentatives. Veuillez redemander un code."}, status=429)
+
+    try:
+        expires_at = dt.datetime.fromisoformat(doc["expires_at"])
+    except Exception:
+        return JsonResponse({"detail": "Code invalide."}, status=400)
+
+    if dt.datetime.utcnow() > expires_at:
+        return JsonResponse({"detail": "Code expiré. Veuillez en redemander un."}, status=400)
+
+    if code != doc.get("code"):
+        codes_col.update_one({"email": email}, {"$inc": {"attempts": 1}})
+        return JsonResponse({"detail": "Code incorrect."}, status=400)
+
+    codes_col.update_one(
+        {"email": email},
+        {"$set": {"verified": True, "verified_at": dt.datetime.utcnow().isoformat()}},
+    )
+    return JsonResponse({"detail": "Email vérifié."})
 
 
 @csrf_exempt
@@ -38,12 +160,38 @@ def register(request: HttpRequest) -> JsonResponse:
     prenom = (data.get("prenom") or "").strip()
     genre = (data.get("genre") or "").strip()
 
-    if not email or not password or role not in {"doctor", "admin", "adminIT"}:
-        return JsonResponse({"detail": "Invalid payload."}, status=400)
+    if role not in {"doctor", "admin", "adminIT"}:
+        return JsonResponse({"detail": "Rôle invalide."}, status=400)
+
+    email_err = validate_email_format(email)
+    if email_err:
+        return JsonResponse({"detail": email_err}, status=400)
+
+    password_err = validate_password_strength(password)
+    if password_err:
+        return JsonResponse({"detail": password_err}, status=400)
 
     users_col = get_collection("users")
     if users_col.find_one({"email": email}):
-        return JsonResponse({"detail": "Email already registered."}, status=400)
+        return JsonResponse({"detail": "Cet email est déjà enregistré."}, status=400)
+
+    # ── Require the email to have been verified recently ──
+    codes_col = get_collection("email_verification_codes")
+    code_doc = codes_col.find_one({"email": email})
+    if not code_doc or not code_doc.get("verified"):
+        return JsonResponse(
+            {"detail": "Email non vérifié. Veuillez confirmer votre email avec le code reçu."},
+            status=400,
+        )
+    try:
+        verified_at = dt.datetime.fromisoformat(code_doc.get("verified_at") or "")
+    except Exception:
+        verified_at = None
+    if not verified_at or (dt.datetime.utcnow() - verified_at) > dt.timedelta(minutes=VERIFIED_GRACE_PERIOD_MIN):
+        return JsonResponse(
+            {"detail": "Vérification expirée. Veuillez redemander un code."},
+            status=400,
+        )
 
     now = dt.datetime.utcnow().isoformat()
     status = "pending"
@@ -60,6 +208,9 @@ def register(request: HttpRequest) -> JsonResponse:
     }
     inserted = users_col.insert_one(user_doc)
     created = users_col.find_one({"_id": inserted.inserted_id})
+
+    # Clean up the verification code once the account is created
+    codes_col.delete_one({"email": email})
 
     # ── Notify all admins & adminIT accounts of the new registration ──
     try:

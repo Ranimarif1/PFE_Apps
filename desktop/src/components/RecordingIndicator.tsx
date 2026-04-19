@@ -25,16 +25,28 @@ export function RecordingIndicator({ collapsed }: Props) {
   // Navigate when transcription result is ready
   useEffect(() => {
     if (!recording.result) return;
-    const { examId, text, méthode, audioId } = recording.result;
+    const { examId, text, méthode, audioId, reportId } = recording.result;
     recording.clearResult();
-    navigate("/rapport/new", {
-      state: {
-        ID_Exam: examId,
-        transcription: text,
-        audioId,
-        _restore: { etape: 3, examId, méthode },
-      },
-    });
+    if (reportId) {
+      // Draft already persisted in the RecordingContext — go straight to it.
+      navigate(`/rapport/${reportId}`, {
+        state: {
+          ID_Exam: examId,
+          audioId,
+          _restore: { etape: 3, examId, méthode },
+        },
+      });
+    } else {
+      // Fallback: draft creation failed — let RapportDetail retry via its auto-save.
+      navigate("/rapport/new", {
+        state: {
+          ID_Exam: examId,
+          transcription: text,
+          audioId,
+          _restore: { etape: 3, examId, méthode },
+        },
+      });
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recording.result]);
 
