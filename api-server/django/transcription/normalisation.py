@@ -284,18 +284,117 @@ def normalize_abbrevs(text: str) -> str:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 6. PIPELINE COMBINÉ
+# 6. SUPPRESSION DES EN-TÊTES DE SECTION DICTÉS
 # ──────────────────────────────────────────────────────────────────────────────
+
+_SECTION_HEADER_RE = re.compile(
+    r'\b(indication|r[eé]sultat|conclusion)\s*:?\s*',
+    flags=re.IGNORECASE,
+)
+
+
+def strip_section_headers(text: str) -> str:
+    """Supprime les mots-clés de section (Indication, Résultat, Conclusion)
+    dictés par le médecin et captés par Whisper dans le corps du texte."""
+    return _SECTION_HEADER_RE.sub('', text).strip()
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 7. PIPELINE COMBINÉ
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# ASR ACCENT FIXES  (deterministic, zero-risk — only unambiguous cases)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Words that Whisper systematically mis-transcribes without accents.
+# Each entry is (bare_form, correct_form) — whole-word substitution only.
+_ASR_ACCENT_FIXES: list[tuple[str, str]] = [
+    # Common French words with accents stripped by ASR
+    ("fievre",                      "fièvre"),
+    ("fevrier",                     "février"),
+    ("hyperleucose",                "hyperleucocytose"),
+    # Article "là" used as wrong form of "la"
+    # Only replace "là" when NOT preceded by punctuation that introduces an
+    # adverb (e.g. "c'est là que") — safest to limit to "là [noun]" patterns.
+    # Handled separately below via regex.
+
+    # Accent fixes
+    ("epanchement",                 "épanchement"),
+    ("epanchements",                "épanchements"),
+
+    # Whisper word-substitution errors (radiologie)
+    ("homodensitometrique",         "tomodensitométrique"),
+    ("homodensitométrique",         "tomodensitométrique"),
+    ("recommente",                  "recommandé"),
+    ("recommenté",                  "recommandé"),
+    ("recommentes",                 "recommandés"),
+    ("hyode",                       "iodé"),
+    ("hyodé",                       "iodé"),
+    ("hyodes",                      "iodés"),
+
+    # Medical terms
+    ("hemiplegie",                  "hémiplégie"),
+    ("hemiplegies",                 "hémiplégies"),
+    ("hemiplégique",                "hémiplégique"),
+    ("splenomegalie",               "splénomégalie"),
+    ("hepatomegalie",               "hépatomégalie"),
+    ("cholecystite",                "cholécystite"),
+    ("pancreatite",                 "pancréatite"),
+    ("appendicite",                 "appendicite"),
+    ("peritoine",                   "péritoine"),
+    ("peritonite",                  "péritonite"),
+    ("anemie",                      "anémie"),
+    ("leucemie",                    "leucémie"),
+    ("diabete",                     "diabète"),
+    ("thrombose",                   "thrombose"),
+    ("arythmie",                    "arythmie"),
+    ("bronchopneumonie",            "bronchopneumonie"),
+    ("biliaire",                    "biliaire"),
+    ("pyelo-calicielle",            "pyélocalicielle"),
+    ("pyelocalicielle",             "pyélocalicielle"),
+    ("retro-peritoneale",           "rétropéritonéale"),
+    ("retroperitoneale",            "rétropéritonéale"),
+    ("perisigmoidienne",            "périsigmoïdienne"),
+    ("sigmoidite",                  "sigmoïdite"),
+    ("endoluminale",                "endoluminale"),
+    ("normodistendue",              "normodistendue"),
+]
+
+_ASR_ACCENT_RE: list[tuple[re.Pattern, str]] = [
+    (re.compile(r'(?<![A-Za-zÀ-ÖØ-öø-ÿ])' + re.escape(bare) + r'(?![A-Za-zÀ-ÖØ-öø-ÿ])',
+                re.IGNORECASE), correct)
+    for bare, correct in _ASR_ACCENT_FIXES
+    if bare != correct   # skip no-ops
+]
+
+# "là" used as definite article (wrong accent) — only when followed by a
+# lowercase letter (i.e. not "là-bas", "là-haut", etc.)
+_LA_ACCENT_RE = re.compile(r'\blà\s+(?=[a-zàâäéèêëîïôùûüç])')
+
+
+def fix_asr_accents(text: str) -> str:
+    """Fix systematic accent-stripping errors produced by Whisper ASR."""
+    for pattern, correct in _ASR_ACCENT_RE:
+        text = pattern.sub(correct, text)
+    text = _LA_ACCENT_RE.sub('la ', text)
+    return text
+
 
 def normalize(text: str) -> str:
     """
     Applique toutes les normalisations dans l'ordre :
-      1. Dates        — avant que les noms de mois soient touchés
-      2. Unités       — "mille grammes" → "mg" AVANT "mille" → 1000
-      3. Unités comp. — "mg par dL" → "mg/dL"
-      4. Nombres      — "cent vingt" → "120"
-      5. Abréviations — irm → IRM, flair → FLAIR, t1 → T1 …
+      1. En-têtes     — supprime Indication/Résultat/Conclusion dictés
+      2. Accents ASR  — corrections déterministes Whisper
+      3. Dates        — avant que les noms de mois soient touchés
+      4. Unités       — "mille grammes" → "mg" AVANT "mille" → 1000
+      5. Unités comp. — "mg par dL" → "mg/dL"
+      6. Nombres      — "cent vingt" → "120"
+      7. Abréviations — irm → IRM, flair → FLAIR, t1 → T1 …
     """
+    text = strip_section_headers(text)
+    text = fix_asr_accents(text)
     text = normalize_dates(text)
     text = normalize_units(text)
     text = normalize_compound_units(text)

@@ -10,8 +10,11 @@ qrcode[pil]>=7.4.0,<8.0
 python-multipart>=0.0.9,<1.0
 websockets>=12.0,<13.0
 transformers>=4.40.0,<5.0
-torch>=2.0.0
-torchaudio>=2.0.0
+optimum[onnxruntime]>=1.18.0
+onnxruntime>=1.18.0
+# torch needed only for the one-time ONNX export (not at runtime)
+# torch>=2.0.0
+# torchaudio>=2.0.0
 librosa>=0.10.0
 soundfile>=0.12.0
 # Optional post-processing (gracefully skipped if not installed)

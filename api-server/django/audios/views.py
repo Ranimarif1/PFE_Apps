@@ -34,7 +34,7 @@ def list_or_upload(request: HttpRequest) -> JsonResponse:
         duration   = request.POST.get("duration", "0")
 
         if not audio_file or not exam_id:
-            return JsonResponse({"detail": "audio and examId are required."}, status=400)
+            return JsonResponse({"detail": "Le fichier audio et l'identifiant d'examen sont requis."}, status=400)
 
         ext      = Path(audio_file.name).suffix or ".webm"
         filename = f"{exam_id}_{uuid.uuid4().hex}{ext}"
@@ -58,7 +58,7 @@ def list_or_upload(request: HttpRequest) -> JsonResponse:
         saved    = col.find_one({"_id": inserted.inserted_id})
         return JsonResponse(serialize_document(saved), status=201)
 
-    return JsonResponse({"detail": "Method not allowed."}, status=405)
+    return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
 
 
 @csrf_exempt
@@ -66,7 +66,7 @@ def list_or_upload(request: HttpRequest) -> JsonResponse:
 def training_dataset(request: HttpRequest) -> JsonResponse:
     """GET /api/audios/training/ — Audio|Text pairs for model retraining (adminIT only)."""
     if request.method != "GET":
-        return JsonResponse({"detail": "Method not allowed."}, status=405)
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
 
     from bson import ObjectId as ObjId
 
@@ -129,7 +129,7 @@ def training_download(request: HttpRequest):
     from django.http import StreamingHttpResponse
 
     if request.method != "GET":
-        return JsonResponse({"detail": "Method not allowed."}, status=405)
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
 
     status_filter = request.GET.get("status", "all")  # "all" or "saved"
 
@@ -223,18 +223,18 @@ def audio_detail(request: HttpRequest, audio_id: str) -> JsonResponse | FileResp
     try:
         oid = ObjectId(audio_id)
     except Exception:
-        return JsonResponse({"detail": "Invalid id."}, status=400)
+        return JsonResponse({"detail": "Identifiant invalide."}, status=400)
 
     doc = col.find_one({"_id": oid})
     if not doc:
-        return JsonResponse({"detail": "Not found."}, status=404)
+        return JsonResponse({"detail": "Audio introuvable."}, status=404)
     if doc.get("doctorId") != user.id and user.role not in {"admin", "adminIT"}:
-        return JsonResponse({"detail": "Permission denied."}, status=403)
+        return JsonResponse({"detail": "Accès refusé."}, status=403)
 
     if request.method == "GET":
         filepath = _audios_dir() / doc["filename"]
         if not filepath.exists():
-            return JsonResponse({"detail": "File not found."}, status=404)
+            return JsonResponse({"detail": "Fichier audio introuvable."}, status=404)
         return FileResponse(open(filepath, "rb"), content_type=doc.get("mimeType", "audio/webm"))
 
     if request.method == "DELETE":
@@ -244,6 +244,6 @@ def audio_detail(request: HttpRequest, audio_id: str) -> JsonResponse | FileResp
         except Exception:
             pass
         col.delete_one({"_id": oid})
-        return JsonResponse({"detail": "Deleted."})
+        return JsonResponse({"detail": "Supprimé."})
 
-    return JsonResponse({"detail": "Method not allowed."}, status=405)
+    return JsonResponse({"detail": "Méthode non autorisée."}, status=405)

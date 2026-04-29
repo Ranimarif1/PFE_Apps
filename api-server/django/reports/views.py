@@ -92,7 +92,7 @@ def _append_to_global_csv(report: Dict[str, Any], doctor: Dict[str, Any]) -> Non
 def report_stats(request: HttpRequest) -> JsonResponse:
     """GET /api/reports/stats/ — aggregate counts across ALL reports (admin only)."""
     if request.method != "GET":
-        return JsonResponse({"detail": "Method not allowed."}, status=405)
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
     reports_col = get_collection("reports")
     pipeline = [
         {"$group": {"_id": "$status", "count": {"$sum": 1}}},
@@ -111,10 +111,10 @@ def report_stats(request: HttpRequest) -> JsonResponse:
 def check_exam_id(request: HttpRequest) -> JsonResponse:
     """GET /api/reports/check-exam-id/?id=XXX — returns {"available": true/false}"""
     if request.method != "GET":
-        return JsonResponse({"detail": "Method not allowed."}, status=405)
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
     exam_id = request.GET.get("id", "").strip()
     if not exam_id:
-        return JsonResponse({"detail": "id param required."}, status=400)
+        return JsonResponse({"detail": "Paramètre 'id' requis."}, status=400)
     reports_col = get_collection("reports")
     taken = reports_col.find_one({"ID_Exam": exam_id}) is not None
     return JsonResponse({"available": not taken})
@@ -173,11 +173,11 @@ def list_or_create_reports(request: HttpRequest) -> JsonResponse:
         status = data.get("status") or "draft"
 
         if not exam_id or not content:
-            return JsonResponse({"detail": "ID_Exam and content are required."}, status=400)
+            return JsonResponse({"detail": "L'identifiant d'examen et le contenu sont requis."}, status=400)
 
         exam_id_str = str(exam_id)
         if not re.fullmatch(r"\d{5,}", exam_id_str):
-            return JsonResponse({"detail": "ID_Exam must be digits starting with the 4-digit year (e.g. 20260001)."}, status=400)
+            return JsonResponse({"detail": "L'identifiant d'examen doit être composé de chiffres commençant par l'année (ex : 20260001)."}, status=400)
 
         utcnow = dt.datetime.utcnow()
         current_year = utcnow.year
@@ -190,19 +190,19 @@ def list_or_create_reports(request: HttpRequest) -> JsonResponse:
         if year_part not in allowed_years:
             if current_month == 1:
                 return JsonResponse(
-                    {"detail": f"ID_Exam must start with {current_year} or {current_year - 1} (January exception)."},
+                    {"detail": f"L'identifiant doit commencer par {current_year} ou {current_year - 1} (exception janvier)."},
                     status=400,
                 )
             return JsonResponse(
-                {"detail": f"ID_Exam must start with {current_year}."},
+                {"detail": f"L'identifiant doit commencer par {current_year}."},
                 status=400,
             )
 
         if reports_col.find_one({"ID_Exam": exam_id_str}):
-            return JsonResponse({"detail": "ID_Exam already exists. It must be unique."}, status=400)
+            return JsonResponse({"detail": "Cet identifiant d'examen existe déjà. Il doit être unique."}, status=400)
 
         if status not in {"draft", "validated", "saved"}:
-            return JsonResponse({"detail": "Invalid status."}, status=400)
+            return JsonResponse({"detail": "Statut invalide."}, status=400)
 
         audio_id = data.get("audioId") or None
         original_content = data.get("originalContent") or None
@@ -246,7 +246,7 @@ def list_or_create_reports(request: HttpRequest) -> JsonResponse:
 
         return JsonResponse(serialize_document(created), status=201)
 
-    return JsonResponse({"detail": "Method not allowed."}, status=405)
+    return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
 
 
 @csrf_exempt
@@ -258,14 +258,14 @@ def get_or_update_report(request: HttpRequest, report_id: str):
     try:
         oid = ObjectId(report_id)
     except Exception:
-        return JsonResponse({"detail": "Invalid report id."}, status=400)
+        return JsonResponse({"detail": "Identifiant de rapport invalide."}, status=400)
 
     report = reports_col.find_one({"_id": oid})
     if not report:
-        return JsonResponse({"detail": "Report not found."}, status=404)
+        return JsonResponse({"detail": "Rapport introuvable."}, status=404)
 
     if not _user_can_access_report(user, report):
-        return JsonResponse({"detail": "Permission denied."}, status=403)
+        return JsonResponse({"detail": "Accès refusé."}, status=403)
 
     if request.method == "GET":
         return JsonResponse(serialize_document(report))
@@ -277,7 +277,7 @@ def get_or_update_report(request: HttpRequest, report_id: str):
         old_status = report.get("status", "draft")
 
         if new_status not in {"draft", "validated", "saved"}:
-            return JsonResponse({"detail": "Invalid status."}, status=400)
+            return JsonResponse({"detail": "Statut invalide."}, status=400)
 
         update_doc: Dict[str, Any] = {
             "content": content,
@@ -309,5 +309,5 @@ def get_or_update_report(request: HttpRequest, report_id: str):
 
         return JsonResponse(serialize_document(updated))
 
-    return JsonResponse({"detail": "Method not allowed."}, status=405)
+    return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
 

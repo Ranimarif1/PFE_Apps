@@ -10,8 +10,7 @@ import {
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useRecording } from "@/contexts/RecordingContext";
-import { checkExamId } from "@/services/reportsService";
-
+import { checkExamId, createReport } from "@/services/reportsService";
 type Etape  = 1 | 2 | 3;
 type Méthode = "navigateur" | "import" | "smartphone" | null;
 

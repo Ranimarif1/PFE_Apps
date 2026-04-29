@@ -54,3 +54,7 @@ pnpm-debug.log*
 # Python
 *.egg-info/
 .pytest_cache/
+
+# ONNX model files (large binaries, generated locally via export_onnx.py)
+**/whisper_onnx/
+*.onnx

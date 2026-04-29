@@ -2,7 +2,7 @@
 Traitement de la ponctuation pour les transcriptions médicales.
   - Commandes verbales → symboles
   - Restauration automatique (deepmultilingualpunctuation, optionnel)
-  - Correction orthographique LanguageTool (optionnel)
+  - Correction intelligente via Ollama (mistral, local)
 """
 from __future__ import annotations
 
@@ -111,74 +111,100 @@ def restore_punctuation_auto(text: str) -> str:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 3. CORRECTION ORTHOGRAPHIQUE — LanguageTool (optionnel)
+# 3. CORRECTION ORTHOGRAPHIQUE — Ollama / mistral-small (local)
 # ──────────────────────────────────────────────────────────────────────────────
 
-_lt_tool = None
+_OLLAMA_URL   = "http://localhost:11434/api/chat"
+_OLLAMA_MODEL = "qwen2:0.5b"
 
-DISABLED_RULES = [
-    "FRENCH_WHITESPACE",
-    "UPPERCASE_SENTENCE_START",
-    "COMMA_PARENTHESIS_WHITESPACE",
-    "PHRASE_REPETITION",
-    "FR_SPELLING_REFORM",
-    "POINTS_VIRGULES",
-    "APOS_TYP",
-    "NON_STANDARD_WORD",
-    "MORFOLOGIK_RULE_FR",
-]
-
-
-def _get_lt_tool():
-    global _lt_tool
-    if _lt_tool is None:
-        import language_tool_python
-        _lt_tool = language_tool_python.LanguageTool(
-            "fr",
-            config={"disabledRuleIds": ",".join(DISABLED_RULES)},
-        )
-    return _lt_tool
+_SYSTEM_PROMPT = (
+    "Tu es un correcteur orthographique pour des transcriptions automatiques "
+    "de comptes rendus radiologiques en français. "
+    "Tu corriges UNIQUEMENT les fautes d'orthographe et les accents manquants. "
+    "Tu ne changes JAMAIS un mot correct. "
+    "Tu ne modifies JAMAIS le sens médical. "
+    "Si un mot te semble étrange mais pourrait être correct, laisse-le tel quel. "
+    "Retourne UNIQUEMENT le texte corrigé sans explication."
+)
 
 
-def _fix_medical_punctuation(text: str) -> str:
-    """Supprime les ? ajoutés par LanguageTool sur des phrases nominales médicales."""
-    question_starters = r"(?:est-ce|y a-t-il|quel|quelle|comment|pourquoi|où|quand|combien)"
-    lines = text.split("\n")
-    result = []
-    for line in lines:
-        line = line.strip()
-        if line.endswith("?"):
-            if not re.search(question_starters, line, re.IGNORECASE):
-                line = line[:-1] + "."
-        result.append(line)
-    return "\n".join(result)
+def correct_with_ollama(text: str) -> tuple:
+    """Returns (corrected_text, changes_list). Full-text correction via Ollama."""
+    import json
+    import urllib.request
 
+    payload = json.dumps({
+        "model": _OLLAMA_MODEL,
+        "messages": [
+            {"role": "system", "content": _SYSTEM_PROMPT},
+            {"role": "user",   "content": text},
+        ],
+        "stream": False,
+        "options": {
+            "temperature": 0.0,
+            "seed": 0,
+        },
+    }).encode()
 
-def correct_orthography(text: str) -> str:
-    """Corrige l'orthographe et la grammaire via LanguageTool (serveur local)."""
+    req = urllib.request.Request(
+        _OLLAMA_URL,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+    )
     try:
-        tool = _get_lt_tool()
-        corrected = tool.correct(text)
-        return _fix_medical_punctuation(corrected)
-    except ImportError:
-        print("  [info] LanguageTool non installé → pip install language_tool_python",
-              file=sys.stderr)
-        return text
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            data = json.loads(resp.read())
+            corrected = data.get("message", {}).get("content", "").strip()
+            if not corrected:
+                return text, []
+            changes = diff_corrections(text, corrected)
+            return corrected, changes
     except Exception as e:
-        print(f"  [warn] LanguageTool échoué : {e}", file=sys.stderr)
-        return text
+        print(f"  [warn] Ollama indisponible : {e}", file=sys.stderr)
+        return text, []
+
+
+def diff_corrections(original: str, corrected: str) -> list:
+    """Word-level diff. Only returns genuine spelling corrections, not rewrites."""
+    import difflib
+    import re
+
+    orig_tokens = re.findall(r'\S+', original)
+    corr_tokens = re.findall(r'\S+', corrected)
+
+    if not orig_tokens:
+        return []
+
+    changes = []
+    matcher = difflib.SequenceMatcher(None, orig_tokens, corr_tokens, autojunk=False)
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag == 'replace':
+            for k in range(max(i2 - i1, j2 - j1)):
+                orig = orig_tokens[i1 + k] if i1 + k < i2 else ''
+                corr = corr_tokens[j1 + k] if j1 + k < j2 else ''
+                if orig and corr and orig != corr:
+                    # Only keep genuine spelling corrections (words must be similar)
+                    similarity = difflib.SequenceMatcher(None, orig.lower(), corr.lower()).ratio()
+                    if similarity >= 0.5:
+                        changes.append({"original": orig, "corrected": corr})
+
+    # If the model changed too many words it rewrote the text — discard entirely
+    if len(changes) > max(5, int(len(orig_tokens) * 0.3)):
+        return []
+
+    return changes
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 4. PIPELINE COMBINÉ
 # ──────────────────────────────────────────────────────────────────────────────
 
-def process(text: str, auto_punct: bool = True, spellcheck: bool = True) -> str:
+def process(text: str, auto_punct: bool = True) -> str:
     """
-    Pipeline complet :
-      1. Commandes verbales   (toujours appliquées)
-      2. Restauration auto    (si peu de ponctuation détectée)
-      3. Correction LanguageTool (orthographe + grammaire)
+    Pipeline de post-traitement :
+      1. Commandes verbales  (toujours)
+      2. Restauration auto   (si peu de ponctuation détectée)
+    La correction Ollama est déclenchée séparément via /api/transcribe/suggest/.
     """
     text = apply_verbal_commands(text)
 
@@ -186,9 +212,6 @@ def process(text: str, auto_punct: bool = True, spellcheck: bool = True) -> str:
         punct_ratio = sum(1 for c in text if c in ".,;:?!") / max(len(text), 1)
         if punct_ratio < 0.02:
             text = restore_punctuation_auto(text)
-
-    if spellcheck:
-        text = correct_orthography(text)
 
     return text
 
@@ -203,4 +226,4 @@ if __name__ == "__main__":
     print(raw)
     print()
     print("Après traitement :")
-    print(process(raw, auto_punct=False, spellcheck=False))
+    print(process(raw, auto_punct=False))
