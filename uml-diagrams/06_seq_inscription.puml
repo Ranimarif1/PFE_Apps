@@ -1,0 +1,48 @@
+@startuml ReportEase_Sequence_Inscription
+!theme plain
+skinparam ParticipantBackgroundColor #F4F6F7
+skinparam ParticipantBorderColor #7F8C8D
+skinparam ArrowColor #2C3E50
+skinparam SequenceLifeLineBorderColor #7F8C8D
+skinparam noteBackgroundColor #FEF9E7
+skinparam noteBorderColor #B7950B
+
+title Diagramme de Sequence — S'inscrire (SPA + API REST)
+
+actor       "Visiteur"          as V
+participant "SPA\n(React)"      as SPA
+participant "API REST\n(Django)" as API
+database    "MongoDB"           as DB
+participant "Service Email\n(SMTP)" as Mail
+actor       "Admin"             as A
+
+== 1. Verification de l'email ==
+V    -> SPA : Saisit email
+SPA  -> API : POST /auth/send-code
+API  -> DB  : Enregistre code (TTL 10 min)
+API  -> Mail: Envoie code par email
+API  --> SPA: 200 OK
+Mail -> V   : Email avec code
+
+V    -> SPA : Saisit le code recu
+SPA  -> API : POST /auth/verify-code
+API  -> DB  : Verifie & marque email verifie
+API  --> SPA: 200 OK
+
+== 2. Creation du compte ==
+V    -> SPA : Remplit formulaire (nom, prenom, mot de passe...)
+SPA  -> API : POST /auth/register
+API  -> DB  : Cree utilisateur (status = pending)
+API  -> Mail: Notifie les admins
+API  --> SPA: 201 Created
+SPA  --> V  : "Compte en attente de validation"
+
+Mail -> A   : Notification nouvelle inscription
+
+note right of API
+  Le compte reste **pending**
+  jusqu'a validation par
+  un Admin / AdminIT.
+end note
+
+@enduml

@@ -28,6 +28,7 @@ import MédecinProfil from "./pages/medecin/Profil";
 // Admin
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminStatistiques from "./pages/admin/Statistiques";
+import AdminMedecins from "./pages/admin/Medecins";
 import AdminExport from "./pages/admin/Export";
 import AdminProfil from "./pages/medecin/Profil";
 
@@ -80,6 +81,7 @@ function AppWithLoading() {
       {/* Admin */}
       <Route path="/admin/dashboard"     element={<RouteGuard allowedRoles={["admin"]}><AdminDashboard /></RouteGuard>} />
       <Route path="/admin/statistiques"  element={<RouteGuard allowedRoles={["admin"]}><AdminStatistiques /></RouteGuard>} />
+      <Route path="/admin/medecins"      element={<RouteGuard allowedRoles={["admin"]}><AdminMedecins /></RouteGuard>} />
       <Route path="/admin/export"        element={<RouteGuard allowedRoles={["admin"]}><AdminExport /></RouteGuard>} />
       <Route path="/admin/profil"        element={<RouteGuard allowedRoles={["admin"]}><AdminProfil /></RouteGuard>} />
 

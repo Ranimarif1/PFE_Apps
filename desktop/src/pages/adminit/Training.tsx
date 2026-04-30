@@ -2,7 +2,7 @@ import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { getTrainingData, fetchAudioBlob, downloadTrainingZip, type TrainingEntry } from "@/services/audioService";
 import { useQuery } from "@tanstack/react-query";
-import { FileAudio, FileText, Search, Download, Loader2, Database } from "lucide-react";
+import { FileAudio, FileText, Search, Download, Loader2, Database, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getStatusBadgeClass, getStatusLabel, getActiveFilterTabClass, INACTIVE_TAB_CLASS } from "@/styles/statusSystem";
 
@@ -23,6 +23,8 @@ export default function AdminITTraining() {
   const [filterStatus, setFilterStatus] = useState("tous");
   const [downloading,  setDownloading]  = useState<string | null>(null);
   const [expanded,     setExpanded]     = useState<string | null>(null);
+  const [startDate,    setStartDate]    = useState("");
+  const [endDate,      setEndDate]      = useState("");
 
   const { data: entries = [], isLoading } = useQuery<TrainingEntry[]>({
     queryKey: ["training"],
@@ -52,9 +54,13 @@ export default function AdminITTraining() {
   };
 
   const handleDownloadZip = async (status: "all" | "saved") => {
+    if (startDate && endDate && startDate > endDate) return;
     setDownloading(`zip-${status}`);
     try {
-      await downloadTrainingZip(status);
+      await downloadTrainingZip(status, {
+        start: startDate || undefined,
+        end:   endDate   || undefined,
+      });
     } catch { /* ignore */ }
     finally { setDownloading(null); }
   };
@@ -99,13 +105,33 @@ export default function AdminITTraining() {
               ))}
             </div>
 
+            <div className="ml-auto relative">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="ID Exam, médecin…"
+                className="pl-8 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 w-48" />
+            </div>
+          </div>
+
+          <div className="px-6 py-3 border-b border-border bg-muted/20 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Calendar size={13} /> Période
+            </div>
+            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+              className="px-2.5 py-1.5 rounded-lg border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            <span className="text-xs text-muted-foreground">→</span>
+            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+              className="px-2.5 py-1.5 rounded-lg border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            {(startDate || endDate) && (
+              <button onClick={() => { setStartDate(""); setEndDate(""); }}
+                className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2">
+                Réinitialiser
+              </button>
+            )}
+            {startDate && endDate && startDate > endDate && (
+              <span className="text-xs text-destructive">Plage invalide</span>
+            )}
             <div className="ml-auto flex items-center gap-2">
-              <div className="relative">
-                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <input value={search} onChange={e => setSearch(e.target.value)}
-                  placeholder="ID Exam, médecin…"
-                  className="pl-8 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 w-48" />
-              </div>
               <button onClick={() => handleDownloadZip("saved")} disabled={!!downloading || filtered.length === 0}
                 className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-success/10 text-success hover:bg-success/20 disabled:opacity-50 transition-all">
                 {downloading === "zip-saved"

@@ -1,0 +1,58 @@
+@startuml ReportEase_Sequence_SoumettreReclamation
+!theme plain
+skinparam ParticipantBackgroundColor #F4F6F7
+skinparam ParticipantBorderColor #7F8C8D
+skinparam ArrowColor #2C3E50
+skinparam SequenceLifeLineBorderColor #7F8C8D
+skinparam noteBackgroundColor #FEF9E7
+skinparam noteBorderColor #B7950B
+
+title Diagramme de Sequence — Soumettre une reclamation (SPA + API REST)
+
+actor       "Medecin"            as MED
+participant "SPA\n(React)"       as SPA
+participant "API REST\n(Django)" as API
+database    "MongoDB"            as DB
+actor       "AdminIT"            as IT
+
+== 1. Consulter mes reclamations ==
+MED -> SPA : 1. Acceder a la page "Reclamations"
+SPA -> API : 2. GET /api/complaints/
+API -> DB  : 3. Recherche {doctorId: user.id}
+DB  --> API: 4. Liste des reclamations
+API --> SPA: 5. 200 OK + liste
+SPA --> MED: 6. Affiche l'historique
+
+== 2. Soumettre une nouvelle reclamation ==
+MED -> SPA : 7. Clique "Nouvelle reclamation"
+MED -> SPA : 8. Saisit titre + description
+SPA -> API : 9. POST /api/complaints/\n{title, description}
+
+alt [Champs invalides]
+  API --> SPA: 10a. 400 Bad Request
+  SPA --> MED: 11a. "Titre et description requis"
+else [Donnees valides]
+  API -> DB  : 10b. Insert reclamation\n(status = "pending")
+  DB  --> API: 11b. Document cree
+  API --> SPA: 12b. 201 Created
+  SPA --> MED: 13b. "Reclamation soumise"
+end
+
+== 3. Traitement par l'AdminIT ==
+IT  -> SPA : 14. Consulte la liste + repond
+SPA -> API : 15. PUT /api/complaints/{id}\n{status, response}
+API -> DB  : 16. Met a jour la reclamation
+API --> SPA: 17. 200 OK
+SPA --> IT : 18. "Reclamation mise a jour"
+
+note right of API
+  Toutes les requetes incluent
+  l'en-tete Authorization:
+  Bearer <access_token>.
+  Roles autorises :
+  - POST  : doctor, admin
+  - GET   : doctor, admin, adminIT
+  - PUT   : adminIT uniquement
+end note
+
+@enduml

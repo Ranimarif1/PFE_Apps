@@ -84,8 +84,8 @@ export default function Profil() {
         nom: form.nom,
         prenom: form.prénom,
         email: form.email,
-        photo,
       };
+      if (photo.startsWith("data:")) payload.photo = photo;
       if (form.password) payload.password = form.password;
       const updated = await updateProfileApi(payload);
       updateUser(updated);
@@ -127,13 +127,13 @@ export default function Profil() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-foreground mb-1.5 block">Prénom</label>
-                <input value={form.prénom} onChange={e => setForm(f => ({ ...f, prénom: e.target.value }))}
-                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                <input value={form.prénom} readOnly aria-readonly="true" tabIndex={-1}
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-muted text-sm text-muted-foreground cursor-not-allowed focus:outline-none" />
               </div>
               <div>
                 <label className="text-sm font-medium text-foreground mb-1.5 block">Nom</label>
-                <input value={form.nom} onChange={e => setForm(f => ({ ...f, nom: e.target.value }))}
-                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                <input value={form.nom} readOnly aria-readonly="true" tabIndex={-1}
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-muted text-sm text-muted-foreground cursor-not-allowed focus:outline-none" />
               </div>
             </div>
             <div>

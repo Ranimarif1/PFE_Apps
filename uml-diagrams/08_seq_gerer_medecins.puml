@@ -1,0 +1,70 @@
+@startuml ReportEase_Sequence_GererMedecins
+!theme plain
+skinparam ParticipantBackgroundColor #F4F6F7
+skinparam ParticipantBorderColor #7F8C8D
+skinparam ArrowColor #2C3E50
+skinparam SequenceLifeLineBorderColor #7F8C8D
+skinparam noteBackgroundColor #FEF9E7
+skinparam noteBorderColor #B7950B
+
+title Diagramme de Sequence — Gerer medecins (SPA + API REST)
+
+actor       "Admin"              as ADM
+participant "SPA\n(React)"       as SPA
+participant "API REST\n(Django)" as API
+database    "MongoDB"            as DB
+participant "Service Email\n(SMTP)" as Mail
+actor       "Medecin"            as MED
+
+== 1. Consulter la liste des medecins ==
+ADM -> SPA : 1. Acceder a la page "Medecins"
+SPA -> API : 2. GET /api/auth/users
+API -> DB  : 3. Recherche des utilisateurs
+DB  --> API: 4. Liste des comptes
+API --> SPA: 5. 200 OK + liste
+SPA --> ADM: 6. Affiche la liste\n(pending / validated / refused)
+
+== 2. Valider ou refuser une demande ==
+ADM -> SPA : 7. Choisit un medecin (statut = pending)
+
+alt [Decision = Valider]
+  ADM -> SPA : 8a. Clique "Valider"
+  SPA -> API : 9a. PUT /api/auth/users/{id}/status\n{status: "validated"}
+  API -> DB  : 10a. Met a jour le statut
+  API -> Mail: 11a. Envoie email de validation
+  Mail -> MED: 12a. Email "Compte valide"
+  API --> SPA: 13a. 200 OK
+  SPA --> ADM: 14a. "Compte valide"
+else [Decision = Refuser]
+  ADM -> SPA : 8b. Clique "Refuser" + saisit motif
+  SPA -> API : 9b. PUT /api/auth/users/{id}/status\n{status: "refused", reason}
+  API -> DB  : 10b. Met a jour le statut
+  API -> Mail: 11b. Envoie email de refus + motif
+  Mail -> MED: 12b. Email "Demande refusee"
+  API --> SPA: 13b. 200 OK
+  SPA --> ADM: 14b. "Compte refuse"
+end
+
+== 3. Promouvoir un medecin en admin ==
+ADM -> SPA : 15. Clique "Promouvoir"
+SPA -> API : 16. PUT /api/auth/users/{id}/role\n{role: "admin"}
+API -> DB  : 17. Met a jour le role
+API --> SPA: 18. 200 OK
+SPA --> ADM: 19. "Medecin promu en admin"
+
+== 4. Supprimer un medecin ==
+ADM -> SPA : 20. Clique "Supprimer" + confirme
+SPA -> API : 21. DELETE /api/auth/users/{id}
+API -> DB  : 22. Supprime le document
+API --> SPA: 23. 200 OK
+SPA --> ADM: 24. "Medecin supprime"
+
+note right of API
+  Toutes les requetes incluent
+  l'en-tete Authorization:
+  Bearer <access_token>.
+  L'API verifie que le role
+  courant = admin.
+end note
+
+@enduml

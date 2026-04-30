@@ -95,7 +95,12 @@ export default function ResetPassword() {
                       className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 pr-11"
                       placeholder="••••••••"
                     />
-                    <button type="button" onClick={() => setShowPass(v => !v)}
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={() => setShowPass(v => !v)}
+                      aria-label={showPass ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                       {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>

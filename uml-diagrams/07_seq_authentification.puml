@@ -1,0 +1,48 @@
+@startuml ReportEase_Sequence_Authentification
+!theme plain
+skinparam ParticipantBackgroundColor #F4F6F7
+skinparam ParticipantBorderColor #7F8C8D
+skinparam ArrowColor #2C3E50
+skinparam SequenceLifeLineBorderColor #7F8C8D
+skinparam noteBackgroundColor #FEF9E7
+skinparam noteBorderColor #B7950B
+
+title Diagramme de Sequence — S'authentifier (SPA + API REST)
+
+actor       "Utilisateur"        as U
+participant "SPA\n(React)"       as SPA
+participant "API REST\n(Django)" as API
+database    "MongoDB"            as DB
+
+== Connexion ==
+U   -> SPA : Saisit email + mot de passe
+SPA -> API : POST /auth/login
+API -> DB  : Recherche utilisateur
+DB  --> API: Donnees utilisateur
+
+alt Identifiants invalides
+  API --> SPA: 401 Unauthorized
+  SPA --> U  : "Identifiants incorrects"
+else Compte non valide
+  API --> SPA: 403 Forbidden
+  SPA --> U  : "Compte non valide"
+else Succes
+  API --> SPA: 200 OK + {access, refresh, user}
+  SPA -> SPA : Stocke les tokens JWT
+  SPA --> U  : Redirection selon le role
+end
+
+== Acces aux ressources protegees ==
+U   -> SPA : Action sur l'application
+SPA -> API : Requete + Header\nAuthorization: Bearer <access>
+API -> API : Verifie le JWT
+API --> SPA: Donnees demandees
+
+note right of API
+  Redirection apres login :
+  - doctor   -> /dashboard
+  - admin    -> /admin/dashboard
+  - adminIT  -> /adminit/dashboard
+end note
+
+@enduml

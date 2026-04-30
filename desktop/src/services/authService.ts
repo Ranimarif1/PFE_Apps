@@ -1,6 +1,22 @@
 import { api } from "@/lib/api";
 import type { User } from "@/contexts/AuthContext";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+
+// Resolve a stored photo value to a URL the <img> tag can load.
+// - "" → ""
+// - "data:..." (legacy base64) → unchanged
+// - "http(s)://..." → unchanged
+// - "/media/..." → prefixed with the API origin
+function resolvePhotoUrl(photo: string): string {
+  if (!photo) return "";
+  if (photo.startsWith("data:") || photo.startsWith("http://") || photo.startsWith("https://")) {
+    return photo;
+  }
+  if (photo.startsWith("/")) return `${API_BASE_URL}${photo}`;
+  return photo;
+}
+
 // Map backend role/status strings to frontend French equivalents
 function mapUser(raw: BackendUser): User {
   const roleMap: Record<string, User["rôle"]> = {
@@ -21,7 +37,7 @@ function mapUser(raw: BackendUser): User {
     rôle: roleMap[raw.role] ?? "médecin",
     statut: statusMap[raw.status] ?? "en_attente",
     genre: (raw.genre === "homme" || raw.genre === "femme") ? raw.genre : "",
-    photo: raw.photo || "",
+    photo: resolvePhotoUrl(raw.photo || ""),
   };
 }
 

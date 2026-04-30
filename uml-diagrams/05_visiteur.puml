@@ -1,4 +1,4 @@
-@startuml RadioAI_Visiteur
+@startuml ReportEase_Visiteur
 !theme plain
 skinparam actorStyle awesome
 skinparam packageStyle rectangle
@@ -13,7 +13,7 @@ actor "Systeme Email"  as Email #FDFEFE
 actor "Administrateur" as A   #A9DFBF
 actor "AdminIT"        as IT  #F9E79F
 
-rectangle "RadioAI — Acces Public" {
+rectangle "ReportEase — Acces Public" {
 
   package "Inscription" {
     usecase "Acceder a la page d'accueil"      as UC_Home

@@ -70,9 +70,15 @@ export interface TrainingEntry {
   text:       string;
 }
 
-export async function downloadTrainingZip(status: "all" | "saved"): Promise<void> {
+export async function downloadTrainingZip(
+  status: "all" | "saved",
+  opts?: { start?: string; end?: string }
+): Promise<void> {
+  const params = new URLSearchParams({ status });
+  if (opts?.start) params.set("start", opts.start);
+  if (opts?.end)   params.set("end",   opts.end);
   const res = await fetch(
-    `${BASE_URL}/api/audios/training/download/?status=${status}`,
+    `${BASE_URL}/api/audios/training/download/?${params.toString()}`,
     { headers: authHeaders() }
   );
   if (!res.ok) {

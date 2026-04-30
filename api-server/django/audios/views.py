@@ -133,11 +133,35 @@ def training_download(request: HttpRequest):
 
     status_filter = request.GET.get("status", "all")  # "all" or "saved"
 
+    # Optional date range — both bounds inclusive, ISO-8601 (YYYY-MM-DD).
+    def _parse(value: str):
+        value = (value or "").strip()
+        if not value:
+            return None
+        try:
+            return dt.date.fromisoformat(value)
+        except ValueError:
+            return None
+
+    start_date = _parse(request.GET.get("start", ""))
+    end_date   = _parse(request.GET.get("end", ""))
+    if start_date and end_date and start_date > end_date:
+        return JsonResponse({"detail": "start must be before end."}, status=400)
+
     audios_col  = get_collection("audios")
     reports_col = get_collection("reports")
     users_col   = get_collection("users")
 
-    audio_docs = list(audios_col.find({"reportId": {"$exists": True, "$ne": None}}))
+    audio_query: dict = {"reportId": {"$exists": True, "$ne": None}}
+    if start_date or end_date:
+        created_filter: dict = {}
+        if start_date:
+            created_filter["$gte"] = dt.datetime.combine(start_date, dt.time.min).isoformat()
+        if end_date:
+            created_filter["$lte"] = dt.datetime.combine(end_date, dt.time.max).isoformat()
+        audio_query["createdAt"] = created_filter
+
+    audio_docs = list(audios_col.find(audio_query))
 
     # Build pairs
     pairs = []
@@ -206,7 +230,12 @@ def training_download(request: HttpRequest):
 
     buf.seek(0)
     label    = "enregistres" if status_filter == "saved" else "tous"
-    filename = f"dataset_audio_texte_{label}_{dt.datetime.utcnow().strftime('%Y%m%d')}.zip"
+    if start_date or end_date:
+        s = start_date.strftime("%Y%m%d") if start_date else "debut"
+        e = end_date.strftime("%Y%m%d") if end_date else "fin"
+        filename = f"dataset_audio_texte_{label}_{s}_{e}.zip"
+    else:
+        filename = f"dataset_audio_texte_{label}_{dt.datetime.utcnow().strftime('%Y%m%d')}.zip"
 
     response = StreamingHttpResponse(buf, content_type="application/zip")
     response["Content-Disposition"] = f'attachment; filename="{filename}"'

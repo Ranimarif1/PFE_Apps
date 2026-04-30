@@ -154,7 +154,7 @@ export default function Dashboard() {
   const minsSaved   = dictated * 4;   // conservative ~4 min saved per dictation
 
   return (
-    <AppLayout title="Tableau de bord">
+    <AppLayout title="Tableau de bord — Médecin">
       <div className="flex flex-col min-h-full max-w-full overflow-hidden">
 
       {/* ══ KPI strip ══════════════════════════════════════════════════════ */}

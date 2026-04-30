@@ -1,4 +1,4 @@
-@startuml RadioAI_Global
+@startuml ReportEase_Global
 !theme plain
 skinparam actorStyle awesome
 skinparam packageStyle rectangle
@@ -9,7 +9,7 @@ skinparam UsecaseBackgroundColor #EBF5FB
 skinparam NoteBackgroundColor #FDFEFE
 skinparam NoteBorderColor #BDC3C7
 
-title Diagramme de Cas d'Utilisation — RadioAI (Vue Globale)
+title Diagramme de Cas d'Utilisation — ReportEase (Vue Globale)
 
 ' ─── Acteurs ───────────────────────────────────────────────
 actor "Visiteur"          as Visiteur  #LightGray
@@ -18,7 +18,7 @@ actor "Administrateur"    as Admin     #A9DFBF
 actor "Administrateur IT" as AdminIT   #F9E79F
 
 ' ─── Systeme ──────────────────────────────────────────────
-rectangle "RadioAI" {
+rectangle "ReportEase" {
 
   package "Authentification" {
     usecase "S'inscrire"                  as UC_Register

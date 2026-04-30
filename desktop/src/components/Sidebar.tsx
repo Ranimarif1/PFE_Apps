@@ -6,7 +6,7 @@ import {
   LayoutDashboard, History, MessageSquare, User,
   Users, Brain, LogOut, Sun, Moon,
   ChevronLeft, ChevronRight,
-  AlertCircle, Plus, FileAudio, Sparkles, Loader2, Database, X,
+  AlertCircle, Plus, FileAudio, Sparkles, Loader2, Database, X, Download,
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -150,6 +150,13 @@ const adminSections: Section[] = [
       { to: "/rapport/nouveau",    icon: Plus,            label: "Nouveau rapport"  },
       { to: "/historique",         icon: History,         label: "Historique"       },
       { to: "/reclamations",       icon: MessageSquare,   label: "Réclamations"     },
+    ],
+  },
+  {
+    label: "GESTION",
+    links: [
+      { to: "/admin/medecins",     icon: Users,           label: "Gérer médecins"   },
+      { to: "/admin/export",       icon: Download,        label: "Exporter CSV"     },
       { to: "/admin/profil",       icon: User,            label: "Mon profil"       },
     ],
   },
@@ -170,6 +177,7 @@ const adminITSections: Section[] = [
       { to: "/adminit/admins",    icon: Users,     label: "Comptes Admin"     },
       { to: "/adminit/modele",    icon: Brain,     label: "Modèle IA"         },
       { to: "/adminit/training",  icon: Database,  label: "Données entraîn."  },
+      { to: "/adminit/profil",    icon: User,      label: "Mon profil"        },
     ],
   },
 ];

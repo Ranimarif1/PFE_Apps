@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import base64
 import datetime as dt
 import json
 import random
+import re
 import secrets
+from pathlib import Path
 from typing import Any, Dict
 
 from bson import ObjectId
@@ -32,6 +35,57 @@ def _parse_body(request: HttpRequest) -> Dict[str, Any]:
         return data
     except Exception:
         return {}
+
+
+# ── Avatar storage helpers ────────────────────────────────────────────────
+AVATAR_MIME_TO_EXT = {
+    "image/jpeg": "jpg",
+    "image/jpg":  "jpg",
+    "image/png":  "png",
+    "image/webp": "webp",
+}
+AVATAR_MAX_BYTES = 5 * 1024 * 1024  # 5 MB after base64 decode
+_DATA_URI_RE = re.compile(r"^data:(?P<mime>image/[a-zA-Z0-9.+-]+);base64,(?P<data>.+)$", re.DOTALL)
+
+
+def _avatars_dir() -> Path:
+    d = settings.MEDIA_ROOT / "avatars"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _save_avatar(user_id: str, data_uri: str) -> str:
+    """Decode a base64 data URI and write it to media/avatars/user_<id>.<ext>.
+
+    Returns the public URL (with cache-busting ?v=<timestamp>) to store in MongoDB.
+    Raises ValueError on invalid input.
+    """
+    match = _DATA_URI_RE.match(data_uri.strip())
+    if not match:
+        raise ValueError("Format de photo invalide.")
+    mime = match.group("mime").lower()
+    ext = AVATAR_MIME_TO_EXT.get(mime)
+    if not ext:
+        raise ValueError("Format d'image non supporté (JPEG, PNG ou WebP uniquement).")
+    try:
+        raw = base64.b64decode(match.group("data"), validate=True)
+    except Exception as exc:
+        raise ValueError("Photo corrompue.") from exc
+    if len(raw) > AVATAR_MAX_BYTES:
+        raise ValueError("Photo trop volumineuse (max 5 Mo).")
+
+    avatars_dir = _avatars_dir()
+    # Remove any prior avatar for this user (any extension), so a fixed filename is used.
+    for old in avatars_dir.glob(f"user_{user_id}.*"):
+        try:
+            old.unlink()
+        except OSError:
+            pass
+
+    target = avatars_dir / f"user_{user_id}.{ext}"
+    target.write_bytes(raw)
+    version = int(dt.datetime.utcnow().timestamp())
+    return f"{settings.MEDIA_URL}avatars/user_{user_id}.{ext}?v={version}"
 
 
 @csrf_exempt
@@ -449,24 +503,24 @@ def update_profile(request: HttpRequest) -> JsonResponse:
     data = _parse_body(request)
     updates: Dict[str, Any] = {}
 
-    nom = (data.get("nom") or "").strip()
-    prenom = (data.get("prenom") or "").strip()
+    # nom and prenom are immutable after account creation — silently ignored if sent.
     email = (data.get("email") or "").strip().lower()
-    photo = data.get("photo")  # base64 data URI string
+    photo = data.get("photo")
     password = data.get("password") or ""
 
-    if nom:
-        updates["nom"] = nom
-    if prenom:
-        updates["prenom"] = prenom
     if email:
         users_col_check = get_collection("users")
         existing = users_col_check.find_one({"email": email, "_id": {"$ne": ObjectId(current.id)}})
         if existing:
             return JsonResponse({"detail": "Email already in use."}, status=400)
         updates["email"] = email
-    if photo is not None:
-        updates["photo"] = photo
+    # Only persist a new photo when the client sends a fresh base64 data URI.
+    # Existing URLs (e.g. "/media/avatars/...") are no-ops to avoid clobbering on every save.
+    if isinstance(photo, str) and photo.startswith("data:"):
+        try:
+            updates["photo"] = _save_avatar(current.id, photo)
+        except ValueError as exc:
+            return JsonResponse({"detail": str(exc)}, status=400)
     if password:
         if len(password) < 6:
             return JsonResponse({"detail": "Password too short."}, status=400)

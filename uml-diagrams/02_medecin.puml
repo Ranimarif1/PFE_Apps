@@ -1,98 +1,306 @@
-@startuml RadioAI_Medecin
+@startuml ReportEase_Medecin
 !theme plain
 skinparam actorStyle awesome
 skinparam packageStyle rectangle
 skinparam UsecaseBackgroundColor #EBF5FB
 skinparam UsecaseBorderColor #2980B9
 skinparam ArrowColor #2C3E50
+skinparam ActorBorderColor #2C3E50
+skinparam NoteBackgroundColor #FDFEFE
+skinparam NoteBorderColor #BDC3C7
+left to right direction
 
-title Cas d'Utilisation — Medecin
+title Diagramme de Cas d'Utilisation Detaille — Acteur Medecin (Radiologue)
 
-actor "Medecin" as M #AED6F1
+' ─── Acteurs ───────────────────────────────────────────────
+actor "Medecin\n(Radiologue)" as M #AED6F1
+actor "Service STT\n(Whisper-Medical-FR)" as STT #F5CBA7
+actor "Moteur MedCorrect\n(Dictionnaire + Regles)" as MC #F5CBA7
+actor "Service Email\n(SMTP)" as MAIL #D7BDE2
+actor "Administrateur IT" as ADMINIT #F9E79F
 
-rectangle "RadioAI — Espace Medecin" {
+rectangle "ReportEase — Espace Medecin" {
 
-  package "Authentification" {
-    usecase "Se connecter"               as UC_Login
-    usecase "Verifier statut compte"     as UC_Status
-    usecase "Consulter son profil"       as UC_Profil
-    usecase "Modifier son profil"        as UC_EditProfil
-    usecase "Changer son mot de passe"   as UC_ChangePwd
+  ' ══════════════════════════════════════════════════════════
+  package "1. Authentification & Compte" {
+    usecase "S'inscrire"                       as UC_Register
+    usecase "Se connecter"                     as UC_Login
+    usecase "Verifier le statut du compte\n(actif / en attente / refuse)" as UC_Status
+    usecase "Mot de passe oublie"              as UC_Forgot
+    usecase "Reinitialiser le mot de passe\n(via lien securise)" as UC_Reset
+    usecase "Se deconnecter"                   as UC_Logout
   }
 
-  package "Tableau de Bord" {
-    usecase "Voir les KPIs 30 jours"     as UC_KPIs
-    usecase "Voir rapports recents"      as UC_RecentReports
-    usecase "Voir tableau de bord"       as UC_Dashboard
+  ' ══════════════════════════════════════════════════════════
+  package "2. Gestion du Profil" {
+    usecase "Consulter son profil"             as UC_Profil
+    usecase "Modifier ses informations\n(nom, prenom, email)" as UC_EditInfo
+    usecase "Changer la photo de profil"       as UC_EditPhoto
+    usecase "Changer le mot de passe"          as UC_ChangePwd
+    usecase "Choisir le theme (clair / sombre)" as UC_Theme
   }
 
-  package "Gestion des Rapports" {
-    usecase "Creer un rapport"           as UC_CreateReport
-    usecase "Saisir ID d'examen"         as UC_ExamID
-    usecase "Verifier unicite ID examen" as UC_CheckID
-    usecase "Enregistrer audio micro"    as UC_RecordAudio
-    usecase "Uploader fichier audio"     as UC_UploadAudio
-    usecase "Transcrire l'audio"         as UC_Transcribe
-    usecase "Rediger le contenu"         as UC_WriteContent
-    usecase "Sauvegarder en brouillon"   as UC_SaveDraft
-    usecase "Valider le rapport"         as UC_ValidateReport
-    usecase "Finaliser le rapport"       as UC_FinalizeReport
-    usecase "Modifier un rapport"        as UC_EditReport
-    usecase "Consulter l'historique"     as UC_History
+  ' ══════════════════════════════════════════════════════════
+  package "3. Tableau de Bord" {
+    usecase "Consulter le tableau de bord"     as UC_Dashboard
+    usecase "Voir les KPIs\n(total, valides, brouillons)" as UC_KPIs
+    usecase "Voir l'activite\n(30 derniers jours)" as UC_Activity
+    usecase "Consulter le calendrier\ndes rapports" as UC_Calendar
+    usecase "Voir la repartition\ndes statuts" as UC_Repartition
+    usecase "Consulter les statistiques IA\n(dictes / manuels / minutes gagnees)" as UC_AIStats
+    usecase "Acceder aux actions rapides"      as UC_QuickActions
   }
 
-  package "Reclamations" {
-    usecase "Soumettre une reclamation"  as UC_Complaint
-    usecase "Suivre mes reclamations"    as UC_TrackComplaint
+  ' ══════════════════════════════════════════════════════════
+  package "4. Creation d'un Rapport" {
+    usecase "Creer un nouveau rapport"         as UC_CreateReport
+    usecase "Saisir l'identifiant d'examen"    as UC_ExamID
+    usecase "Valider le format de l'ID\n(annee + numero)" as UC_ValidateID
+    usecase "Verifier l'unicite de l'ID\n(cote serveur)" as UC_CheckID
+    usecase "Choisir la methode\nd'acquisition audio" as UC_ChooseMethod
   }
 
-  package "Enregistrement Mobile" {
-    usecase "Acceder via mobile"         as UC_Mobile
-    usecase "Enregistrer audio mobile"   as UC_MobileRecord
+  ' ══════════════════════════════════════════════════════════
+  package "5. Acquisition Audio" {
+    usecase "Enregistrer via le navigateur\n(microphone PC)" as UC_RecordMic
+    usecase "Mettre en pause / reprendre"      as UC_Pause
+    usecase "Arreter l'enregistrement"         as UC_Stop
+    usecase "Importer un fichier audio\n(MP3/WAV/M4A — max 50 Mo)" as UC_UploadFile
+    usecase "Enregistrer via smartphone\n(QR code)" as UC_Smartphone
+    usecase "Generer une session mobile"       as UC_GenSession
+    usecase "Afficher le QR code\n(expire en 15 min)" as UC_QR
+    usecase "Recevoir l'audio du mobile\n(via Socket.io)" as UC_ReceiveMobile
+    usecase "Sauvegarder l'audio sur le serveur" as UC_SaveAudio
+    usecase "Annuler l'enregistrement"         as UC_CancelRec
+  }
+
+  ' ══════════════════════════════════════════════════════════
+  package "6. Transcription IA (automatique)" {
+    usecase "Transcrire l'audio\n(Speech-to-Text medical)" as UC_Transcribe
+    usecase "Recevoir le texte transcrit"      as UC_GetText
+    usecase "Decouper en sections\n(Indication / Resultat / Conclusion)" as UC_Sections
+    usecase "Creer un brouillon\nautomatiquement" as UC_AutoDraft
+    usecase "Detecter un echec\nde transcription" as UC_TranscribeFail
+  }
+
+  ' ══════════════════════════════════════════════════════════
+  package "7. File d'Audios en Attente\n(repli en cas d'echec)" {
+    usecase "Consulter la file d'audios\n(barre laterale)" as UC_Queue
+    usecase "Relancer la transcription\nd'un audio echoue" as UC_StartTranscribe
+    usecase "Supprimer un audio\nde la file" as UC_DeleteAudio
+  }
+
+  ' ══════════════════════════════════════════════════════════
+  package "8. Redaction & Correction" {
+    usecase "Rediger / modifier le contenu\n(mode edition)" as UC_WriteContent
+    usecase "Modifier l'ID d'examen\n(brouillon)" as UC_EditExamID
+    usecase "Charger le dictionnaire medical"  as UC_LoadDict
+    usecase "Analyser le texte (MedCorrect)"   as UC_Analyze
+    usecase "Consulter les suggestions\n(STT / Ortho / Accord / Medical)" as UC_ViewSugg
+    usecase "Appliquer une suggestion"         as UC_ApplyOne
+    usecase "Choisir une alternative"          as UC_Alternative
+    usecase "Appliquer toutes les suggestions" as UC_ApplyAll
+    usecase "Ignorer une suggestion"           as UC_Dismiss
+    usecase "Re-analyser le texte"             as UC_ReAnalyze
+  }
+
+  ' ══════════════════════════════════════════════════════════
+  package "9. Cycle de Vie du Rapport" {
+    usecase "Sauvegarder en brouillon"         as UC_SaveDraft
+    usecase "Valider le rapport"               as UC_Validate
+    usecase "Enregistrer le rapport\n(finaliser)" as UC_Finalize
+    usecase "Consulter un rapport"             as UC_ViewReport
+    usecase "Modifier un brouillon"            as UC_EditDraft
+  }
+
+  ' ══════════════════════════════════════════════════════════
+  package "10. Historique & Recherche" {
+    usecase "Consulter l'historique"           as UC_History
+    usecase "Filtrer par statut\n(brouillon/valide/enregistre)" as UC_FilterStatus
+    usecase "Filtrer par date\n(annee / mois / jour)" as UC_FilterDate
+    usecase "Rechercher par ID Exam"           as UC_SearchID
+    usecase "Trier par date"                   as UC_Sort
+    usecase "Effacer les filtres"              as UC_ClearFilters
+  }
+
+  ' ══════════════════════════════════════════════════════════
+  package "11. Reclamations" {
+    usecase "Soumettre une reclamation"        as UC_Complaint
+    usecase "Suivre ses reclamations"          as UC_TrackComplaint
+    usecase "Consulter la reponse de l'Admin IT" as UC_ReadResponse
   }
 }
 
-' ─── Associations ─────────────────────────────────────────
+' ═══════════════════════════════════════════════════════════
+' ─── Associations principales (Acteur Medecin) ─────────────
+' ═══════════════════════════════════════════════════════════
+M --> UC_Register
 M --> UC_Login
+M --> UC_Forgot
+M --> UC_Logout
 M --> UC_Profil
+M --> UC_Theme
 M --> UC_Dashboard
 M --> UC_CreateReport
+M --> UC_Queue
+M --> UC_ViewReport
 M --> UC_History
 M --> UC_Complaint
 M --> UC_TrackComplaint
-M --> UC_Mobile
 
-' ─── Include / Extend ─────────────────────────────────────
-UC_Login      ..> UC_Status         : <<include>>
-UC_Profil     ..> UC_EditProfil     : <<extend>>
-UC_Profil     ..> UC_ChangePwd      : <<extend>>
-UC_Dashboard  ..> UC_RecentReports  : <<include>>
-UC_Dashboard  ..> UC_KPIs           : <<include>>
+' ─── Acteurs secondaires ───────────────────────────────────
+UC_Transcribe   --> STT
+UC_Analyze      --> MC
+UC_LoadDict     --> MC
+UC_Forgot       --> MAIL
+UC_Reset        --> MAIL
+UC_Status       ..> ADMINIT : <<approbation>>
+UC_Complaint    ..> ADMINIT : <<traite par>>
 
-UC_CreateReport ..> UC_ExamID       : <<include>>
-UC_ExamID       ..> UC_CheckID      : <<include>>
-UC_CreateReport ..> UC_WriteContent : <<include>>
-UC_CreateReport ..> UC_RecordAudio  : <<extend>>
-UC_CreateReport ..> UC_UploadAudio  : <<extend>>
-UC_RecordAudio  ..> UC_Transcribe   : <<extend>>
-UC_UploadAudio  ..> UC_Transcribe   : <<extend>>
-UC_CreateReport ..> UC_SaveDraft    : <<extend>>
-UC_CreateReport ..> UC_ValidateReport : <<extend>>
-UC_ValidateReport ..> UC_FinalizeReport : <<extend>>
+' ═══════════════════════════════════════════════════════════
+' ─── Relations <<include>> (obligatoires) ──────────────────
+' ═══════════════════════════════════════════════════════════
+UC_Login        ..> UC_Status        : <<include>>
+UC_Forgot       ..> UC_Reset         : <<include>>
 
-UC_History    ..> UC_EditReport     : <<extend>>
+UC_Dashboard    ..> UC_KPIs          : <<include>>
+UC_Dashboard    ..> UC_Activity      : <<include>>
+UC_Dashboard    ..> UC_Calendar      : <<include>>
+UC_Dashboard    ..> UC_Repartition   : <<include>>
+UC_Dashboard    ..> UC_AIStats       : <<include>>
+UC_Dashboard    ..> UC_QuickActions  : <<include>>
 
-UC_Mobile     ..> UC_MobileRecord   : <<include>>
-UC_MobileRecord ..> UC_Transcribe   : <<extend>>
+UC_CreateReport ..> UC_ExamID        : <<include>>
+UC_ExamID       ..> UC_ValidateID    : <<include>>
+UC_ExamID       ..> UC_CheckID       : <<include>>
+UC_CreateReport ..> UC_ChooseMethod  : <<include>>
 
-note right of UC_ValidateReport
-  Statuts du rapport :
-  draft → validated → saved
+UC_Smartphone   ..> UC_GenSession    : <<include>>
+UC_GenSession   ..> UC_QR            : <<include>>
+UC_Smartphone   ..> UC_ReceiveMobile : <<include>>
+
+UC_RecordMic    ..> UC_SaveAudio     : <<include>>
+UC_UploadFile   ..> UC_SaveAudio     : <<include>>
+UC_ReceiveMobile..> UC_SaveAudio     : <<include>>
+
+' Transcription declenchee automatiquement apres sauvegarde de l'audio
+UC_SaveAudio       ..> UC_Transcribe : <<include>>
+UC_Transcribe      ..> UC_GetText    : <<include>>
+UC_GetText         ..> UC_Sections   : <<include>>
+UC_GetText         ..> UC_AutoDraft  : <<include>>
+
+' Re-transcription manuelle depuis la file d'attente (fallback)
+UC_StartTranscribe ..> UC_Transcribe : <<include>>
+
+UC_WriteContent ..> UC_Analyze       : <<include>>
+UC_Analyze      ..> UC_ViewSugg      : <<include>>
+
+UC_History      ..> UC_FilterStatus  : <<include>>
+UC_History      ..> UC_FilterDate    : <<include>>
+UC_History      ..> UC_SearchID      : <<include>>
+UC_History      ..> UC_Sort          : <<include>>
+
+UC_TrackComplaint ..> UC_ReadResponse : <<include>>
+
+' ═══════════════════════════════════════════════════════════
+' ─── Relations <<extend>> (optionnelles / conditionnelles) ─
+' ═══════════════════════════════════════════════════════════
+UC_Profil       <.. UC_EditInfo      : <<extend>>
+UC_Profil       <.. UC_EditPhoto     : <<extend>>
+UC_Profil       <.. UC_ChangePwd     : <<extend>>
+
+UC_ChooseMethod <.. UC_RecordMic     : <<extend>>
+UC_ChooseMethod <.. UC_UploadFile    : <<extend>>
+UC_ChooseMethod <.. UC_Smartphone    : <<extend>>
+
+UC_RecordMic    <.. UC_Pause         : <<extend>>
+UC_RecordMic    <.. UC_Stop          : <<extend>>
+UC_RecordMic    <.. UC_CancelRec     : <<extend>>
+UC_Smartphone   <.. UC_CancelRec     : <<extend>>
+
+' La file d'audios n'est alimentee QUE si la transcription auto echoue
+UC_Transcribe   <.. UC_TranscribeFail : <<extend>>\n(en cas d'erreur)
+UC_TranscribeFail ..> UC_Queue       : <<include>>
+UC_Queue        <.. UC_StartTranscribe : <<extend>>
+UC_Queue        <.. UC_DeleteAudio   : <<extend>>
+
+UC_Sections     <.. UC_WriteContent  : <<extend>>
+UC_WriteContent <.. UC_LoadDict      : <<extend>>
+UC_WriteContent <.. UC_ReAnalyze     : <<extend>>
+UC_ViewSugg     <.. UC_ApplyOne      : <<extend>>
+UC_ViewSugg     <.. UC_ApplyAll      : <<extend>>
+UC_ViewSugg     <.. UC_Alternative   : <<extend>>
+UC_ViewSugg     <.. UC_Dismiss       : <<extend>>
+
+UC_WriteContent <.. UC_SaveDraft     : <<extend>>
+UC_WriteContent <.. UC_Validate      : <<extend>>
+UC_Validate     <.. UC_Finalize      : <<extend>>
+UC_WriteContent <.. UC_Finalize      : <<extend>>
+
+UC_ViewReport   <.. UC_EditDraft     : <<extend>>
+UC_EditDraft    <.. UC_EditExamID    : <<extend>>
+
+UC_History      <.. UC_ClearFilters  : <<extend>>
+UC_History      <.. UC_ViewReport    : <<extend>>
+
+' ═══════════════════════════════════════════════════════════
+' ─── Notes explicatives ────────────────────────────────────
+' ═══════════════════════════════════════════════════════════
+note right of UC_Status
+  Acces autorise uniquement
+  si compte = "actif".
+  Sinon : message + redirection.
+end note
+
+note right of UC_ValidateID
+  Format : <AAAA><N+>
+  Annee = annee courante
+  (ou precedente en janvier).
+  Min. 5 chiffres.
 end note
 
 note right of UC_Transcribe
   Moteur : Whisper-Medical-FR
-  (correction orthographique incluse)
+  - Transcription FR
+  - Vocabulaire medical
+  - Pre-correction phonetique
+end note
+
+note right of UC_Analyze
+  MedCorrect = 4 categories :
+  • STT     (erreurs phonetiques)
+  • Ortho   (orthographe)
+  • Accord  (grammaire)
+  • Medical (terminologie)
+  Confiance affichee par suggestion.
+end note
+
+note bottom of UC_Validate
+  Cycle des statuts :
+  draft -> validated -> saved
+  (irreversible apres "saved")
+end note
+
+note right of UC_Smartphone
+  Communication PC <-> mobile
+  via Socket.io (port 4000).
+  QR code expire en 15 min.
+end note
+
+note bottom of UC_Queue
+  La file ne contient QUE les audios
+  dont la transcription automatique
+  a echoue (pas de brouillon cree).
+  Le medecin peut alors :
+   - relancer la transcription, ou
+   - supprimer l'audio.
+end note
+
+note top of UC_AutoDraft
+  Flux normal :
+  Audio sauvegarde -> Transcription auto
+  -> Brouillon cree avec le texte
+  -> Audio lie au rapport (sort de la file).
 end note
 
 @enduml

@@ -1,0 +1,328 @@
+================================================================================
+  REPORTEASE - APPLICATION ARCHITECTURE OVERVIEW
+================================================================================
+
+A medical radiology reporting platform that lets doctors dictate reports by
+voice (recorded from a phone, transcribed by AI, reviewed and validated on
+desktop) and lets admins/IT staff manage users, complaints, training data,
+and exports.
+
+The system is split into FOUR independent processes that communicate over
+HTTP and WebSockets:
+
+   1. Django REST API     (port 8000)  - business logic + database
+   2. Socket.io server    (port 4000)  - desktop/mobile real-time bridge
+   3. Desktop web app     (port 8080)  - main UI for doctors/admins
+   4. Mobile web app      (port 5173)  - phone microphone recorder
+
+
+================================================================================
+  1. REPOSITORY LAYOUT
+================================================================================
+
+   apps/
+   |-- api-server/
+   |   |-- django/         <-- Django REST backend (Python, MongoDB)
+   |   |-- server/         <-- Node.js Socket.io server (real-time)
+   |   `-- media/          <-- Uploaded files (audios/, avatars/)
+   |
+   |-- desktop/            <-- React + Vite desktop frontend (main UI)
+   |   `-- src/
+   |       |-- pages/      <-- Per-role page components
+   |       |-- services/   <-- API client wrappers
+   |       `-- components/ <-- Shared UI components (Sidebar, etc.)
+   |
+   |-- client/             <-- React + Vite mobile recorder (lightweight)
+   |
+   |-- uml-diagrams/       <-- PlantUML/draw.io system diagrams
+   `-- ARCHITECTURE.txt    <-- This file
+
+
+================================================================================
+  2. BACKEND - DJANGO REST API (api-server/django/)
+================================================================================
+
+Stack:    Django + PyMongo (NOT the Django ORM)
+Database: MongoDB, database name "radiology_platform"
+Auth:     Custom JWT (no DRF, no Django auth tables)
+
+------------------------------------------------------------
+2.1  Why no serializers / no models.py
+------------------------------------------------------------
+The project bypasses the Django ORM entirely and talks to MongoDB directly
+through PyMongo (see core/mongo.py). Because there are no Django models,
+there is no DRF serializer layer either - each view parses request JSON,
+validates fields by hand, and writes to MongoDB collections.
+
+------------------------------------------------------------
+2.2  Django apps and their responsibilities
+------------------------------------------------------------
+
+   core/              Shared infrastructure (not a route).
+                      - mongo.py: opens the MongoDB connection used by all apps
+                      - auth.py:  JWT issuing/decoding, bcrypt password hashing,
+                                  and the @jwt_required(roles={...}) decorator
+                                  used to guard every protected view
+
+   auth/              User accounts: register, login, password reset,
+                      email validation, profile fetch.
+
+   audios/            Stores recorded audio files in api-server/media/audios/
+                      and links each one to an exam/report.
+
+   transcription/     Calls a Whisper model (amnbk/whisper-medical-fr,
+                      a French medical-domain fine-tune) to convert audio
+                      bytes into text. Includes punctuation + normalisation
+                      post-processing steps.
+
+   reports/           CRUD for medical reports. A report has both the
+                      raw transcription (originalContent) and the doctor's
+                      validated version (content); accuracy is computed
+                      as the similarity ratio between the two.
+
+   csvapp/            Date-range CSV export of reports for admins.
+
+   complaints/        Doctor-submitted complaints/feedback, triaged by
+                      adminIT users.
+
+------------------------------------------------------------
+2.3  URL routing  (api-server/django/urls.py)
+------------------------------------------------------------
+
+   /api/auth/         -> auth app
+   /api/audios/       -> audios app
+   /api/transcribe/   -> transcription app
+   /api/reports/      -> reports app
+   /api/csv/          -> csvapp
+   /api/complaints/   -> complaints app
+   /media/avatars/*   -> static file serving for profile photos
+
+------------------------------------------------------------
+2.4  Roles
+------------------------------------------------------------
+Three user roles are enforced by the @jwt_required decorator:
+
+   - medecin   (doctor)    -> records, transcribes, writes, validates reports
+   - admin                 -> dashboards, stats, manages doctors
+   - adminIT               -> manages admins, complaints, ML model,
+                              training data, bulk exports
+
+
+================================================================================
+  3. SOCKET.IO SERVER (api-server/server/)
+================================================================================
+
+Stack:    Node.js + Express + socket.io
+Purpose:  Real-time bridge so a phone can stream audio to the desktop app
+          without going through Django.
+
+Entry:    api-server/server/src/index.js
+
+Key pieces:
+
+   POST /api/session
+       Desktop calls this to get a fresh sessionId. The server generates
+       a UUID and a URL like  http://<host>:5173/?sessionId=<uuid>
+       which the desktop renders as a QR code.
+
+   Socket.io connections
+       - The desktop opens a socket and registers as the "desktop" side
+         of a session.
+       - The doctor scans the QR on their phone, the mobile app opens,
+         connects to the same sessionId, and registers as the "mobile" side.
+       - Audio chunks emitted by the phone are forwarded to the matching
+         desktop socket.
+
+   In-memory session map
+       { sessionId -> { desktopSocketId, mobileSocketId } }
+       (Not persisted - sessions live only as long as both clients are
+       connected.)
+
+   maxHttpBufferSize is raised to 10 MB so audio chunks fit.
+
+
+================================================================================
+  4. DESKTOP FRONTEND (desktop/)
+================================================================================
+
+Stack:    React 18 + Vite + TypeScript
+UI:       shadcn/ui + Tailwind CSS
+Data:     @tanstack/react-query for server state
+Realtime: socket.io-client
+
+Entry:    desktop/src/App.tsx
+          - Wraps the app in AuthProvider, ThemeProvider, RecordingProvider
+          - Defines all routes; RouteGuard enforces role-based access
+
+------------------------------------------------------------
+4.1  Routes (grouped by role)
+------------------------------------------------------------
+
+   Public
+       /login, /register, /forgot-password, /reset-password
+
+   medecin/  (doctor)
+       /dashboard            home
+       /rapport/nouveau      record + transcribe + write a new report
+       /rapport/:id          open an existing report
+       /historique           past reports
+       /reclamations         file complaints
+       /profil               profile settings
+
+   admin/
+       /admin/dashboard, /admin/statistiques, /admin/profil
+
+   adminit/  (IT admin)
+       /adminit/dashboard      doctors/admins overview
+       /adminit/reclamations   triage complaints
+       /adminit/admins         create/manage admins
+       /adminit/modele         ML model configuration
+       /adminit/export         bulk CSV export
+       /adminit/training       upload training data
+       /adminit/profil
+
+   Mobile bridge
+       /mobile/record/:token   shown on desktop to display the QR code
+                               and receive incoming audio chunks
+
+------------------------------------------------------------
+4.2  Service layer  (desktop/src/services/)
+------------------------------------------------------------
+Each file is a thin wrapper around fetch() that targets one Django app:
+
+   authService.ts          -> /api/auth/      login, register, refresh,
+                                              avatar URL resolution
+   audioService.ts         -> /api/audios/    upload audio Blob, list
+   transcriptionService.ts -> /api/transcribe/ POST audio, get text
+   reportsService.ts       -> /api/reports/   CRUD + accuracy tracking
+   csvService.ts           -> /api/csv/       download exports
+   complaintsService.ts    -> /api/complaints/ file + list complaints
+   usersService.ts         -> /api/auth/      profile + avatar updates
+   sessionService.ts       -> /api/session    request a Socket.io session
+
+
+================================================================================
+  5. MOBILE FRONTEND (client/)
+================================================================================
+
+Stack:    React 18 + Vite (no router, single screen)
+Entry:    client/src/main.jsx -> client/src/pages/RecordPage.jsx
+
+Job (and only job): open the device microphone, capture audio, stream
+the chunks over Socket.io to the desktop using the sessionId from the URL.
+It does not talk to Django at all.
+
+
+================================================================================
+  6. END-TO-END FLOW: RECORDING A REPORT
+================================================================================
+
+This is the central user journey - it touches every component.
+
+   STEP 1   Doctor logs in on the desktop app
+            desktop  -> POST /api/auth/login           -> Django
+            Django returns a JWT, stored client-side and sent on every
+            subsequent request as "Authorization: Bearer <token>".
+
+   STEP 2   Doctor clicks "New report"
+            desktop  -> POST /api/session              -> Socket.io server
+            Server generates sessionId + a mobile URL; desktop renders
+            it as a QR code on /mobile/record/:token.
+
+   STEP 3   Doctor scans QR with their phone
+            phone (client/) opens with ?sessionId=...,
+            connects to Socket.io, registers as the mobile side.
+            The desktop and mobile sockets are now paired in memory.
+
+   STEP 4   Doctor records on the phone
+            phone -> emits audio chunks over WebSocket
+            Socket.io server forwards chunks to the paired desktop socket.
+            Desktop reconstructs a single audio Blob.
+
+   STEP 5   Doctor stops recording, hits "Transcribe"
+            desktop -> POST /api/audios/      (saves the audio file)
+            desktop -> POST /api/transcribe/  (Django runs Whisper,
+                                               returns { text: "..." })
+
+   STEP 6   Doctor edits the transcribed text and validates
+            desktop -> POST /api/reports/
+            Django stores both originalContent (raw STT output) and
+            content (validated version) in MongoDB; accuracy is the
+            similarity ratio between the two.
+
+   STEP 7   Later: admin exports the month's reports
+            desktop -> GET /api/csv/?from=...&to=...   -> Django
+            Django queries MongoDB and streams a CSV back.
+
+
+================================================================================
+  7. COMPONENT INTERACTION DIAGRAM (TEXT)
+================================================================================
+
+                    +-----------------------+
+                    |   MongoDB             |
+                    |   radiology_platform  |
+                    +-----------+-----------+
+                                ^
+                                | PyMongo
+                                |
+                    +-----------+-----------+
+                    |  Django REST API      |
+                    |  (port 8000)          |
+                    |  auth, reports,       |
+                    |  audios, transcribe,  |
+                    |  csv, complaints      |
+                    +-----------+-----------+
+                                ^
+                                | HTTP + JWT
+                                |
+   +---------------+    HTTP    |
+   | Mobile (5173) |------+     |
+   | client/       |      |     |
+   | RecordPage    |      |     |
+   +-------+-------+      v     |
+           |        +----------+----------+
+           |  WS    | Socket.io server    |
+           +------->| (port 4000)         |
+                    | session bridge      |
+                    +----------+----------+
+                               ^
+                               | WS (audio chunks)
+                               |
+                    +----------+----------+
+                    |  Desktop (8080)     |
+                    |  desktop/src/       |
+                    |  React + Vite       |
+                    |  doctor / admin /   |
+                    |  adminIT dashboards |
+                    +---------------------+
+
+   Legend:  HTTP = REST calls with JWT bearer
+            WS   = WebSocket (Socket.io)
+
+
+================================================================================
+  8. KEY DESIGN CHOICES (NON-OBVIOUS)
+================================================================================
+
+   - MongoDB instead of Postgres: chosen so report documents (which mix
+     structured fields with free-form transcription text) can evolve
+     without schema migrations. Trade-off: no Django ORM, no DRF
+     serializers, all validation is hand-written in views.
+
+   - Separate Socket.io server instead of Django Channels: keeps the
+     real-time path (phone -> desktop) lightweight and independent of
+     the heavier Python/Whisper stack.
+
+   - Phone is a "dumb" recorder: it never authenticates with Django and
+     never stores data. It only streams bytes to the paired desktop,
+     which is the authenticated client that ultimately saves the audio.
+
+   - Accuracy metric: every report keeps the raw STT output alongside
+     the doctor-validated text, so the platform can measure how much
+     editing the model required - useful both as a quality signal and
+     as training data fed back through /adminit/training.
+
+================================================================================
+                             END OF DOCUMENT
+================================================================================

@@ -1,4 +1,4 @@
-@startuml RadioAI_AdminIT
+@startuml ReportEase_AdminIT
 !theme plain
 skinparam actorStyle awesome
 skinparam packageStyle rectangle
@@ -12,7 +12,7 @@ actor "Administrateur IT" as IT #F9E79F
 actor "Systeme Email"     as Email  #FDFEFE
 actor "Modele Whisper"    as Whisper #FADBD8
 
-rectangle "RadioAI — Espace Administrateur IT" {
+rectangle "ReportEase — Espace Administrateur IT" {
 
   package "Authentification" {
     usecase "Se connecter sans validation" as UC_Login
