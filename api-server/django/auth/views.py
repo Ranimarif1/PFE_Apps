@@ -92,7 +92,7 @@ def _save_avatar(user_id: str, data_uri: str) -> str:
 def send_verification_code(request: HttpRequest) -> JsonResponse:
     """Generate a 5-digit code, store it, and email it to the user."""
     if request.method != "POST":
-        return JsonResponse({"detail": "Method not allowed."}, status=405)
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
 
     data = _parse_body(request)
     email = (data.get("email") or "").strip().lower()
@@ -164,7 +164,7 @@ def send_verification_code(request: HttpRequest) -> JsonResponse:
 def verify_email_code(request: HttpRequest) -> JsonResponse:
     """Check a submitted 5-digit code and mark the email as verified."""
     if request.method != "POST":
-        return JsonResponse({"detail": "Method not allowed."}, status=405)
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
 
     data = _parse_body(request)
     email = (data.get("email") or "").strip().lower()
@@ -204,7 +204,7 @@ def verify_email_code(request: HttpRequest) -> JsonResponse:
 @csrf_exempt
 def register(request: HttpRequest) -> JsonResponse:
     if request.method != "POST":
-        return JsonResponse({"detail": "Method not allowed."}, status=405)
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
 
     data = _parse_body(request)
     email = (data.get("email") or "").strip().lower()
@@ -301,23 +301,23 @@ def register(request: HttpRequest) -> JsonResponse:
 @csrf_exempt
 def login_view(request: HttpRequest) -> JsonResponse:
     if request.method != "POST":
-        return JsonResponse({"detail": "Method not allowed."}, status=405)
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
 
     data = _parse_body(request)
     email = (data.get("email") or "").strip().lower()
     password = data.get("password") or ""
 
     if not email or not password:
-        return JsonResponse({"detail": "Invalid credentials."}, status=400)
+        return JsonResponse({"detail": "Identifiants incorrects."}, status=400)
 
     users_col = get_collection("users")
     user = users_col.find_one({"email": email})
     if not user or not verify_password(password, user["password"]):
-        return JsonResponse({"detail": "Invalid credentials."}, status=401)
+        return JsonResponse({"detail": "Identifiants incorrects."}, status=401)
 
     # Doctors and admins must be validated before login.
     if user["role"] in {"doctor", "admin"} and user.get("status") != "validated":
-        return JsonResponse({"detail": "Account not validated yet."}, status=403)
+        return JsonResponse({"detail": "Compte en attente de validation."}, status=403)
 
     access = create_access_token(user)
     refresh = create_refresh_token(user)
@@ -341,11 +341,11 @@ def login_view(request: HttpRequest) -> JsonResponse:
 
 def me(request: HttpRequest) -> JsonResponse:
     if request.method != "GET":
-        return JsonResponse({"detail": "Method not allowed."}, status=405)
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
 
     user = get_current_user(request)
     if not user:
-        return JsonResponse({"detail": "Authentication required."}, status=401)
+        return JsonResponse({"detail": "Authentification requise."}, status=401)
 
     return JsonResponse(
         {
@@ -364,20 +364,20 @@ def me(request: HttpRequest) -> JsonResponse:
 @csrf_exempt
 def update_user_status(request: HttpRequest, user_id: str) -> JsonResponse:
     if request.method not in {"PUT", "PATCH"}:
-        return JsonResponse({"detail": "Method not allowed."}, status=405)
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
 
     current = get_current_user(request)
     if not current:
-        return JsonResponse({"detail": "Authentication required."}, status=401)
+        return JsonResponse({"detail": "Authentification requise."}, status=401)
 
     # Only admins can validate users.
     if current.role not in {"admin", "adminIT"}:
-        return JsonResponse({"detail": "Permission denied."}, status=403)
+        return JsonResponse({"detail": "Accès refusé."}, status=403)
 
     data = _parse_body(request)
     new_status = data.get("status")
     if new_status not in {"pending", "validated", "refused"}:
-        return JsonResponse({"detail": "Invalid status."}, status=400)
+        return JsonResponse({"detail": "Statut invalide."}, status=400)
 
     reason = (data.get("reason") or "").strip()
 
@@ -385,11 +385,11 @@ def update_user_status(request: HttpRequest, user_id: str) -> JsonResponse:
     try:
         oid = ObjectId(user_id)
     except Exception:
-        return JsonResponse({"detail": "Invalid user id."}, status=400)
+        return JsonResponse({"detail": "Identifiant utilisateur invalide."}, status=400)
 
     result = users_col.update_one({"_id": oid}, {"$set": {"status": new_status}})
     if result.matched_count == 0:
-        return JsonResponse({"detail": "User not found."}, status=404)
+        return JsonResponse({"detail": "Utilisateur introuvable."}, status=404)
 
     updated = users_col.find_one({"_id": oid})
 
@@ -446,24 +446,24 @@ def update_user_status(request: HttpRequest, user_id: str) -> JsonResponse:
 @csrf_exempt
 def delete_user(request: HttpRequest, user_id: str) -> JsonResponse:
     if request.method != "DELETE":
-        return JsonResponse({"detail": "Method not allowed."}, status=405)
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
 
     current = get_current_user(request)
     if not current:
-        return JsonResponse({"detail": "Authentication required."}, status=401)
+        return JsonResponse({"detail": "Authentification requise."}, status=401)
 
     if current.role not in {"admin", "adminIT"}:
-        return JsonResponse({"detail": "Permission denied."}, status=403)
+        return JsonResponse({"detail": "Accès refusé."}, status=403)
 
     users_col = get_collection("users")
     try:
         oid = ObjectId(user_id)
     except Exception:
-        return JsonResponse({"detail": "Invalid user id."}, status=400)
+        return JsonResponse({"detail": "Identifiant utilisateur invalide."}, status=400)
 
     user = users_col.find_one({"_id": oid})
     if not user:
-        return JsonResponse({"detail": "User not found."}, status=404)
+        return JsonResponse({"detail": "Utilisateur introuvable."}, status=404)
 
     # Admin can only delete doctors; AdminIT can only delete admins
     if current.role == "admin" and user.get("role") != "doctor":
@@ -472,19 +472,19 @@ def delete_user(request: HttpRequest, user_id: str) -> JsonResponse:
         return JsonResponse({"detail": "L'Admin IT ne peut supprimer que des comptes admin."}, status=403)
 
     users_col.delete_one({"_id": oid})
-    return JsonResponse({"detail": "User deleted."})
+    return JsonResponse({"detail": "Utilisateur supprimé."})
 
 
 def list_users(request: HttpRequest) -> JsonResponse:
     if request.method != "GET":
-        return JsonResponse({"detail": "Method not allowed."}, status=405)
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
 
     current = get_current_user(request)
     if not current:
-        return JsonResponse({"detail": "Authentication required."}, status=401)
+        return JsonResponse({"detail": "Authentification requise."}, status=401)
 
     if current.role not in {"admin", "adminIT"}:
-        return JsonResponse({"detail": "Permission denied."}, status=403)
+        return JsonResponse({"detail": "Accès refusé."}, status=403)
 
     users_col = get_collection("users")
     docs = list(users_col.find({}, {"password": 0}).sort("createdAt", -1))
@@ -494,11 +494,11 @@ def list_users(request: HttpRequest) -> JsonResponse:
 @csrf_exempt
 def update_profile(request: HttpRequest) -> JsonResponse:
     if request.method not in {"PUT", "PATCH"}:
-        return JsonResponse({"detail": "Method not allowed."}, status=405)
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
 
     current = get_current_user(request)
     if not current:
-        return JsonResponse({"detail": "Authentication required."}, status=401)
+        return JsonResponse({"detail": "Authentification requise."}, status=401)
 
     data = _parse_body(request)
     updates: Dict[str, Any] = {}
@@ -512,7 +512,7 @@ def update_profile(request: HttpRequest) -> JsonResponse:
         users_col_check = get_collection("users")
         existing = users_col_check.find_one({"email": email, "_id": {"$ne": ObjectId(current.id)}})
         if existing:
-            return JsonResponse({"detail": "Email already in use."}, status=400)
+            return JsonResponse({"detail": "Cet email est déjà utilisé."}, status=400)
         updates["email"] = email
     # Only persist a new photo when the client sends a fresh base64 data URI.
     # Existing URLs (e.g. "/media/avatars/...") are no-ops to avoid clobbering on every save.
@@ -523,11 +523,11 @@ def update_profile(request: HttpRequest) -> JsonResponse:
             return JsonResponse({"detail": str(exc)}, status=400)
     if password:
         if len(password) < 6:
-            return JsonResponse({"detail": "Password too short."}, status=400)
+            return JsonResponse({"detail": "Mot de passe trop court."}, status=400)
         updates["password"] = hash_password(password)
 
     if not updates:
-        return JsonResponse({"detail": "Nothing to update."}, status=400)
+        return JsonResponse({"detail": "Aucune modification à effectuer."}, status=400)
 
     users_col = get_collection("users")
     users_col.update_one({"_id": ObjectId(current.id)}, {"$set": updates})
@@ -547,30 +547,30 @@ def update_profile(request: HttpRequest) -> JsonResponse:
 @csrf_exempt
 def change_user_role(request: HttpRequest, user_id: str) -> JsonResponse:
     if request.method not in {"PUT", "PATCH"}:
-        return JsonResponse({"detail": "Method not allowed."}, status=405)
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
 
     current = get_current_user(request)
     if not current:
-        return JsonResponse({"detail": "Authentication required."}, status=401)
+        return JsonResponse({"detail": "Authentification requise."}, status=401)
 
     if current.role not in {"admin", "adminIT"}:
-        return JsonResponse({"detail": "Permission denied."}, status=403)
+        return JsonResponse({"detail": "Accès refusé."}, status=403)
 
     data = _parse_body(request)
     new_role = (data.get("role") or "").strip()
 
     if new_role not in {"doctor", "admin"}:
-        return JsonResponse({"detail": "Invalid role."}, status=400)
+        return JsonResponse({"detail": "Rôle invalide."}, status=400)
 
     users_col = get_collection("users")
     try:
         oid = ObjectId(user_id)
     except Exception:
-        return JsonResponse({"detail": "Invalid user id."}, status=400)
+        return JsonResponse({"detail": "Identifiant utilisateur invalide."}, status=400)
 
     user = users_col.find_one({"_id": oid})
     if not user:
-        return JsonResponse({"detail": "User not found."}, status=404)
+        return JsonResponse({"detail": "Utilisateur introuvable."}, status=404)
 
     # Admin can only promote doctor → admin
     if current.role == "admin":
@@ -590,7 +590,7 @@ def change_user_role(request: HttpRequest, user_id: str) -> JsonResponse:
 @csrf_exempt
 def forgot_password(request: HttpRequest) -> JsonResponse:
     if request.method != "POST":
-        return JsonResponse({"detail": "Method not allowed."}, status=405)
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
 
     data = _parse_body(request)
     email = (data.get("email") or "").strip().lower()
@@ -643,7 +643,7 @@ def forgot_password(request: HttpRequest) -> JsonResponse:
 @csrf_exempt
 def reset_password(request: HttpRequest) -> JsonResponse:
     if request.method != "POST":
-        return JsonResponse({"detail": "Method not allowed."}, status=405)
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
 
     data = _parse_body(request)
     token = (data.get("token") or "").strip()

@@ -108,13 +108,13 @@ def jwt_required(roles: Optional[Iterable[str]] = None, require_validated: bool 
         def _wrapped(request: HttpRequest, *args: Any, **kwargs: Any):
             user = get_current_user(request)
             if not user:
-                return JsonResponse({"detail": "Authentication credentials were not provided or invalid."}, status=401)
+                return JsonResponse({"detail": "Authentification requise."}, status=401)
 
             if require_validated and not user.is_validated:
-                return JsonResponse({"detail": "User is not validated."}, status=403)
+                return JsonResponse({"detail": "Compte en attente de validation."}, status=403)
 
             if roles is not None and user.role not in roles:
-                return JsonResponse({"detail": "Permission denied."}, status=403)
+                return JsonResponse({"detail": "Accès refusé."}, status=403)
 
             request.user = user  # type: ignore[attr-defined]
             return view_func(request, *args, **kwargs)

@@ -32,6 +32,7 @@ export function RecordingIndicator({ collapsed }: Props) {
       navigate(`/rapport/${reportId}`, {
         state: {
           ID_Exam: examId,
+          transcription: text,
           audioId,
           _restore: { etape: 3, examId, méthode },
         },

@@ -29,3 +29,34 @@ export async function transcribeAudio(audio: Blob | File): Promise<string> {
 
   return (data.text as string) || "";
 }
+
+export interface OllamaChange {
+  original:  string;
+  corrected: string;
+}
+
+export interface OllamaSuggestion {
+  suggestion: string;
+  changes:    OllamaChange[];
+}
+
+export async function getSuggestion(text: string): Promise<OllamaSuggestion> {
+  const token = localStorage.getItem("access_token");
+
+  const res = await fetch(`${BASE_URL}/api/transcribe/suggest/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ text }),
+  });
+
+  if (!res.ok) throw new Error(`Erreur ${res.status}`);
+
+  const data = await res.json().catch(() => ({}));
+  return {
+    suggestion: (data.suggestion as string) || text,
+    changes:    (data.changes    as OllamaChange[]) || [],
+  };
+}

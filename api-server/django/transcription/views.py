@@ -13,11 +13,11 @@ from transformers import WhisperForConditionalGeneration, WhisperProcessor
 
 from core.auth import jwt_required
 from .normalisation import normalize
-from .ponctuation import process
+from .ponctuation import process, correct_with_ollama, diff_corrections
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-MODEL_ID      = "amnbk/whisper-medical-fr"
-BASE_MODEL_ID = "openai/whisper-small"   # fallback for missing preprocessor_config.json
+MODEL_ID      = "amnbk/whisper-medium-medical-fr-v2"
+BASE_MODEL_ID = "openai/whisper-medium"  # fallback for missing preprocessor_config.json
 SAMPLE_RATE   = 16_000
 _MAX_CHUNK  = 28 * SAMPLE_RATE   # 28 s — Whisper 30 s window with safety margin
 _MIN_CHUNK  = SAMPLE_RATE // 2   # ignore segments < 0.5 s
@@ -153,7 +153,7 @@ def _load_audio(path: str, sample_rate: int) -> np.ndarray:
 @jwt_required(roles={"doctor", "admin", "adminIT"})
 def transcribe(request: HttpRequest) -> JsonResponse:
     if request.method != "POST":
-        return JsonResponse({"detail": "Method not allowed."}, status=405)
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
 
     audio_file = request.FILES.get("audio")
     if not audio_file:
@@ -175,7 +175,7 @@ def transcribe(request: HttpRequest) -> JsonResponse:
 
         processor, model, device = _load_model()
         raw  = _transcribe(audio, processor, model, device)
-        text = process(normalize(raw), auto_punct=True, spellcheck=True)
+        text = process(normalize(raw), auto_punct=True)
         return JsonResponse({"text": text})
 
     except Exception as exc:
@@ -186,3 +186,25 @@ def transcribe(request: HttpRequest) -> JsonResponse:
     finally:
         if tmp_path and os.path.exists(tmp_path):
             os.unlink(tmp_path)
+
+
+# ── Ollama suggestion view ──────────────────────────────────────────────────
+
+@csrf_exempt
+@jwt_required(roles={"doctor", "admin", "adminIT"})
+def suggest(request: HttpRequest) -> JsonResponse:
+    if request.method != "POST":
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+
+    import json as _json
+    try:
+        body = _json.loads(request.body)
+    except Exception:
+        return JsonResponse({"detail": "Corps JSON invalide."}, status=400)
+
+    text = (body.get("text") or "").strip()
+    if not text:
+        return JsonResponse({"detail": "Champ 'text' manquant."}, status=400)
+
+    suggestion, changes = correct_with_ollama(text)
+    return JsonResponse({"suggestion": suggestion, "changes": changes})

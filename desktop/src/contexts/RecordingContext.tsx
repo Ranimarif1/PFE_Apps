@@ -12,11 +12,12 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:4000";
 export type RecMéthode = "navigateur" | "smartphone" | null;
 
 export interface RecordingResult {
-  examId:   string;
-  text:     string;
-  méthode:  RecMéthode;
-  audioId:  string | null;
-  reportId: string | null;  // draft report created right after transcription success
+  examId:     string;
+  text:       string;
+  méthode:    RecMéthode;
+  audioId:    string | null;
+  reportId:   string | null;  // draft report created right after transcription success
+  suggestion: string | null;  // Ollama correction — arrives async, null until ready
 }
 
 interface RecordingContextType {
@@ -137,7 +138,7 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
         draftId = r._id;
         if (aid) setAudioQueue(q => q.filter(a => a._id !== aid));
       } catch { /* draft save failed — RapportDetail fallback will retry */ }
-      setResult({ examId: eid, text, méthode: m, audioId: aid, reportId: draftId });
+      setResult({ examId: eid, text, méthode: m, audioId: aid, reportId: draftId, suggestion: null });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur de transcription.");
     } finally {
@@ -184,7 +185,7 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
         const r = await createReport({ ID_Exam: eid, content, status: "draft", audioId: id });
         draftId = r._id;
       } catch { /* draft save failed — RapportDetail fallback will retry */ }
-      setResult({ examId: eid, text, méthode: null, audioId: id, reportId: draftId });
+      setResult({ examId: eid, text, méthode: null, audioId: id, reportId: draftId, suggestion: null });
       setAudioQueue(q => q.filter(a => a._id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur de transcription.");
