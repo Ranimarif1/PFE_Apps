@@ -17,7 +17,9 @@ __pycache__/
 *.p12
 *.pfx
 
-# Exported patient data
+# User-generated media (patient recordings, avatars, exports)
+**/media/audios/
+**/media/avatars/
 **/media/exports/
 *.csv
 
