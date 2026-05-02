@@ -73,8 +73,14 @@ function registerMobileHandlers(io, socket) {
   // ── Mobile → desktop: full recording sent on demand ─────────────
   socket.on('audio:complete', ({ sessionId, audio, mimeType, timestamp }) => {
     const session = sessions.get(sessionId);
-    if (!session?.desktopSocketId) return;
+    const audioSize = audio ? (audio.byteLength || audio.length || 0) : 0;
+    console.log(`[audio:complete] sessionId=${sessionId} size=${audioSize} mimeType=${mimeType} desktopId=${session?.desktopSocketId || 'NONE'}`);
+    if (!session?.desktopSocketId) {
+      console.log(`[audio:complete] DROPPED — no desktop socket for session ${sessionId}`);
+      return;
+    }
     io.to(session.desktopSocketId).emit('audio:complete', { audio, mimeType, timestamp });
+    console.log(`[audio:complete] forwarded to desktop ${session.desktopSocketId}`);
   });
 
   // ── Mobile → desktop: recording lifecycle events ─────────────────

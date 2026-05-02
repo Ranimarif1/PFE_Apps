@@ -77,7 +77,7 @@ export default function NouveauRapport() {
   // Smartphone UI only: session loading/error + QR expiry countdown
   const [sessionLoading, setSessionLoading] = useState(false);
   const [sessionError,   setSessionError]   = useState<string | null>(null);
-  const [timer,          setTimer]          = useState(900);
+  const [timer,          setTimer]          = useState(3600);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── If recording already active for this examId, jump to step 3 ───────────
@@ -97,7 +97,7 @@ export default function NouveauRapport() {
   // ── QR countdown once mobileUrl is ready ─────────────────────────────────
   useEffect(() => {
     if (!recording.mobileUrl) return;
-    setTimer(900);
+    setTimer(3600);
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       setTimer(t => { if (t <= 1) { clearInterval(timerRef.current!); return 0; } return t - 1; });
@@ -142,7 +142,7 @@ export default function NouveauRapport() {
     }
   };
 
-  const timerProgress = (timer / 900) * 100;
+  const timerProgress = (timer / 3600) * 100;
 
   return (
     <AppLayout title="Nouveau rapport">

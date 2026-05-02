@@ -67,7 +67,7 @@ MEDIA_URL = "/media/"
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-this-jwt-secret-in-prod")
 JWT_ALGORITHM = "HS256"
 JWT_ACCESS_TOKEN_LIFETIME = timedelta(
-    minutes=int(os.getenv("JWT_ACCESS_TOKEN_LIFETIME_MIN", "15"))
+    minutes=int(os.getenv("JWT_ACCESS_TOKEN_LIFETIME_MIN", "60"))
 )
 JWT_REFRESH_TOKEN_LIFETIME = timedelta(
     days=int(os.getenv("JWT_REFRESH_TOKEN_LIFETIME_DAYS", "7"))

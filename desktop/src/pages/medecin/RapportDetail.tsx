@@ -29,12 +29,38 @@ function AutoTextarea({ value, onChange, className }: { value: string; onChange:
   );
 }
 
+/* ── Highlight words suggested by Ollama ── */
+function HighlightedText({ text, changes }: { text: string; changes: OllamaChange[] }) {
+  if (!text) return <span className="text-muted-foreground">—</span>;
+  if (!changes.length) return <span>{text}</span>;
+
+  const escaped = changes.map(c => c.original.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const re = new RegExp(`\\b(${escaped.join("|")})\\b`, "gi");
+
+  const parts: React.ReactNode[] = [];
+  let last = 0, m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    const fix = changes.find(c => c.original.toLowerCase() === m![0].toLowerCase());
+    parts.push(
+      <mark key={m.index} title={`→ ${fix?.corrected}`}
+        style={{ background: "rgba(251,191,36,0.30)", borderRadius: "3px", padding: "0 2px", borderBottom: "2px solid rgba(217,119,6,0.6)" }}>
+        {m[0]}
+      </mark>
+    );
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return <>{parts}</>;
+}
+
 /* ── Content parser / builder ── */
 function parseReport(text: string) {
-  // Accent-tolerant, colon-optional regex matching
-  const iMatch = /indication\s*:?/i.exec(text);
-  const rMatch = /r[ée]sultat\s*:?/i.exec(text);
-  const cMatch = /conclusion\s*:?/i.exec(text);
+  // Accent-tolerant, colon-optional, paren-tolerant regex matching
+  // Whisper sometimes wraps keywords in parentheses: (Conclusion) → consume both parens
+  const iMatch = /[({]?\s*indication\s*[)}]?\s*:?/i.exec(text);
+  const rMatch = /[({]?\s*r[ée]sultat\s*[)}]?\s*:?/i.exec(text);
+  const cMatch = /[({]?\s*conclusion\s*[)}]?\s*:?/i.exec(text);
 
   const iIdx = iMatch?.index ?? -1;
   const rIdx = rMatch?.index ?? -1;
@@ -48,7 +74,18 @@ function parseReport(text: string) {
   const extract = (match: RegExpExecArray | null, end: number) => {
     if (!match) return "";
     const afterKeyword = match.index + match[0].length;
-    return text.slice(afterKeyword, end === -1 ? text.length : end).trim();
+    const raw = text.slice(afterKeyword, end === -1 ? text.length : end).trim();
+    // Strip Whisper noise at section start (mishearings of "deux points à la ligne").
+    // Pattern: Whisper mishears "deux"→"de/d'" and "points"→p-word (pont, panne, pan...).
+    // No `i` flag: real content always starts uppercase (IRM, Présence, État...).
+    const cleaned = raw
+      .replace(/^(?:de\s+p[a-z]+|d[''][a-z]{0,4}\s+p[a-z]+|et\s+[a-z]{3,6})\s+/, "")
+      .replace(/^[-—]+\s*/, "")  // strip leading dash artifacts from auto-punctuation
+      .trim();
+    // If only dashes/punctuation remain, treat section as empty
+    if (/^[-—\s]*$/.test(cleaned)) return "";
+    const result = cleaned.length > 0 ? cleaned : raw;
+    return result.charAt(0).toUpperCase() + result.slice(1);
   };
 
   return {
@@ -315,7 +352,11 @@ export default function RapportDetail() {
                 {/* Indication */}
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Indication</label>
-                  {editing ? (
+                  {editing && ollamaSuggestion && !ollamaDismissed && !ollamaLoading ? (
+                    <p className="text-foreground leading-relaxed text-sm bg-amber-50/60 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-200/50 dark:border-amber-800/30">
+                      <HighlightedText text={indication} changes={ollamaChanges} />
+                    </p>
+                  ) : editing ? (
                     <AutoTextarea value={indication} onChange={setIndication}
                       className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                   ) : (
@@ -326,7 +367,11 @@ export default function RapportDetail() {
                 {/* Résultat */}
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Résultat</label>
-                  {editing ? (
+                  {editing && ollamaSuggestion && !ollamaDismissed && !ollamaLoading ? (
+                    <p className="text-foreground leading-relaxed text-sm bg-amber-50/60 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-200/50 dark:border-amber-800/30">
+                      <HighlightedText text={resultat} changes={ollamaChanges} />
+                    </p>
+                  ) : editing ? (
                     <AutoTextarea value={resultat} onChange={setResultat}
                       className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                   ) : (
@@ -337,7 +382,11 @@ export default function RapportDetail() {
                 {/* Conclusion */}
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Conclusion</label>
-                  {editing ? (
+                  {editing && ollamaSuggestion && !ollamaDismissed && !ollamaLoading ? (
+                    <p className="text-foreground leading-relaxed text-sm bg-amber-50/60 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-200/50 dark:border-amber-800/30">
+                      <HighlightedText text={conclusion} changes={ollamaChanges} />
+                    </p>
+                  ) : editing ? (
                     <AutoTextarea value={conclusion} onChange={setConclusion}
                       className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                   ) : (

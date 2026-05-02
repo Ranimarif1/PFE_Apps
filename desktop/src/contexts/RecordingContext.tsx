@@ -9,6 +9,30 @@ import { createReport } from "@/services/reportsService";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:4000";
 
+function structureContent(text: string): string {
+  const iMatch = /[({]?\s*indication\s*[)}]?\s*:?\s*/i.exec(text);
+  const rMatch = /[({]?\s*r[eé]sultat\s*[)}]?\s*:?\s*/i.exec(text);
+  const cMatch = /[({]?\s*conclusion\s*[)}]?\s*:?\s*/i.exec(text);
+  const iIdx = iMatch?.index ?? -1;
+  const rIdx = rMatch?.index ?? -1;
+  const cIdx = cMatch?.index ?? -1;
+  if (iIdx === -1 && rIdx === -1 && cIdx === -1) {
+    return `Indication: \n\nResultat: ${text}\n\nConclusion: `;
+  }
+  const extract = (match: RegExpExecArray | null, end: number) => {
+    if (!match) return "";
+    const raw = text.slice(match.index + match[0].length, end === -1 ? text.length : end).trim();
+    const cleaned = raw
+      .replace(/^(?:de\s+p[a-z]+|d[''][a-z]{0,4}\s+p[a-z]+|et\s+[a-z]{3,6})\s+/, "")
+      .replace(/^[-—]+\s*/, "")
+      .trim();
+    if (/^[-—\s]*$/.test(cleaned)) return "";
+    const result = cleaned.length > 0 ? cleaned : raw;
+    return result.charAt(0).toUpperCase() + result.slice(1);
+  };
+  return `Indication: ${extract(iMatch, rIdx !== -1 ? rIdx : cIdx)}\n\nResultat: ${extract(rMatch, cIdx)}\n\nConclusion: ${extract(cMatch, -1)}`;
+}
+
 export type RecMéthode = "navigateur" | "smartphone" | null;
 
 export interface RecordingResult {
@@ -133,7 +157,7 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
       // ones are always backed by a report server-side.
       let draftId: string | null = null;
       try {
-        const content = `Indication: \n\nResultat: ${text}\n\nConclusion: `;
+        const content = structureContent(text);
         const r = await createReport({ ID_Exam: eid, content, status: "draft", audioId: aid ?? undefined });
         draftId = r._id;
         if (aid) setAudioQueue(q => q.filter(a => a._id !== aid));
@@ -181,7 +205,7 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
       // the audio orphaned for retry.
       let draftId: string | null = null;
       try {
-        const content = `Indication: \n\nResultat: ${text}\n\nConclusion: `;
+        const content = structureContent(text);
         const r = await createReport({ ID_Exam: eid, content, status: "draft", audioId: id });
         draftId = r._id;
       } catch { /* draft save failed — RapportDetail fallback will retry */ }

@@ -288,7 +288,7 @@ def normalize_abbrevs(text: str) -> str:
 # ──────────────────────────────────────────────────────────────────────────────
 
 _SECTION_HEADER_RE = re.compile(
-    r'\b(indication|r[eé]sultat|conclusion)\s*:?\s*',
+    r'[({]?\s*(indication|r[eé]sultat|conclusion)\s*[)}]?\s*:?\s*',
     flags=re.IGNORECASE,
 )
 
@@ -297,6 +297,27 @@ def strip_section_headers(text: str) -> str:
     """Supprime les mots-clés de section (Indication, Résultat, Conclusion)
     dictés par le médecin et captés par Whisper dans le corps du texte."""
     return _SECTION_HEADER_RE.sub('', text).strip()
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 6b. PONCTUATION DICTÉE — "deux points à la ligne" et variantes ASR
+# ──────────────────────────────────────────────────────────────────────────────
+# Whisper mishears "deux points à la ligne" (spoken colon+newline) as
+# "de pananalyses" / "de pananalyse" / "de panalyse" etc.
+# These phrases are never legitimate medical text so it is safe to strip them.
+
+_SPOKEN_PUNCT_RE = re.compile(
+    r'\b(?:'
+    r'deux\s+points?\s+[àa]\s+la\s+ligne'   # correct transcription
+    r'|de\s+pan[a-z]*lyses?'                 # Whisper mishearing variants
+    r')\b[\s,]*',
+    flags=re.IGNORECASE,
+)
+
+
+def normalize_spoken_punct(text: str) -> str:
+    """Strip spoken punctuation commands and their Whisper misrecognitions."""
+    return _SPOKEN_PUNCT_RE.sub(' ', text).strip()
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -323,6 +344,15 @@ _ASR_ACCENT_FIXES: list[tuple[str, str]] = [
     # Accent fixes
     ("epanchement",                 "épanchement"),
     ("epanchements",                "épanchements"),
+    ("impresence",                  "présence"),
+    ("imprésence",                  "présence"),
+    ("lithesie",                    "lithiase"),
+    ("lithésie",                    "lithiase"),
+    ("lithiasie",                   "lithiase"),
+    ("récommandée",                 "recommandée"),
+    ("récommandés",                 "recommandés"),
+    ("récommandé",                  "recommandé"),
+    ("récommendée",                 "recommandée"),
 
     # Whisper word-substitution errors (radiologie)
     ("homodensitometrique",         "tomodensitométrique"),
@@ -385,15 +415,16 @@ def fix_asr_accents(text: str) -> str:
 def normalize(text: str) -> str:
     """
     Applique toutes les normalisations dans l'ordre :
-      1. En-têtes     — supprime Indication/Résultat/Conclusion dictés
-      2. Accents ASR  — corrections déterministes Whisper
-      3. Dates        — avant que les noms de mois soient touchés
-      4. Unités       — "mille grammes" → "mg" AVANT "mille" → 1000
-      5. Unités comp. — "mg par dL" → "mg/dL"
-      6. Nombres      — "cent vingt" → "120"
-      7. Abréviations — irm → IRM, flair → FLAIR, t1 → T1 …
+      1. Accents ASR  — corrections déterministes Whisper
+      2. Dates        — avant que les noms de mois soient touchés
+      3. Unités       — "mille grammes" → "mg" AVANT "mille" → 1000
+      4. Unités comp. — "mg par dL" → "mg/dL"
+      5. Nombres      — "cent vingt" → "120"
+      6. Abréviations — irm → IRM, flair → FLAIR, t1 → T1 …
+    Note: section headers (Indication/Résultat/Conclusion) are preserved
+    so the frontend can parse them into separate fields.
     """
-    text = strip_section_headers(text)
+    text = normalize_spoken_punct(text)
     text = fix_asr_accents(text)
     text = normalize_dates(text)
     text = normalize_units(text)

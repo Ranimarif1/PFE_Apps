@@ -7,18 +7,29 @@ const { v4: uuidv4 } = require('uuid');
 const os = require('os');
 const { registerMobileHandlers, sessions } = require('./mobile-socket');
 
-// Auto-detect local WiFi/Ethernet IP
+// Auto-detect local WiFi/Ethernet IP — skip virtual/VPN adapters
 function getLocalIP() {
+  const VIRTUAL_NAMES = /virtual|vmware|vbox|hyper.v|vethernet|loopback|docker|wsl|tap|tun/i;
+  const VIRTUAL_PREFIXES = ['192.168.56.', '172.16.', '172.17.', '172.18.', '172.19.',
+    '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', '172.26.',
+    '172.27.', '172.28.', '172.29.', '172.30.', '172.31.', '169.254.'];
+
   const ifaces = os.networkInterfaces();
+  let fallback = null;
+
   for (const name of Object.keys(ifaces)) {
+    if (VIRTUAL_NAMES.test(name)) continue;          // skip virtual adapters by name
     for (const iface of ifaces[name]) {
-      if (iface.family === 'IPv4' && !iface.internal) {
-        // Prefer WiFi (usually 192.168.x.x or 172.x.x.x) over VirtualBox (192.168.56.x)
-        if (!iface.address.startsWith('192.168.56')) return iface.address;
-      }
+      if (iface.family !== 'IPv4' || iface.internal) continue;
+      if (VIRTUAL_PREFIXES.some(p => iface.address.startsWith(p))) continue;
+      return iface.address;                           // first real physical IP
+    }
+    // keep as fallback if only virtual prefix but good adapter name
+    for (const iface of ifaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal && !fallback) fallback = iface.address;
     }
   }
-  return 'localhost';
+  return fallback || 'localhost';
 }
 
 const app = express();

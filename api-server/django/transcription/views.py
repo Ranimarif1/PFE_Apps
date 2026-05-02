@@ -12,7 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from transformers import WhisperForConditionalGeneration, WhisperProcessor
 
 from core.auth import jwt_required
-from .normalisation import normalize
+from .normalisation import normalize, normalize_abbrevs
 from .ponctuation import process, correct_with_ollama, diff_corrections
 
 # ── Constants ─────────────────────────────────────────────────────────────────
@@ -176,6 +176,7 @@ def transcribe(request: HttpRequest) -> JsonResponse:
         processor, model, device = _load_model()
         raw  = _transcribe(audio, processor, model, device)
         text = process(normalize(raw), auto_punct=True)
+        text = normalize_abbrevs(text)   # re-apply after process() lowercases everything
         return JsonResponse({"text": text})
 
     except Exception as exc:

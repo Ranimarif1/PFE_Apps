@@ -115,29 +115,48 @@ def restore_punctuation_auto(text: str) -> str:
 # ──────────────────────────────────────────────────────────────────────────────
 
 _OLLAMA_URL   = "http://localhost:11434/api/chat"
-_OLLAMA_MODEL = "qwen2:0.5b"
+_OLLAMA_MODEL = "mistral:latest"
 
 _SYSTEM_PROMPT = (
-    "Tu es un correcteur orthographique pour des transcriptions automatiques "
-    "de comptes rendus radiologiques en français. "
-    "Tu corriges UNIQUEMENT les fautes d'orthographe et les accents manquants. "
-    "Tu ne changes JAMAIS un mot correct. "
-    "Tu ne modifies JAMAIS le sens médical. "
-    "Si un mot te semble étrange mais pourrait être correct, laisse-le tel quel. "
-    "Retourne UNIQUEMENT le texte corrigé sans explication."
+    "Tu es un correcteur orthographique strict pour des comptes rendus radiologiques en français. "
+    "RÈGLES ABSOLUES : "
+    "1. Corrige UNIQUEMENT les fautes d'orthographe évidentes et les accents manquants (ex: trés → très, enflammation → inflammation). "
+    "2. Ne change JAMAIS la ponctuation, les guillemets, les majuscules ou les chiffres. "
+    "3. Ne supprime JAMAIS les unités médicales (48h, 12mm, 2cm restent tels quels). "
+    "4. Ne change JAMAIS le genre grammatical d'un mot. "
+    "5. Ne change JAMAIS un terme médical même s'il te semble inhabituel. "
+    "6. Retourne UNIQUEMENT le texte corrigé, sans guillemets autour, sans explication."
+)
+
+# Section header pattern — used to strip structure before sending to Ollama so
+# small models (qwen2:0.5b) don't rewrite or drop the labels.
+_SECTION_RE = re.compile(
+    r'\b(indication|r[eé]sultat|conclusion)\s*:?\s*',
+    flags=re.IGNORECASE,
 )
 
 
 def correct_with_ollama(text: str) -> tuple:
-    """Returns (corrected_text, changes_list). Full-text correction via Ollama."""
+    """Returns (corrected_text, changes_list). Full-text correction via Ollama.
+
+    Section headers (Indication/Résultat/Conclusion) are stripped before sending
+    to the model — small models tend to rewrite or drop them, which inflates the
+    diff and hides real corrections.  Corrections are then applied back to the
+    full structured text so the frontend receives the complete content.
+    """
     import json
     import urllib.request
+
+    # Work on body text only so the model doesn't touch structural labels.
+    stripped = _SECTION_RE.sub(' ', text).strip()
+    if not stripped:
+        return text, []
 
     payload = json.dumps({
         "model": _OLLAMA_MODEL,
         "messages": [
             {"role": "system", "content": _SYSTEM_PROMPT},
-            {"role": "user",   "content": text},
+            {"role": "user",   "content": stripped},
         ],
         "stream": False,
         "options": {
@@ -154,11 +173,25 @@ def correct_with_ollama(text: str) -> tuple:
     try:
         with urllib.request.urlopen(req, timeout=120) as resp:
             data = json.loads(resp.read())
-            corrected = data.get("message", {}).get("content", "").strip()
-            if not corrected:
+            corrected_stripped = data.get("message", {}).get("content", "").strip()
+            if not corrected_stripped:
                 return text, []
-            changes = diff_corrections(text, corrected)
-            return corrected, changes
+
+            # Diff on stripped text only — no structural noise.
+            changes = diff_corrections(stripped, corrected_stripped)
+            if not changes:
+                return text, []
+
+            # Apply word corrections back to the full structured text.
+            corrected_full = text
+            for change in changes:
+                corrected_full = re.sub(
+                    r'(?<![A-Za-zÀ-ÖØ-öø-ÿ])' + re.escape(change["original"]) + r'(?![A-Za-zÀ-ÖØ-öø-ÿ])',
+                    change["corrected"],
+                    corrected_full,
+                    count=1,
+                )
+            return corrected_full, changes
     except Exception as e:
         print(f"  [warn] Ollama indisponible : {e}", file=sys.stderr)
         return text, []
@@ -183,6 +216,24 @@ def diff_corrections(original: str, corrected: str) -> list:
                 orig = orig_tokens[i1 + k] if i1 + k < i2 else ''
                 corr = corr_tokens[j1 + k] if j1 + k < j2 else ''
                 if orig and corr and orig != corr:
+                    # 1. Skip punctuation-only changes (masse → masse.)
+                    if re.sub(r'[.,;:!?]+$', '', orig) == re.sub(r'[.,;:!?]+$', '', corr):
+                        continue
+                    # 1b. Skip quote-wrapping changes (Maladie → "Maladie, IRM → IRM", 48h → "48h")
+                    if re.sub(r'[\"\'«»“”‘’]+', '', orig) == re.sub(r'[\"\'«»“”‘’]+', '', corr):
+                        continue
+                    # 2. Skip number+unit stripping (48h → 48, 12mm → 12)
+                    if re.match(r'^\d+[a-zA-Z]+$', orig):
+                        num = re.match(r'^\d+', orig).group()
+                        if corr == num:
+                            continue
+                    # 3. Skip gender/number-only changes (urgente → urgent, élevées → élevée, mots → mot)
+                    if orig.endswith('e') and corr == orig[:-1]:
+                        continue
+                    if orig.lower().endswith('ée') and corr.lower().endswith('é') and not corr.lower().endswith('ée'):
+                        continue
+                    if orig.lower() == corr.lower() + 's':
+                        continue
                     # Only keep genuine spelling corrections (words must be similar)
                     similarity = difflib.SequenceMatcher(None, orig.lower(), corr.lower()).ratio()
                     if similarity >= 0.5:
