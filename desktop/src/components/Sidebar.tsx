@@ -156,7 +156,7 @@ const adminSections: Section[] = [
     label: "GESTION",
     links: [
       { to: "/admin/medecins",     icon: Users,           label: "Gérer médecins"   },
-      { to: "/admin/export",       icon: Download,        label: "Exporter CSV"     },
+      { to: "/admin/export",       icon: Download,        label: "Exporter Rapports" },
       { to: "/admin/profil",       icon: User,            label: "Mon profil"       },
     ],
   },

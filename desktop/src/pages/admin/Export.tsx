@@ -52,7 +52,7 @@ export default function AdminExport() {
   };
 
   return (
-    <AppLayout title="Exporter CSV">
+    <AppLayout title="Exporter Rapports">
       <div className="flex flex-col min-h-full max-w-full overflow-hidden">
         <div className="mb-4">
           <p className="text-sm font-semibold text-foreground">Exporter les rapports</p>

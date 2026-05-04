@@ -141,7 +141,7 @@ export default function AdminITDashboard() {
 
   return (
     <AppLayout title="Tableau de bord — Admin IT">
-      <div className="flex flex-col min-h-full max-w-full overflow-hidden">
+      <div className="flex flex-col min-h-full max-w-full overflow-hidden -mt-4">
 
       {/* ══ KPI strip ══════════════════════════════════════════════════════ */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 divide-y sm:divide-x sm:divide-y-0 divide-border border border-border rounded-xl bg-card overflow-hidden">
