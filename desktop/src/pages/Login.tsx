@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { Sun, Moon, Eye, EyeOff, Mic, ShieldCheck, Activity, Building2 } from "lucide-react";
+import { Sun, Moon, Eye, EyeOff } from "lucide-react";
 import { motion } from "framer-motion";
 import hospitalImg from "@/assets/téléchargement.jpeg";
 
@@ -33,186 +33,119 @@ export default function Login() {
   };
 
   return (
-    <div className="h-screen bg-background flex overflow-hidden">
-      {/* Left panel — Hospital image + overlay */}
-      <div className="hidden lg:flex flex-col w-[55%] relative overflow-hidden">
-        <img
-          src={hospitalImg}
-          alt="Hôpital Fatouma Bourguiba Monastir"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0D1119]/90 via-[#4A7BBE]/75 to-[#6B97D0]/60" />
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8 sm:py-12">
+      <button
+        onClick={toggleTheme}
+        aria-label="Basculer le thème"
+        className="fixed top-4 right-4 z-10 w-9 h-9 rounded-lg border border-border bg-card flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+      >
+        {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+      </button>
 
-        <div className="absolute inset-0 opacity-[0.07]">
-          {[...Array(6)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute rounded-full border-2 border-white"
-              style={{
-                width: `${(i + 1) * 120}px`,
-                height: `${(i + 1) * 120}px`,
-                bottom: "-10%",
-                right: "-5%",
-                transform: "translate(-50%, -50%)",
-              }}
-            />
-          ))}
-        </div>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="w-full max-w-5xl bg-card rounded-3xl overflow-hidden grid lg:grid-cols-2"
+        style={{ boxShadow: "var(--shadow-xl)" }}
+      >
+        {/* Left — clean photo */}
+        <div className="hidden lg:block relative min-h-[560px]">
+          <img
+            src={hospitalImg}
+            alt="Hôpital Fattouma-Bourguiba"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0D1119]/45 via-transparent to-transparent" />
 
-        <div className="relative z-10 flex flex-col h-full p-10">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl overflow-hidden">
+          <Link to="/" className="absolute top-6 left-6 flex items-center gap-2.5 z-10">
+            <div className="w-10 h-10 rounded-xl overflow-hidden ring-1 ring-white/30">
               <img src="/ReportEase.png" alt="ReportEase" className="w-full h-full object-cover" />
             </div>
+            <span className="text-white font-bold text-base tracking-tight">ReportEase</span>
+          </Link>
+        </div>
+
+        {/* Right — form */}
+        <div className="px-6 sm:px-10 py-10 sm:py-12 flex flex-col justify-center">
+          <div className="flex items-center gap-2.5 mb-8 lg:hidden">
+            <div className="w-10 h-10 rounded-xl overflow-hidden ring-1 ring-border">
+              <img src="/ReportEase.png" alt="ReportEase" className="w-full h-full object-cover" />
+            </div>
+            <span className="font-bold text-lg text-foreground">ReportEase</span>
+          </div>
+
+          <h2 className="text-2xl font-bold text-foreground mb-1">Connexion</h2>
+          <p className="text-muted-foreground text-sm mb-7">
+            Accédez à votre espace radiologie sécurisé
+          </p>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <span className="text-white font-bold text-xl tracking-tight">ReportEase</span>
-              <p className="text-white/60 text-[11px] -mt-0.5">Speech-to-Text Platform</p>
-            </div>
-          </div>
-
-          <div className="flex-1 flex flex-col justify-center max-w-lg">
-            <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.6 }}>
-
-              <h1 className="text-[2.6rem] font-extrabold text-white leading-[1.15] mb-4 tracking-tight">
-                Transcription<br />
-                Médicale<br />
-                <span className="text-[#FDE68A]">Intelligente</span>
-              </h1>
-
-              <p className="text-white/65 text-base leading-relaxed mb-8 max-w-sm">
-                Plateforme IA dédiée au service de radiologie de l'Hôpital Fattouma-Bourguiba de Monastir. Dictée vocale, transcription automatique et gestion des comptes rendus.
-              </p>
-            </motion.div>
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.5 }}
-            className="grid grid-cols-3 gap-3"
-          >
-            {[
-              { icon: Mic, title: "Dictée Vocale", desc: "Transcription IA temps réel" },
-              { icon: Activity, title: "Multi-appareils", desc: "QR Code sync smartphone" },
-              { icon: ShieldCheck, title: "Sécurisé", desc: "JWT + RBAC certifié" },
-            ].map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                <Icon className="w-5 h-5 text-[#FDE68A] mb-2" />
-                <p className="text-white text-sm font-semibold">{title}</p>
-                <p className="text-white/50 text-xs">{desc}</p>
-              </div>
-            ))}
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Right panel — Login form */}
-      <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto p-6 sm:p-10">
-        <div className="w-full max-w-[420px]">
-          <div className="flex items-center justify-between mb-10">
-            <div className="flex items-center gap-2.5 lg:hidden">
-              <div className="w-10 h-10 rounded-xl overflow-hidden">
-                <img src="/ReportEase.png" alt="ReportEase" className="w-full h-full object-cover" />
-              </div>
-              <div>
-                <span className="font-bold text-lg text-foreground">ReportEase</span>
-                <p className="text-muted-foreground text-[11px] -mt-0.5">Hôpital Fattouma-Bourguiba</p>
-              </div>
-            </div>
-            <button
-              onClick={toggleTheme}
-              className="ml-auto w-9 h-9 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-            >
-              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
-          </div>
-
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-            <div className="hidden lg:flex items-center gap-2 mb-6">
-              <Building2 size={18} className="text-primary" />
-              <p className="text-sm text-muted-foreground font-medium">
-                Hôpital Fattouma-Bourguiba de Monastir
-              </p>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full px-4 py-3 text-sm"
+                placeholder="votre@email.com"
+              />
             </div>
 
-            <h2 className="text-2xl font-bold text-foreground mb-1">Connexion</h2>
-            <p className="text-muted-foreground text-sm mb-8">
-              Accédez à votre espace radiologie sécurisé
-            </p>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">Email</label>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">Mot de passe</label>
+              <div className="relative">
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all placeholder:text-muted-foreground"
-                  placeholder="votre@email.com"
+                  className="w-full px-4 py-3 text-sm pr-11"
+                  placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
-
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">Mot de passe</label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all pr-11 placeholder:text-muted-foreground"
-                    placeholder="••••••••"
-                  />
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => setShowPassword((v) => !v)}
-                    aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex justify-end -mt-1">
-                <Link to="/forgot-password" className="text-xs text-muted-foreground hover:text-primary transition-colors">
-                  Mot de passe oublié ?
-                </Link>
-              </div>
-
-              {error && (
-                <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 text-destructive text-sm">
-                  {error}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full gradient-hero text-white font-semibold py-3 rounded-xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-60"
-              >
-                {loading ? "Connexion en cours..." : "Se connecter"}
-              </button>
-            </form>
-
-            <p className="text-center text-sm text-muted-foreground mt-6">
-              Pas encore de compte ?{" "}
-              <Link to="/register" className="text-primary font-medium hover:underline">
-                Créer un compte
-              </Link>
-            </p>
-
-            <div className="mt-10 pt-6 border-t border-border text-center">
-              <p className="text-xs text-muted-foreground">
-                CHU Fattouma-Bourguiba de Monastir
-              </p>
             </div>
-          </motion.div>
+
+            <div className="flex justify-end -mt-1">
+              <Link to="/forgot-password" className="text-xs text-muted-foreground hover:text-primary transition-colors">
+                Mot de passe oublié ?
+              </Link>
+            </div>
+
+            {error && (
+              <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 text-destructive text-sm">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full gradient-hero text-white font-semibold py-3 rounded-xl"
+            >
+              {loading ? "Connexion en cours..." : "Se connecter"}
+            </button>
+          </form>
+
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            Pas encore de compte ?{" "}
+            <Link to="/register" className="text-primary font-medium hover:underline">
+              Créer un compte
+            </Link>
+          </p>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

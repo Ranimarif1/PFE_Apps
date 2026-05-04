@@ -10,6 +10,7 @@ import { RouteGuard } from "@/components/RouteGuard";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { useEffect, useState } from "react";
 
+import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -46,7 +47,7 @@ const queryClient = new QueryClient();
 function RootRedirect() {
   const { user, loading } = useAuth();
   if (loading) return null;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Index />;
   if (user.rôle === "admin") return <Navigate to="/admin/dashboard" replace />;
   if (user.rôle === "adminIT") return <Navigate to="/adminit/dashboard" replace />;
   return <Navigate to="/dashboard" replace />;
