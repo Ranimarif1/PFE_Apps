@@ -390,6 +390,33 @@ _ASR_ACCENT_FIXES: list[tuple[str, str]] = [
     ("sigmoidite",                  "sigmoïdite"),
     ("endoluminale",                "endoluminale"),
     ("normodistendue",              "normodistendue"),
+    # Échographie et dérivés
+    ("echographie",                 "échographie"),
+    ("echographique",               "échographique"),
+    ("echostructure",               "échostructure"),
+    ("echogenicite",                "échogénicité"),
+    ("echogene",                    "échogène"),
+    ("hyperechogene",               "hyperéchogène"),
+    ("hypoechogene",                "hypoéchogène"),
+    ("isoechogene",                 "isoéchogène"),
+    ("anechogene",                  "anéchogène"),
+    # Autres termes fréquents sans accent
+    ("adenomegalie",                "adénomégalie"),
+    ("cholecystite",                "cholécystite"),
+    ("choledoque",                  "cholédoque"),
+    ("lithiase",                    "lithiase"),
+    ("vesiculaire",                 "vésiculaire"),
+    ("pericardique",                "péricardique"),
+    ("peritoneal",                  "péritonéal"),
+    ("peritoneale",                 "péritonéale"),
+    ("hepatique",                   "hépatique"),
+    ("pancreatique",                "pancréatique"),
+    ("uretere",                     "uretère"),
+    ("ureterale",                   "urétérale"),
+    ("aortique",                    "aortique"),
+    ("stenose",                     "sténose"),
+    ("oedeme",                      "œdème"),
+    ("cecite",                      "cécité"),
 ]
 
 _ASR_ACCENT_RE: list[tuple[re.Pattern, str]] = [

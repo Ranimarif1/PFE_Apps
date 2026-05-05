@@ -14,13 +14,20 @@ import sys
 # ──────────────────────────────────────────────────────────────────────────────
 
 VERBAL_COMMANDS = [
-    # Sauts de ligne
+    # ── Sauts de ligne combinés — AVANT les règles individuelles ──────────────
+    (r"\bpoints?\s+à\s+la\s+ligne\b",                   ".\n"),
+    (r"\bpoints?\s+(?:et\s+)?(?:nouveau|nouvelle)\s+paragraphe\b", ".\n\n"),
+    (r"\bpoints?\s+(?:et\s+)?(?:nouvelle|nouveau)\s+ligne\b",      ".\n"),
+    (r"\bvirgule\s+à\s+la\s+ligne\b",                   ",\n"),
+
+    # ── Sauts de ligne seuls ───────────────────────────────────────────────────
     (r"\bnouveau paragraphe\b",                         "\n\n"),
     (r"\bnouvelle ligne\b",                             "\n"),
     (r"\bà la ligne\b",                                 "\n"),
     (r"\bsaut de ligne\b",                              "\n"),
+    (r"\bretour à la ligne\b",                          "\n"),
 
-    # Ponctuation de fin — AVANT "point" seul pour éviter collision
+    # ── Ponctuation de fin — AVANT "point" seul pour éviter collision ─────────
     (r"\bpoints? d[' ]interrogation\b",                 "?"),
     (r"\bpoints? d[' ]exclamation\b",                   "!"),
     (r"\bpoints? virgule\b",                            ";"),
@@ -32,12 +39,12 @@ VERBAL_COMMANDS = [
     # "point" ou "points" seul → point final
     (r"\bpoints?\b",                                    "."),
 
-    # Ponctuation interne
+    # ── Ponctuation interne ────────────────────────────────────────────────────
     (r"\bvirgule\b",                                    ","),
     (r"\btiret\b",                                      "-"),
     (r"\bslash\b",                                      "/"),
 
-    # Parenthèses / guillemets
+    # ── Parenthèses / guillemets ───────────────────────────────────────────────
     (r"\bouvr(?:ez|ir) (?:la )?parenth[èe]se\b",       "("),
     (r"\bferm(?:ez|er) (?:la )?parenth[èe]se\b",       ")"),
     (r"\bparenth[èe]se (?:ouvrante|ouverte)\b",         "("),
@@ -118,14 +125,16 @@ _OLLAMA_URL   = "http://localhost:11434/api/chat"
 _OLLAMA_MODEL = "mistral:latest"
 
 _SYSTEM_PROMPT = (
-    "Tu es un correcteur orthographique strict pour des comptes rendus radiologiques en français. "
-    "RÈGLES ABSOLUES : "
-    "1. Corrige UNIQUEMENT les fautes d'orthographe évidentes et les accents manquants (ex: trés → très, enflammation → inflammation). "
-    "2. Ne change JAMAIS la ponctuation, les guillemets, les majuscules ou les chiffres. "
-    "3. Ne supprime JAMAIS les unités médicales (48h, 12mm, 2cm restent tels quels). "
-    "4. Ne change JAMAIS le genre grammatical d'un mot. "
-    "5. Ne change JAMAIS un terme médical même s'il te semble inhabituel. "
-    "6. Retourne UNIQUEMENT le texte corrigé, sans guillemets autour, sans explication."
+    "Tu es un correcteur orthographique médical spécialisé en radiologie française.\n\n"
+    "Règles STRICTES :\n"
+    "- Corrige UNIQUEMENT les vraies fautes d'orthographe et les erreurs de termes médicaux\n"
+    "- NE PAS modifier la casse (majuscules/minuscules)\n"
+    "- NE PAS ajouter ou modifier la ponctuation\n"
+    "- NE PAS reformuler ou restructurer les phrases\n"
+    "- NE PAS corriger la grammaire ou les accords\n\n"
+    "Réponds UNIQUEMENT avec un JSON de cette forme :\n"
+    '{\"corrections\": [{\"original\": \"mot_fautif\", \"corrected\": \"mot_corrigé\"}]}\n\n'
+    "Si aucune faute réelle, réponds : {\"corrections\": []}"
 )
 
 # Section header pattern — used to strip structure before sending to Ollama so
@@ -136,27 +145,73 @@ _SECTION_RE = re.compile(
 )
 
 
-def correct_with_ollama(text: str) -> tuple:
-    """Returns (corrected_text, changes_list). Full-text correction via Ollama.
+def _edit_distance(a: str, b: str) -> int:
+    """Basic Levenshtein distance between two strings."""
+    a, b = a.lower(), b.lower()
+    if a == b:
+        return 0
+    if not a:
+        return len(b)
+    if not b:
+        return len(a)
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        curr = [i]
+        for j, cb in enumerate(b, 1):
+            curr.append(min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = curr
+    return prev[-1]
 
-    Section headers (Indication/Résultat/Conclusion) are stripped before sending
-    to the model — small models tend to rewrite or drop them, which inflates the
-    diff and hides real corrections.  Corrections are then applied back to the
-    full structured text so the frontend receives the complete content.
+
+def _is_valid_spelling_fix(original: str, corrected: str) -> bool:
+    """Accept only genuine single-word spelling/accent fixes. Reject everything else."""
+    orig_words = original.strip().split()
+    corr_words = corrected.strip().split()
+
+    # Must be single word → single word (no phrase rewrites)
+    if len(orig_words) != 1 or len(corr_words) != 1:
+        return False
+
+    orig_clean = re.sub(r'[^\w]', '', orig_words[0], flags=re.UNICODE).lower()
+    corr_clean = re.sub(r'[^\w]', '', corr_words[0], flags=re.UNICODE).lower()
+
+    if orig_clean == corr_clean:
+        return False
+
+    # Reject if edit distance > 3 (synonym replacement, not spelling fix)
+    if _edit_distance(orig_clean, corr_clean) > 3:
+        return False
+
+    # Reject if the words share less than 60% of characters (completely different word)
+    shorter = min(len(orig_clean), len(corr_clean))
+    if shorter == 0:
+        return False
+    common = sum(1 for a, b in zip(sorted(orig_clean), sorted(corr_clean)) if a == b)
+    if common / max(len(orig_clean), len(corr_clean)) < 0.6:
+        return False
+
+    return True
+
+
+def correct_with_ollama(text: str) -> tuple:
+    """Returns (corrected_text, changes_list). JSON-based correction via Ollama.
+
+    The model returns only a JSON list of {original, corrected} pairs — no free
+    text rewriting — so capitalization, punctuation and grammar are never touched.
     """
     import json
     import urllib.request
 
-    # Work on body text only so the model doesn't touch structural labels.
-    stripped = _SECTION_RE.sub(' ', text).strip()
-    if not stripped:
+    if not text.strip():
         return text, []
+
+    user_message = f"Texte à analyser :\n{text}"
 
     payload = json.dumps({
         "model": _OLLAMA_MODEL,
         "messages": [
             {"role": "system", "content": _SYSTEM_PROMPT},
-            {"role": "user",   "content": stripped},
+            {"role": "user",   "content": user_message},
         ],
         "stream": False,
         "options": {
@@ -173,25 +228,44 @@ def correct_with_ollama(text: str) -> tuple:
     try:
         with urllib.request.urlopen(req, timeout=120) as resp:
             data = json.loads(resp.read())
-            corrected_stripped = data.get("message", {}).get("content", "").strip()
-            if not corrected_stripped:
+            raw = data.get("message", {}).get("content", "").strip()
+            if not raw:
                 return text, []
 
-            # Diff on stripped text only — no structural noise.
-            changes = diff_corrections(stripped, corrected_stripped)
+            # Extract JSON even if the model wraps it in ```json ... ```
+            json_match = re.search(r'\{.*\}', raw, re.DOTALL)
+            if not json_match:
+                return text, []
+
+            parsed = json.loads(json_match.group())
+            raw_changes = parsed.get("corrections", [])
+            if not raw_changes:
+                return text, []
+
+            # Filter: only genuine single-word spelling/accent fixes
+            changes = [
+                c for c in raw_changes
+                if c.get("original") and c.get("corrected")
+                and c["original"] != c["corrected"]
+                and _is_valid_spelling_fix(c["original"], c["corrected"])
+            ]
             if not changes:
                 return text, []
 
-            # Apply word corrections back to the full structured text.
+            # Apply each correction to the full text (word-boundary aware)
             corrected_full = text
             for change in changes:
+                orig = change["original"]
+                corr = change["corrected"]
                 corrected_full = re.sub(
-                    r'(?<![A-Za-zÀ-ÖØ-öø-ÿ])' + re.escape(change["original"]) + r'(?![A-Za-zÀ-ÖØ-öø-ÿ])',
-                    change["corrected"],
+                    r'(?<![A-Za-zÀ-ÖØ-öø-ÿ])' + re.escape(orig) + r'(?![A-Za-zÀ-ÖØ-öø-ÿ])',
+                    corr,
                     corrected_full,
                     count=1,
                 )
+
             return corrected_full, changes
+
     except Exception as e:
         print(f"  [warn] Ollama indisponible : {e}", file=sys.stderr)
         return text, []
