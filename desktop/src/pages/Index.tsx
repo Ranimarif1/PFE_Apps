@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Sun, Moon, Mic, ShieldCheck, Activity, Building2,
@@ -10,6 +10,11 @@ import { useTheme } from "@/contexts/ThemeContext";
 import hospitalImg from "@/assets/téléchargement.jpeg";
 import lightModeImg from "@/assets/light mode.png";
 import darkModeImg from "@/assets/dark mode.png";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { LoginForm } from "@/components/auth/LoginForm";
+import { RegisterForm } from "@/components/auth/RegisterForm";
+
+type AuthMode = "login" | "register" | null;
 
 /* ── Animation variants ───────────────────────────────────── */
 const heroVariants = {
@@ -106,6 +111,23 @@ export default function Index() {
   const [scrolled, setScrolled] = useState(false);
   const isDark = theme === "dark";
 
+  const [authMode, setAuthMode] = useState<AuthMode>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Auto-open the modal when arriving via /?auth=login or /?auth=register
+  // (e.g. from the legacy /login & /register redirects, RouteGuard, or
+  // any in-app link). The query param is stripped so refreshing the page
+  // doesn't keep popping the modal.
+  useEffect(() => {
+    const auth = searchParams.get("auth");
+    if (auth === "login" || auth === "register") {
+      setAuthMode(auth);
+      const next = new URLSearchParams(searchParams);
+      next.delete("auth");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -197,16 +219,18 @@ export default function Index() {
             </button>
 
             {/* Se connecter */}
-            <Link
-              to="/login"
+            <button
+              type="button"
+              onClick={() => setAuthMode("login")}
               className="hidden sm:inline-flex items-center gradient-hero text-white text-sm font-semibold px-4 py-2 rounded-lg"
             >
               Se connecter
-            </Link>
+            </button>
 
             {/* S'inscrire */}
-            <Link
-              to="/register"
+            <button
+              type="button"
+              onClick={() => setAuthMode("register")}
               className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg transition-all duration-200"
               style={{
                 background: isDark ? "hsl(var(--accent))" : "#FDE68A",
@@ -218,7 +242,7 @@ export default function Index() {
             >
               S'inscrire
               <ArrowRight size={14} />
-            </Link>
+            </button>
           </div>
         </div>
       </motion.nav>
@@ -276,23 +300,25 @@ export default function Index() {
 
             {/* CTAs */}
             <motion.div variants={heroItem} className="flex flex-wrap gap-3">
-              <Link
-                to="/login"
+              <button
+                type="button"
+                onClick={() => setAuthMode("login")}
                 className="inline-flex items-center gap-2 gradient-hero text-white font-semibold px-5 py-3 rounded-xl"
                 style={{ boxShadow: "0 4px 20px rgba(74,123,190,0.45)" }}
               >
                 Se connecter
                 <ArrowRight size={16} />
-              </Link>
-              <Link
-                to="/register"
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthMode("register")}
                 className="inline-flex items-center gap-2 font-semibold px-5 py-3 rounded-xl border transition-all duration-200 text-white"
                 style={{ background: "rgba(255,255,255,0.10)", borderColor: "rgba(255,255,255,0.22)" }}
                 onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.18)")}
                 onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.10)")}
               >
                 Créer un compte
-              </Link>
+              </button>
               <a
                 href="#about"
                 className="inline-flex items-center gap-2 font-semibold px-5 py-3 rounded-xl transition-colors duration-200"
@@ -649,6 +675,27 @@ export default function Index() {
           </div>
         </div>
       </footer>
+
+      {/* ───────── AUTH MODAL ───────── */}
+      <Dialog open={authMode !== null} onOpenChange={(open) => { if (!open) setAuthMode(null); }}>
+        <DialogContent
+          className="max-w-md w-[95vw] max-h-[90vh] overflow-y-auto p-6 sm:p-8 bg-card border-border rounded-3xl"
+          style={{ boxShadow: "var(--shadow-xl)" }}
+        >
+          {authMode === "login" && (
+            <LoginForm
+              onSuccess={() => setAuthMode(null)}
+              onSwitchToRegister={() => setAuthMode("register")}
+            />
+          )}
+          {authMode === "register" && (
+            <RegisterForm
+              onSwitchToLogin={() => setAuthMode("login")}
+              onAfterSuccess={() => setAuthMode("login")}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
