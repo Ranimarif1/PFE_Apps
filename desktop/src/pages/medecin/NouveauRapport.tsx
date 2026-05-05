@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Mic, Upload, Smartphone, QrCode, CheckCircle, Loader2,
   Play, Pause, Square, ArrowLeft, Wifi, WifiOff, RefreshCw,
-  LayoutDashboard, CloudUpload,
+  LayoutDashboard, CloudUpload, ChevronDown,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useRecording } from "@/contexts/RecordingContext";
@@ -513,6 +513,11 @@ export default function NouveauRapport() {
                 </div>
               )}
 
+              {/* ── Commandes vocales ── */}
+              {(méthode === "navigateur" || méthode === "smartphone") && (
+                <VocalCommandsCard />
+              )}
+
               {/* ── IMPORT ── */}
               {méthode === "import" && (
                 <div className="space-y-4">
@@ -576,5 +581,85 @@ export default function NouveauRapport() {
         </AnimatePresence>
       </div>
     </AppLayout>
+  );
+}
+
+/* ── Commandes vocales ─────────────────────────────────────────────────────── */
+const COMMANDS = [
+  { group: "Ponctuation",    items: [
+    { say: "virgule",               result: "," },
+    { say: "point",                 result: "." },
+    { say: "point virgule",         result: ";" },
+    { say: "deux points",           result: ":" },
+    { say: "point d'interrogation", result: "?" },
+    { say: "point d'exclamation",   result: "!" },
+    { say: "points de suspension",  result: "…" },
+    { say: "tiret",                 result: "-" },
+    { say: "slash",                 result: "/" },
+  ]},
+  { group: "Sauts de ligne", items: [
+    { say: "point à la ligne",           result: ". ↵" },
+    { say: "virgule à la ligne",         result: ", ↵" },
+    { say: "à la ligne",                 result: "↵" },
+    { say: "retour à la ligne",          result: "↵" },
+    { say: "nouveau paragraphe",         result: "↵↵" },
+    { say: "point nouveau paragraphe",   result: ". ↵↵" },
+  ]},
+  { group: "Parenthèses",   items: [
+    { say: "ouvrir parenthèse",  result: "(" },
+    { say: "fermer parenthèse",  result: ")" },
+    { say: "ouvrir guillemets",  result: "«" },
+    { say: "fermer guillemets",  result: "»" },
+  ]},
+];
+
+function VocalCommandsCard() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="mt-4 bg-card rounded-2xl border border-border shadow-card overflow-hidden">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-muted/40 transition-colors"
+      >
+        <div className="flex items-center gap-2.5">
+          <Mic size={15} className="text-primary" />
+          <span className="text-sm font-semibold text-foreground">Commandes vocales disponibles</span>
+        </div>
+        <ChevronDown
+          size={16}
+          className="text-muted-foreground transition-transform duration-200"
+          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+        />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className="px-5 pb-5 grid sm:grid-cols-3 gap-4 border-t border-border pt-4">
+              {COMMANDS.map(({ group, items }) => (
+                <div key={group}>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">{group}</p>
+                  <div className="space-y-1.5">
+                    {items.map(({ say, result }) => (
+                      <div key={say} className="flex items-center justify-between gap-2 text-xs">
+                        <span className="text-foreground/80 italic">« {say} »</span>
+                        <span className="font-mono font-bold text-primary shrink-0">{result}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

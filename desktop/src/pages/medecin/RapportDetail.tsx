@@ -135,6 +135,7 @@ export default function RapportDetail() {
   const [ollamaChanges,      setOllamaChanges]      = useState<OllamaChange[]>([]);
   const [ollamaDismissed,    setOllamaDismissed]    = useState(false);
   const [ollamaLoading,      setOllamaLoading]      = useState(false);
+  const [ollamaClean,        setOllamaClean]        = useState(false);
 
   /* ── Category auto-save (for already-saved/validated reports) ── */
   const [categorySaving,     setCategorySaving]     = useState(false);
@@ -207,6 +208,7 @@ export default function RapportDetail() {
       setOllamaSuggestion(null);
       setOllamaChanges([]);
       setOllamaDismissed(false);
+      setOllamaClean(false);
       setOllamaLoading(true);
       const text = buildContent(indication, resultat, conclusion);
       getSuggestion(text)
@@ -214,9 +216,11 @@ export default function RapportDetail() {
           if (changes.length > 0) {
             setOllamaSuggestion(suggestion);
             setOllamaChanges(changes);
+          } else {
+            setOllamaClean(true);
           }
         })
-        .catch(() => {})
+        .catch((err) => console.error("[Ollama]", err))
         .finally(() => setOllamaLoading(false));
     }
   };
@@ -446,7 +450,7 @@ export default function RapportDetail() {
 
               {/* ── Ollama suggestion panel (right) ── */}
               <AnimatePresence>
-                {editing && (ollamaLoading || (ollamaSuggestion && !ollamaDismissed)) && (
+                {editing && (ollamaLoading || ollamaClean || (ollamaSuggestion && !ollamaDismissed)) && (
                   <motion.div
                     initial={{ opacity: 0, x: 40, width: 0 }}
                     animate={{ opacity: 1, x: 0, width: 300 }}
@@ -462,11 +466,11 @@ export default function RapportDetail() {
                         <div className="flex-1">
                           <h4 className="font-semibold text-sm text-foreground">Correction IA</h4>
                           <p className="text-[10px] text-muted-foreground -mt-0.5">
-                            {ollamaLoading ? "Analyse en cours…" : `${ollamaChanges.length} correction${ollamaChanges.length > 1 ? "s" : ""} détectée${ollamaChanges.length > 1 ? "s" : ""}`}
+                            {ollamaLoading ? "Analyse en cours…" : ollamaClean ? "Texte correct" : `${ollamaChanges.length} correction${ollamaChanges.length > 1 ? "s" : ""} détectée${ollamaChanges.length > 1 ? "s" : ""}`}
                           </p>
                         </div>
                         {!ollamaLoading && (
-                          <button onClick={() => { setOllamaSuggestion(null); setOllamaChanges([]); setOllamaDismissed(true); }} className="text-muted-foreground hover:text-foreground">
+                          <button onClick={() => { setOllamaSuggestion(null); setOllamaChanges([]); setOllamaDismissed(true); setOllamaClean(false); }} className="text-muted-foreground hover:text-foreground">
                             <X size={14} />
                           </button>
                         )}
@@ -476,6 +480,14 @@ export default function RapportDetail() {
                         <div className="flex flex-col items-center justify-center py-8 text-center">
                           <Loader2 size={24} className="animate-spin text-primary mb-3" />
                           <p className="text-sm text-muted-foreground">Ollama analyse le texte…</p>
+                        </div>
+                      ) : ollamaClean ? (
+                        <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "rgba(16,185,129,0.12)" }}>
+                            <Check size={20} style={{ color: "#10B981" }} />
+                          </div>
+                          <p className="text-sm font-medium" style={{ color: "#10B981" }}>Aucune correction nécessaire</p>
+                          <p className="text-xs text-muted-foreground">Le texte ne contient pas de fautes détectées.</p>
                         </div>
                       ) : ollamaSuggestion && !ollamaDismissed ? (
                         <>
