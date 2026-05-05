@@ -6,6 +6,7 @@ import { createSession } from "@/services/sessionService";
 import { transcribeAudio } from "@/services/transcriptionService";
 import { uploadAudio, fetchAudioBlob, getAudios, type AudioRecord } from "@/services/audioService";
 import { createReport } from "@/services/reportsService";
+import type { ReportCategory } from "@/constants/reportCategories";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:4000";
 
@@ -37,6 +38,7 @@ export type RecMéthode = "navigateur" | "smartphone" | null;
 
 export interface RecordingResult {
   examId:     string;
+  category:   ReportCategory | null;
   text:       string;
   méthode:    RecMéthode;
   audioId:    string | null;
@@ -50,6 +52,7 @@ interface RecordingContextType {
   isPaused:       boolean;
   seconds:        number;
   examId:         string | null;
+  category:       ReportCategory | null;
   méthode:        RecMéthode;
   // Smartphone
   sessionId:      string | null;
@@ -66,12 +69,13 @@ interface RecordingContextType {
   error:          string | null;
   result:         RecordingResult | null;
   // Actions
-  startMicRecording:      (examId: string) => Promise<void>;
+  setCategory:            (category: ReportCategory | null) => void;
+  startMicRecording:      (examId: string, category: ReportCategory) => Promise<void>;
   togglePause:            () => void;
   stopRecording:          () => void;
-  startSmartphoneSession: (examId: string) => Promise<void>;
-  transcribeFile:         (examId: string, file: File) => Promise<void>;
-  transcribeById:         (id: string, examId: string) => Promise<void>; // re-transcribe from server (risk fallback)
+  startSmartphoneSession: (examId: string, category: ReportCategory) => Promise<void>;
+  transcribeFile:         (examId: string, category: ReportCategory, file: File) => Promise<void>;
+  transcribeById:         (id: string, examId: string, category: ReportCategory) => Promise<void>; // re-transcribe from server (risk fallback)
   cancelRecording:        () => void;
   clearResult:            () => void;
   clearSavedAudio:        () => void;
@@ -86,6 +90,7 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
   const [isPaused,        setIsPaused]        = useState(false);
   const [seconds,         setSeconds]         = useState(0);
   const [examId,          setExamId]          = useState<string | null>(null);
+  const [category,        setCategory]        = useState<ReportCategory | null>(null);
   const [méthode,         setMéthode]         = useState<RecMéthode>(null);
   const [sessionId,       setSessionId]       = useState<string | null>(null);
   const [mobileUrl,       setMobileUrl]       = useState("");
@@ -104,6 +109,7 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
   const timerRef         = useRef<ReturnType<typeof setInterval> | null>(null);
   const pendingBlobRef   = useRef<Blob | null>(null);   // kept in memory after stop
   const pendingEidRef    = useRef<string | null>(null);
+  const pendingCatRef    = useRef<ReportCategory | null>(null);
   const pendingMRef      = useRef<RecMéthode>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const socketRef        = useRef<any>(null);
@@ -147,7 +153,7 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
   useEffect(() => { if (savedAudio) refreshQueue(); }, [savedAudio, refreshQueue]);
 
   // ── Core transcription ─────────────────────────────────────────────────────
-  const doTranscribe = useCallback(async (blob: Blob, eid: string, m: RecMéthode, aid: string | null) => {
+  const doTranscribe = useCallback(async (blob: Blob, eid: string, cat: ReportCategory, m: RecMéthode, aid: string | null) => {
     setIsTranscribing(true);
     setError(null);
     try {
@@ -158,11 +164,11 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
       let draftId: string | null = null;
       try {
         const content = structureContent(text);
-        const r = await createReport({ ID_Exam: eid, content, status: "draft", audioId: aid ?? undefined });
+        const r = await createReport({ ID_Exam: eid, content, category: cat, status: "draft", audioId: aid ?? undefined });
         draftId = r._id;
         if (aid) setAudioQueue(q => q.filter(a => a._id !== aid));
       } catch { /* draft save failed — RapportDetail fallback will retry */ }
-      setResult({ examId: eid, text, méthode: m, audioId: aid, reportId: draftId, suggestion: null });
+      setResult({ examId: eid, category: cat, text, méthode: m, audioId: aid, reportId: draftId, suggestion: null });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur de transcription.");
     } finally {
@@ -171,10 +177,11 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ── Upload then auto-transcribe ────────────────────────────────────────────
-  const doUpload = useCallback(async (blob: Blob, eid: string, m: RecMéthode, duration: number) => {
+  const doUpload = useCallback(async (blob: Blob, eid: string, cat: ReportCategory, m: RecMéthode, duration: number) => {
     resetHardware();
     pendingBlobRef.current = blob;
     pendingEidRef.current  = eid;
+    pendingCatRef.current  = cat;
     pendingMRef.current    = m;
     setAudioUploading(true);
     setError(null);
@@ -190,11 +197,11 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
     }
     setAudioUploading(false);
     // Auto-transcribe immediately using in-memory blob
-    await doTranscribe(blob, eid, m, savedId);
+    await doTranscribe(blob, eid, cat, m, savedId);
   }, [resetHardware, doTranscribe]);
 
   // ── Public: re-transcribe a queued audio from server (risk fallback) ───────
-  const transcribeById = useCallback(async (id: string, eid: string) => {
+  const transcribeById = useCallback(async (id: string, eid: string, cat: ReportCategory) => {
     setIsTranscribing(true);
     setError(null);
     try {
@@ -206,10 +213,10 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
       let draftId: string | null = null;
       try {
         const content = structureContent(text);
-        const r = await createReport({ ID_Exam: eid, content, status: "draft", audioId: id });
+        const r = await createReport({ ID_Exam: eid, content, category: cat, status: "draft", audioId: id });
         draftId = r._id;
       } catch { /* draft save failed — RapportDetail fallback will retry */ }
-      setResult({ examId: eid, text, méthode: null, audioId: id, reportId: draftId, suggestion: null });
+      setResult({ examId: eid, category: cat, text, méthode: null, audioId: id, reportId: draftId, suggestion: null });
       setAudioQueue(q => q.filter(a => a._id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur de transcription.");
@@ -219,7 +226,7 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ── Browser mic ────────────────────────────────────────────────────────────
-  const startMicRecording = async (eid: string) => {
+  const startMicRecording = async (eid: string, cat: ReportCategory) => {
     try {
       const stream   = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
@@ -230,6 +237,7 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
       recorder.start(250);
       mediaRecorderRef.current = recorder;
       setExamId(eid);
+      setCategory(cat);
       setMéthode("navigateur");
       setSeconds(0);
       setIsRecording(true);
@@ -258,16 +266,17 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
   const stopRecording = () => {
     const recorder = mediaRecorderRef.current;
     const eid      = examId;
+    const cat      = category;
     const m        = méthode;
     const dur      = seconds;
-    if (!recorder || !eid) return;
+    if (!recorder || !eid || !cat) return;
     stopTimer();
     setIsRecording(false);
     recorder.onstop = () => {
       const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType });
       try { recorder.stream.getTracks().forEach(t => t.stop()); } catch { /* */ }
       mediaRecorderRef.current = null;
-      doUpload(blob, eid, m, dur);
+      doUpload(blob, eid, cat, m, dur);
     };
     recorder.stop();
   };
@@ -276,19 +285,22 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
     resetHardware();
     pendingBlobRef.current = null;
     pendingEidRef.current  = null;
+    pendingCatRef.current  = null;
     pendingMRef.current    = null;
     setSavedAudio(null);
     setExamId(null);
+    setCategory(null);
     setMéthode(null);
     setError(null);
   }, [resetHardware]);
 
   // ── Smartphone session ─────────────────────────────────────────────────────
-  const startSmartphoneSession = async (eid: string) => {
+  const startSmartphoneSession = async (eid: string, cat: ReportCategory) => {
     const { sessionId: sid, mobileUrl: url } = await createSession();
     setSessionId(sid);
     setMobileUrl(url);
     setExamId(eid);
+    setCategory(cat);
     setMéthode("smartphone");
     setSavedAudio(null);
 
@@ -311,19 +323,21 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
       setAudioReceived(true);
       socket.disconnect();
       socketRef.current = null;
-      doUpload(blob, eid, "smartphone", seconds);
+      doUpload(blob, eid, cat, "smartphone", seconds);
     });
     socket.on("disconnect", () => { setSocketConnected(false); setMobileConnected(false); });
   };
 
   // ── Import file — upload then show list (no auto-transcribe) ───────────────
-  const transcribeFile = async (eid: string, file: File) => {
+  const transcribeFile = async (eid: string, cat: ReportCategory, file: File) => {
     setExamId(eid);
+    setCategory(cat);
     setMéthode(null);
     setSavedAudio(null);
     const dur = 0;
     pendingBlobRef.current = file;
     pendingEidRef.current  = eid;
+    pendingCatRef.current  = cat;
     pendingMRef.current    = null;
     setAudioUploading(true);
     setError(null);
@@ -337,11 +351,12 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const clearResult     = useCallback(() => { setResult(null); setExamId(null); setMéthode(null); }, []);
+  const clearResult     = useCallback(() => { setResult(null); setExamId(null); setCategory(null); setMéthode(null); }, []);
   const clearSavedAudio = useCallback(() => {
     setSavedAudio(null);
     pendingBlobRef.current = null;
     pendingEidRef.current  = null;
+    pendingCatRef.current  = null;
     pendingMRef.current    = null;
   }, []);
   const clearError = () => setError(null);
@@ -355,10 +370,11 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
 
   return (
     <RecordingContext.Provider value={{
-      isRecording, isPaused, seconds, examId, méthode,
+      isRecording, isPaused, seconds, examId, category, méthode,
       sessionId, mobileUrl, mobileConnected, socketConnected, audioReceived,
       audioUploading, savedAudio, audioQueue,
       isTranscribing, error, result,
+      setCategory,
       startMicRecording, togglePause, stopRecording,
       startSmartphoneSession, transcribeFile,
       transcribeById,

@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRecording } from "@/contexts/RecordingContext";
 import { getSuggestion, type OllamaChange } from "@/services/transcriptionService";
 import { getStatusBadgeClass, getStatusLabel } from "@/styles/statusSystem";
+import { REPORT_CATEGORIES, type ReportCategory } from "@/constants/reportCategories";
 
 /* ── Auto-resizing textarea ── */
 function AutoTextarea({ value, onChange, className }: { value: string; onChange: (v: string) => void; className?: string }) {
@@ -106,7 +107,7 @@ export default function RapportDetail() {
   const { user }          = useAuth();
   const { refreshQueue } = useRecording();
 
-  const fromState = location.state as { ID_Exam?: string; transcription?: string; audioId?: string; _restore?: object } | null;
+  const fromState = location.state as { ID_Exam?: string; transcription?: string; audioId?: string; category?: ReportCategory; _restore?: object } | null;
   const isNew     = id === "new";
 
   /* ── Report fields ── */
@@ -120,6 +121,7 @@ export default function RapportDetail() {
   const [examIdError, setExamIdError] = useState("");
   const [status,      setStatus]      = useState<string>("draft");
   const [createdAt,   setCreatedAt]   = useState<string | null>(null);
+  const [category,    setCategory]    = useState<ReportCategory | "">(fromState?.category ?? "");
 
   /* ── UI states ── */
   const [editing,              setEditing]              = useState(false);
@@ -134,12 +136,34 @@ export default function RapportDetail() {
   const [ollamaDismissed,    setOllamaDismissed]    = useState(false);
   const [ollamaLoading,      setOllamaLoading]      = useState(false);
 
+  /* ── Category auto-save (for already-saved/validated reports) ── */
+  const [categorySaving,     setCategorySaving]     = useState(false);
+  const [categorySaved,      setCategorySaved]      = useState(false);
+
+  const handleCategoryChange = async (next: ReportCategory) => {
+    setCategory(next);
+    setCategorySaved(false);
+    // For new and draft reports, the category is persisted via the main save buttons.
+    if (isNew || !id || status === "draft") return;
+    setCategorySaving(true);
+    try {
+      await updateReport(id, { category: next });
+      setCategorySaved(true);
+      setTimeout(() => setCategorySaved(false), 1800);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur lors de la mise à jour du type.");
+    } finally {
+      setCategorySaving(false);
+    }
+  };
+
   const contenu = buildContent(indication, resultat, conclusion);
 
   /* ── Auto-save as draft when arriving from transcription ── */
   useEffect(() => {
     if (!isNew || !fromState?.transcription) return;
-    createReport({ ID_Exam: examId || "—", content: contenu, status: "draft", audioId: fromState?.audioId })
+    const cat = (fromState?.category ?? "autre") as ReportCategory;
+    createReport({ ID_Exam: examId || "—", content: contenu, category: cat, status: "draft", audioId: fromState?.audioId })
       .then(r => {
         refreshQueue(); // audio now has reportId → remove from sidebar queue
         navigate(`/rapport/${r._id}`, { replace: true, state: { ...fromState } });
@@ -166,6 +190,9 @@ export default function RapportDetail() {
           setConclusion(p.conclusion);
           setStatus(r.status);
           setCreatedAt(r.createdAt);
+          setExamId(r.ID_Exam);
+          setExamIdInput(r.ID_Exam);
+          if (r.category) setCategory(r.category);
         })
         .catch(() => setError("Rapport introuvable."))
         .finally(() => setLoading(false));
@@ -207,15 +234,19 @@ export default function RapportDetail() {
 
   /* ── Save ── */
   const handleAction = async (action: "draft" | "validate" | "save") => {
+    if (!category) {
+      setError("Veuillez sélectionner un type d'examen.");
+      return;
+    }
     setSaving(action);
     setError("");
     const newStatus = action === "draft" ? "draft" : action === "validate" ? "validated" : "saved";
     try {
       if (isNew) {
-        await createReport({ ID_Exam: examId, content: contenu, status: newStatus, audioId: fromState?.audioId });
+        await createReport({ ID_Exam: examId, content: contenu, category, status: newStatus, audioId: fromState?.audioId });
         refreshQueue();
       } else if (id) {
-        await updateReport(id, { content: contenu, status: newStatus });
+        await updateReport(id, { content: contenu, status: newStatus, category });
       }
       if (action === "validate" || action === "save") {
         setSavedAsValidated(action);
@@ -283,7 +314,7 @@ export default function RapportDetail() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground text-xs mb-0.5">ID Exam</p>
                   {(isNew || status === "draft") && editingId ? (
@@ -326,6 +357,24 @@ export default function RapportDetail() {
                     </div>
                   )}
                   {examIdError && <p className="text-destructive text-[10px] mt-0.5">{examIdError}</p>}
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs mb-0.5">Type d'examen</p>
+                  <div className="flex items-center gap-1.5">
+                    <select
+                      value={category}
+                      onChange={e => handleCategoryChange(e.target.value as ReportCategory)}
+                      disabled={categorySaving}
+                      className="font-medium text-foreground bg-background border border-border rounded px-1.5 py-0.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
+                    >
+                      <option value="" disabled>Sélectionner…</option>
+                      {REPORT_CATEGORIES.map(c => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
+                    </select>
+                    {categorySaving && <Loader2 size={11} className="animate-spin text-muted-foreground" />}
+                    {categorySaved && !categorySaving && <Check size={11} className="text-success" />}
+                  </div>
                 </div>
                 <div><p className="text-muted-foreground text-xs mb-0.5">Médecin</p><p className="font-medium text-foreground">Dr. {user?.prénom} {user?.nom}</p></div>
                 <div><p className="text-muted-foreground text-xs mb-0.5">Date</p><p className="font-medium text-foreground">{createdAt ? new Date(createdAt).toLocaleDateString("fr-FR") : new Date().toLocaleDateString("fr-FR")}</p></div>

@@ -15,6 +15,9 @@ from core.auth import CurrentUser, jwt_required
 from core.mongo import get_collection, serialize_document
 
 
+REPORT_CATEGORIES = {"scanner", "irm", "radiographie", "echographie", "mammographie", "autre"}
+
+
 def _compute_accuracy(original: Optional[str], final: Optional[str]) -> Optional[float]:
     """
     Similarity ratio between the raw STT transcription and the validated content.
@@ -171,9 +174,15 @@ def list_or_create_reports(request: HttpRequest) -> JsonResponse:
         exam_id = data.get("ID_Exam")
         content = data.get("content") or ""
         status = data.get("status") or "draft"
+        category = (data.get("category") or "").strip().lower()
 
         if not exam_id or not content:
             return JsonResponse({"detail": "L'identifiant d'examen et le contenu sont requis."}, status=400)
+
+        if not category:
+            return JsonResponse({"detail": "La catégorie est requise."}, status=400)
+        if category not in REPORT_CATEGORIES:
+            return JsonResponse({"detail": "Catégorie invalide."}, status=400)
 
         exam_id_str = str(exam_id)
         if not re.fullmatch(r"\d{5,}", exam_id_str):
@@ -214,6 +223,7 @@ def list_or_create_reports(request: HttpRequest) -> JsonResponse:
             "content": content,
             "originalContent": original_content,
             "status": status,
+            "category": category,
             "audioId": audio_id,
             "createdAt": now,
             "updatedAt": now,
@@ -288,6 +298,13 @@ def get_or_update_report(request: HttpRequest, report_id: str):
         # Back-fill originalContent if it was missing and caller provides it.
         if not report.get("originalContent") and data.get("originalContent"):
             update_doc["originalContent"] = data["originalContent"]
+
+        if "category" in data:
+            new_category = (data.get("category") or "").strip().lower()
+            if new_category and new_category not in REPORT_CATEGORIES:
+                return JsonResponse({"detail": "Catégorie invalide."}, status=400)
+            if new_category:
+                update_doc["category"] = new_category
 
         # Compute accuracy when transitioning into "validated" for the first time
         # or when content changes while already validated.

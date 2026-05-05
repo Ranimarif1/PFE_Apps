@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FileAudio, FileText, Search, Download, Loader2, Database, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getStatusBadgeClass, getStatusLabel, getActiveFilterTabClass, INACTIVE_TAB_CLASS } from "@/styles/statusSystem";
+import { REPORT_CATEGORIES, getCategoryLabel } from "@/constants/reportCategories";
 
 const fmt = (s: number) =>
   `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
@@ -19,12 +20,13 @@ function downloadBlob(blob: Blob, filename: string) {
 }
 
 export default function AdminITTraining() {
-  const [search,       setSearch]       = useState("");
-  const [filterStatus, setFilterStatus] = useState("tous");
-  const [downloading,  setDownloading]  = useState<string | null>(null);
-  const [expanded,     setExpanded]     = useState<string | null>(null);
-  const [startDate,    setStartDate]    = useState("");
-  const [endDate,      setEndDate]      = useState("");
+  const [search,         setSearch]         = useState("");
+  const [filterStatus,   setFilterStatus]   = useState("tous");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [downloading,    setDownloading]    = useState<string | null>(null);
+  const [expanded,       setExpanded]       = useState<string | null>(null);
+  const [startDate,      setStartDate]      = useState("");
+  const [endDate,        setEndDate]        = useState("");
 
   const { data: entries = [], isLoading } = useQuery<TrainingEntry[]>({
     queryKey: ["training"],
@@ -33,6 +35,7 @@ export default function AdminITTraining() {
 
   const filtered = entries.filter(e => {
     if (filterStatus !== "tous" && e.status !== filterStatus) return false;
+    if (filterCategory && e.category !== filterCategory) return false;
     if (search && !e.examId.toLowerCase().includes(search.toLowerCase()) &&
         !e.doctorName.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
@@ -105,11 +108,24 @@ export default function AdminITTraining() {
               ))}
             </div>
 
-            <div className="ml-auto relative">
-              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="ID Exam, médecin…"
-                className="pl-8 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 w-48" />
+            <div className="ml-auto flex items-center gap-2">
+              <select
+                value={filterCategory}
+                onChange={e => setFilterCategory(e.target.value)}
+                className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="">Tous les types</option>
+                {REPORT_CATEGORIES.map(c => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
+
+              <div className="relative">
+                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input value={search} onChange={e => setSearch(e.target.value)}
+                  placeholder="ID Exam, médecin…"
+                  className="pl-8 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 w-48" />
+              </div>
             </div>
           </div>
 
@@ -156,7 +172,7 @@ export default function AdminITTraining() {
               <table className="w-full text-sm">
                 <thead className="bg-muted/50">
                   <tr>
-                    {["ID Exam", "Médecin", "Date", "Durée", "Statut", "Transcription", "Téléchargement"].map(h => (
+                    {["ID Exam", "Type", "Médecin", "Date", "Durée", "Statut", "Transcription", "Téléchargement"].map(h => (
                       <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -168,6 +184,11 @@ export default function AdminITTraining() {
                         className="hover:bg-muted/20 transition-colors cursor-pointer"
                         onClick={() => setExpanded(expanded === entry.audioId ? null : entry.audioId)}>
                         <td className="px-5 py-3 font-mono font-semibold text-foreground">{entry.examId}</td>
+                        <td className="px-5 py-3">
+                          {entry.category
+                            ? <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 whitespace-nowrap">{getCategoryLabel(entry.category)}</span>
+                            : <span className="text-xs text-muted-foreground">—</span>}
+                        </td>
                         <td className="px-5 py-3 text-muted-foreground">{entry.doctorName || "—"}</td>
                         <td className="px-5 py-3 text-muted-foreground whitespace-nowrap">
                           {new Date(entry.createdAt).toLocaleDateString("fr-FR")}
@@ -208,7 +229,7 @@ export default function AdminITTraining() {
                       {/* Expanded transcription */}
                       {expanded === entry.audioId && (
                         <tr key={`${entry.audioId}-expanded`} className="bg-muted/10">
-                          <td colSpan={7} className="px-5 py-3">
+                          <td colSpan={8} className="px-5 py-3">
                             <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap font-mono bg-muted/40 rounded-lg p-3">
                               {entry.text}
                             </p>
@@ -219,7 +240,7 @@ export default function AdminITTraining() {
                   ))}
                   {filtered.length === 0 && !isLoading && (
                     <tr>
-                      <td colSpan={7} className="px-5 py-12 text-center text-muted-foreground">
+                      <td colSpan={8} className="px-5 py-12 text-center text-muted-foreground">
                         Aucune paire Audio|Texte disponible.
                       </td>
                     </tr>

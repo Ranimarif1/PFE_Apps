@@ -25,7 +25,7 @@ export function RecordingIndicator({ collapsed }: Props) {
   // Navigate when transcription result is ready
   useEffect(() => {
     if (!recording.result) return;
-    const { examId, text, méthode, audioId, reportId } = recording.result;
+    const { examId, category, text, méthode, audioId, reportId } = recording.result;
     recording.clearResult();
     if (reportId) {
       // Draft already persisted in the RecordingContext — go straight to it.
@@ -34,7 +34,8 @@ export function RecordingIndicator({ collapsed }: Props) {
           ID_Exam: examId,
           transcription: text,
           audioId,
-          _restore: { etape: 3, examId, méthode },
+          category,
+          _restore: { etape: 3, examId, category, méthode },
         },
       });
     } else {
@@ -44,7 +45,8 @@ export function RecordingIndicator({ collapsed }: Props) {
           ID_Exam: examId,
           transcription: text,
           audioId,
-          _restore: { etape: 3, examId, méthode },
+          category,
+          _restore: { etape: 3, examId, category, méthode },
         },
       });
     }

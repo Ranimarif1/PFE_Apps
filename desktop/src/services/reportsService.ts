@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import type { ReportCategory } from "@/constants/reportCategories";
 
 export interface Report {
   _id: string;
@@ -8,6 +9,7 @@ export interface Report {
   originalContent?: string;   // raw STT transcription, used for accuracy comparison
   accuracy?: number;          // 0..1 similarity ratio computed at validation
   status: "draft" | "validated" | "saved";
+  category?: ReportCategory;
   audioId?: string;
   createdAt: string;
   updatedAt: string;
@@ -27,8 +29,10 @@ export async function getReport(id: string): Promise<Report> {
 export async function createReport(payload: {
   ID_Exam: string;
   content: string;
+  category: ReportCategory;
   status?: "draft" | "validated" | "saved";
   audioId?: string;
+  originalContent?: string;
 }): Promise<Report> {
   return api.post<Report>("/api/reports/", payload);
 }
@@ -50,7 +54,12 @@ export async function getReportStats(): Promise<ReportStats> {
 
 export async function updateReport(
   id: string,
-  payload: { content?: string; status?: "draft" | "validated" | "saved" }
+  payload: {
+    content?: string;
+    status?: "draft" | "validated" | "saved";
+    category?: ReportCategory;
+    originalContent?: string;
+  }
 ): Promise<Report> {
   return api.put<Report>(`/api/reports/${id}`, payload);
 }

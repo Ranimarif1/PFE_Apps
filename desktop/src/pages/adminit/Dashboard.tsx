@@ -44,7 +44,7 @@ function Kpi({ value, label, delta, accent, icon: Icon }: {
 }) {
   return (
     <div
-      className="dashboard-kpi relative overflow-hidden flex items-center gap-4 px-5 py-5"
+      className="dashboard-kpi relative overflow-hidden flex items-center gap-3 px-4 py-3"
       style={
         {
           "--kpi-border": accent.base,
@@ -53,13 +53,13 @@ function Kpi({ value, label, delta, accent, icon: Icon }: {
         } as CSSProperties
       }
     >
-      <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
         style={{ background: accent.soft, color: accent.text }}>
-        <Icon size={19} />
+        <Icon size={17} />
       </div>
       <div>
-        <p className="text-2xl font-bold leading-none tracking-tight" style={{ color: accent.text }}>{value}</p>
-        <p className="text-xs text-muted-foreground mt-1 font-medium">{label}</p>
+        <p className="text-xl font-bold leading-none tracking-tight" style={{ color: accent.text }}>{value}</p>
+        <p className="text-xs text-muted-foreground mt-0.5 font-medium">{label}</p>
         {delta && <p className="text-[10px] mt-0.5 text-muted-foreground">{delta}</p>}
       </div>
     </div>
@@ -140,7 +140,7 @@ export default function AdminITDashboard() {
   ];
 
   return (
-    <AppLayout title="Tableau de bord — Admin IT">
+    <AppLayout title="Tableau de bord">
       <div className="flex flex-col min-h-full max-w-full overflow-hidden -mt-4">
 
       {/* ══ KPI strip ══════════════════════════════════════════════════════ */}

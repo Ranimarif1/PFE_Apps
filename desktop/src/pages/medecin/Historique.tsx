@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Eye, Search, FileAudio, ArrowUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getStatusBadgeClass, getStatusLabel, getActiveFilterTabClass, INACTIVE_TAB_CLASS } from "@/styles/statusSystem";
+import { REPORT_CATEGORIES, getCategoryLabel } from "@/constants/reportCategories";
 
 export default function Historique() {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ export default function Historique() {
   const isAdmin = user?.rôle === "admin";
 
   const [filterStatut, setFilterStatut] = useState("tous");
+  const [filterCategory, setFilterCategory] = useState("");
   const [filterYear, setFilterYear] = useState("");
   const [filterMonth, setFilterMonth] = useState("");
   const [filterDay, setFilterDay] = useState("");
@@ -51,10 +53,11 @@ export default function Historique() {
     return Array.from(days).sort();
   }, [visibleReports, filterYear, filterMonth]);
 
-  const hasActiveFilters = filterStatut !== "tous" || filterYear || filterMonth || filterDay || searchId;
+  const hasActiveFilters = filterStatut !== "tous" || filterCategory || filterYear || filterMonth || filterDay || searchId;
 
   const clearFilters = () => {
     setFilterStatut("tous");
+    setFilterCategory("");
     setFilterYear("");
     setFilterMonth("");
     setFilterDay("");
@@ -64,6 +67,7 @@ export default function Historique() {
   const filtered = useMemo(() => {
     const result = visibleReports.filter(r => {
       if (filterStatut !== "tous" && r.status !== filterStatut) return false;
+      if (filterCategory && r.category !== filterCategory) return false;
       if (filterYear) {
         const d = new Date(r.createdAt);
         if (d.getFullYear().toString() !== filterYear) return false;
@@ -82,7 +86,7 @@ export default function Historique() {
       return sortOrder === "asc" ? diff : -diff;
     });
     return result;
-  }, [visibleReports, filterStatut, filterYear, filterMonth, filterDay, searchId, sortOrder]);
+  }, [visibleReports, filterStatut, filterCategory, filterYear, filterMonth, filterDay, searchId, sortOrder]);
 
   const showDoctorCol = isAdmin && viewMode === "all";
 
@@ -133,6 +137,18 @@ export default function Historique() {
               <ArrowUpDown size={13} />
               {sortOrder === "desc" ? "Plus récent" : "Plus ancien"}
             </button>
+
+            {/* Category filter */}
+            <select
+              value={filterCategory}
+              onChange={e => setFilterCategory(e.target.value)}
+              className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              <option value="">Tous les types</option>
+              {REPORT_CATEGORIES.map(c => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </select>
 
             {/* Year filter */}
             <select
@@ -211,6 +227,7 @@ export default function Historique() {
                 {showDoctorCol && (
                   <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Médecin</th>
                 )}
+                <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Type</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide cursor-pointer select-none hover:text-foreground transition-colors"
                   onClick={() => setSortOrder(o => o === "desc" ? "asc" : "desc")}>
                   Date {sortOrder === "desc" ? "↓" : "↑"}
@@ -232,6 +249,11 @@ export default function Historique() {
                       )}
                     </td>
                   )}
+                  <td className="px-6 py-4">
+                    {r.category
+                      ? <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">{getCategoryLabel(r.category)}</span>
+                      : <span className="text-xs text-muted-foreground">—</span>}
+                  </td>
                   <td className="px-6 py-4 text-muted-foreground">
                     {new Date(r.createdAt).toLocaleDateString("fr-FR")}
                   </td>
@@ -255,7 +277,7 @@ export default function Historique() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={showDoctorCol ? 6 : 5} className="px-6 py-10 text-center text-muted-foreground">
+                  <td colSpan={showDoctorCol ? 7 : 6} className="px-6 py-10 text-center text-muted-foreground">
                     Aucun rapport trouvé.
                   </td>
                 </tr>

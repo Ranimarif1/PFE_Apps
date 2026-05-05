@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(curl -s http://localhost:8080/src/index.css)"
+      "Bash(curl -s http://localhost:8080/src/index.css)",
+      "Bash(npm run *)",
+      "Bash(python -c \"import ast; [ast.parse\\(open\\(f, encoding='utf-8'\\).read\\(\\), f\\) for f in ['reports/views.py', 'audios/views.py']]; print\\('OK'\\)\")"
     ]
   }
 }

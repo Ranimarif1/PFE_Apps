@@ -5,13 +5,14 @@ import { getReports, type Report } from "@/services/reportsService";
 import { useQuery } from "@tanstack/react-query";
 import {
   FileText, CheckCircle, Clock, Plus,
-  History, Mic, Pencil, Ruler, Stethoscope, Sparkles,
+  History, Mic,
 } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from "recharts";
 import { DASHBOARD_ACCENTS, type DashboardAccent } from "@/styles/dashboardAccents";
+import { REPORT_CATEGORIES } from "@/constants/reportCategories";
 
 /* ─── helpers ─────────────────────────────────────────────────────────────── */
 function buildChartData(reports: Report[], days = 30) {
@@ -148,13 +149,16 @@ export default function Dashboard() {
   const last      = reports[0];
 
   /* ── AI Assistant stats ── */
-  const dictated    = reports.filter(r => r.audioId).length;
-  const manual      = total - dictated;
-  const dictatedPct = total > 0 ? Math.round((dictated / total) * 100) : 0;
-  const minsSaved   = dictated * 4;   // conservative ~4 min saved per dictation
+  // Counts by category (zero for absent ones, "autre" bucket for legacy reports)
+  const categoryCounts = REPORT_CATEGORIES.map(c => ({
+    value: c.value,
+    label: c.label,
+    count: reports.filter(r => (r.category ?? "autre") === c.value).length,
+  }));
+  const maxCategoryCount = Math.max(...categoryCounts.map(c => c.count), 1);
 
   return (
-    <AppLayout title="Tableau de bord — Médecin">
+    <AppLayout title="Tableau de bord">
       <div className="flex flex-col min-h-full max-w-full overflow-hidden -mt-4">
 
       {/* ══ KPI strip ══════════════════════════════════════════════════════ */}
@@ -255,46 +259,32 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Assistant IA — dictation coverage + category chips */}
+              {/* Répartition par type de rapport */}
               <div className="lg:col-span-2 bg-card border border-border rounded-xl flex flex-col">
                 <div className="flex items-center justify-between px-4 py-2 border-b border-border shrink-0">
                   <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                    <Sparkles size={13} className="text-primary" /> Assistant IA
+                    <FileText size={13} className="text-primary" /> Rapports par type
                   </span>
-                  <span className="text-[10px] bg-muted border border-border rounded px-2 py-0.5 text-muted-foreground">{dictatedPct}% dictés</span>
+                  <span className="text-[10px] bg-muted border border-border rounded px-2 py-0.5 text-muted-foreground">Total : {total}</span>
                 </div>
-                <div className="p-2 flex flex-col gap-1.5 flex-1 min-h-0 justify-between">
-                  {/* Sub-stats */}
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <div className="bg-muted/40 border border-border rounded-lg px-2 py-1.5">
-                      <p className="text-[9px] text-muted-foreground uppercase tracking-wide font-semibold">Dictés</p>
-                      <p className="text-base font-semibold text-foreground">{dictated}</p>
-                    </div>
-                    <div className="bg-muted/40 border border-border rounded-lg px-2 py-1.5">
-                      <p className="text-[9px] text-muted-foreground uppercase tracking-wide font-semibold">Manuels</p>
-                      <p className="text-base font-semibold text-foreground">{manual}</p>
-                    </div>
-                    <div className="bg-muted/40 border border-border rounded-lg px-2 py-1.5">
-                      <p className="text-[9px] text-muted-foreground uppercase tracking-wide font-semibold">Gagné</p>
-                      <p className="text-base font-semibold text-foreground">~{minsSaved}<span className="text-[10px] font-normal text-muted-foreground"> m</span></p>
-                    </div>
-                  </div>
-
-                  {/* AI category chips */}
-                  <div className="flex flex-wrap gap-1">
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[rgba(100,116,139,0.2)] text-[#334155] border border-[rgba(100,116,139,0.35)] dark:text-[#CBD5E1] dark:border-[rgba(148,163,184,0.4)]">
-                      <Mic size={9} /> STT
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[rgba(217,119,6,0.2)] text-[#7C4A08] border border-[rgba(217,119,6,0.4)] dark:text-[#FCD34D] dark:border-[rgba(245,158,11,0.45)]">
-                      <Pencil size={9} /> Ortho
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[rgba(74,123,190,0.22)] text-[#1E3A6B] border border-[rgba(74,123,190,0.45)] dark:text-[#93C5FD] dark:border-[rgba(94,151,232,0.45)]">
-                      <Ruler size={9} /> Accord
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[rgba(5,150,105,0.2)] text-[#065F46] border border-[rgba(5,150,105,0.4)] dark:text-[#6EE7B7] dark:border-[rgba(56,211,159,0.4)]">
-                      <Stethoscope size={9} /> Médical
-                    </span>
-                  </div>
+                <div className="p-3 flex flex-col gap-1.5 flex-1 min-h-0 justify-center">
+                  {categoryCounts.map(c => {
+                    const pct = total > 0 ? Math.round((c.count / total) * 100) : 0;
+                    const widthPct = (c.count / maxCategoryCount) * 100;
+                    return (
+                      <div key={c.value} className="flex items-center gap-2">
+                        <span className="text-[11px] font-medium text-foreground w-24 shrink-0 truncate">{c.label}</span>
+                        <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{ width: `${widthPct}%`, background: c.count === 0 ? "transparent" : "hsl(var(--primary))" }}
+                          />
+                        </div>
+                        <span className="text-[11px] font-semibold text-foreground tabular-nums w-7 text-right">{c.count}</span>
+                        <span className="text-[10px] text-muted-foreground tabular-nums w-9 text-right">{pct}%</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

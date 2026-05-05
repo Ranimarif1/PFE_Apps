@@ -179,7 +179,7 @@ export default function AdminDashboard() {
   const resolvedComplaints = complaints.filter(c => c.status === "resolved").length;
 
   return (
-    <AppLayout title="Tableau de bord — Admin">
+    <AppLayout title="Tableau de bord">
       <div className="flex flex-col min-h-full max-w-full overflow-hidden -mt-4">
 
         {/* ══ KPI strip ══════════════════════════════════════════════════════ */}

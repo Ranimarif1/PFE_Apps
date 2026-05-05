@@ -67,6 +67,7 @@ export interface TrainingEntry {
   mimeType:   string;
   createdAt:  string;
   status:     string;
+  category:   string;
   text:       string;
 }
 

@@ -10,7 +10,8 @@ import {
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useRecording } from "@/contexts/RecordingContext";
-import { checkExamId, createReport } from "@/services/reportsService";
+import { checkExamId } from "@/services/reportsService";
+import { REPORT_CATEGORIES, type ReportCategory } from "@/constants/reportCategories";
 type Etape  = 1 | 2 | 3;
 type Méthode = "navigateur" | "import" | "smartphone" | null;
 
@@ -50,12 +51,13 @@ export default function NouveauRapport() {
   const recording = useRecording();
 
   const restore = location.state as {
-    _restore?: { etape: Etape; examId: string; méthode: Méthode };
+    _restore?: { etape: Etape; examId: string; category?: ReportCategory; méthode: Méthode };
   } | null;
 
-  const [etape,   setEtape]   = useState<Etape>(restore?._restore?.etape ?? 1);
-  const [examId,  setExamId]  = useState(restore?._restore?.examId ?? "");
-  const [méthode, setMéthode] = useState<Méthode>(restore?._restore?.méthode ?? null);
+  const [etape,    setEtape]    = useState<Etape>(restore?._restore?.etape ?? 1);
+  const [examId,   setExamId]   = useState(restore?._restore?.examId ?? "");
+  const [category, setCategory] = useState<ReportCategory | "">(restore?._restore?.category ?? "");
+  const [méthode,  setMéthode]  = useState<Méthode>(restore?._restore?.méthode ?? null);
 
   // Step 1: async exam-id availability check
   const [idChecking,  setIdChecking]  = useState(false);
@@ -114,9 +116,10 @@ export default function NouveauRapport() {
     if (méthode !== "smartphone" || etape !== 3) return;
     if (recording.sessionId || sessionLoading) return;
 
+    if (!category) return;
     setSessionLoading(true);
     setSessionError(null);
-    recording.startSmartphoneSession(examId)
+    recording.startSmartphoneSession(examId, category)
       .catch(() => setSessionError("Impossible de créer la session. Vérifiez que le serveur est démarré."))
       .finally(() => setSessionLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -181,7 +184,7 @@ export default function NouveauRapport() {
               <p className="text-muted-foreground text-sm mb-6">
                 Entrez l'identifiant au format <span className="font-mono font-semibold">{new Date().getFullYear()}N…</span>
               </p>
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">ID Exam</label>
                   <input
@@ -208,9 +211,37 @@ export default function NouveauRapport() {
                     </p>
                   )}
                 </div>
+
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Type d'examen <span className="text-destructive">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {REPORT_CATEGORIES.map(c => (
+                      <button
+                        key={c.value}
+                        type="button"
+                        onClick={() => setCategory(c.value)}
+                        className={cn(
+                          "px-3 py-2 rounded-lg border text-sm font-medium transition-all",
+                          category === c.value
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                        )}
+                      >
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <button
-                  onClick={() => isValidExamId(examId) && idAvailable === true && setEtape(2)}
-                  disabled={!isValidExamId(examId) || idChecking || idAvailable !== true}
+                  onClick={() => {
+                    if (isValidExamId(examId) && idAvailable === true && category) {
+                      setEtape(2);
+                    }
+                  }}
+                  disabled={!isValidExamId(examId) || idChecking || idAvailable !== true || !category}
                   className="w-full gradient-hero text-white font-semibold py-3 rounded-xl hover:opacity-90 disabled:opacity-40 transition-all"
                 >
                   Continuer →
@@ -320,8 +351,9 @@ export default function NouveauRapport() {
                           <Mic className="w-10 h-10 text-muted-foreground" />
                         </div>
                         <p className="text-muted-foreground text-sm">Prêt à enregistrer</p>
-                        <button onClick={() => recording.startMicRecording(examId)}
-                          className="flex items-center gap-2 mx-auto gradient-hero text-white font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition-all">
+                        <button onClick={() => category && recording.startMicRecording(examId, category)}
+                          disabled={!category}
+                          className="flex items-center gap-2 mx-auto gradient-hero text-white font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition-all disabled:opacity-40">
                           <Play className="w-5 h-5" /> Démarrer l'enregistrement
                         </button>
                       </div>
@@ -498,7 +530,7 @@ export default function NouveauRapport() {
                           <p className="text-sm text-muted-foreground">MP3, WAV, M4A — Max 50 Mo</p>
                         </div>
                         <input type="file" accept=".mp3,.wav,.m4a" className="hidden"
-                          onChange={(e) => { const f = e.target.files?.[0]; if (f) recording.transcribeFile(examId, f); }} />
+                          onChange={(e) => { const f = e.target.files?.[0]; if (f && category) recording.transcribeFile(examId, category, f); }} />
                       </label>
                     ) : (
                       <div className="space-y-3">

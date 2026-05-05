@@ -12,6 +12,16 @@ from core.auth import CurrentUser, jwt_required
 from core.mongo import get_collection, serialize_document
 
 
+CATEGORY_FOLDERS = {
+    "scanner":      "Scanner",
+    "irm":          "IRM",
+    "radiographie": "Radiographie",
+    "echographie":  "Echographie",
+    "mammographie": "Mammographie",
+    "autre":        "Autre",
+}
+
+
 def _audios_dir() -> Path:
     d = settings.MEDIA_ROOT / "audios"
     d.mkdir(parents=True, exist_ok=True)
@@ -108,6 +118,7 @@ def training_dataset(request: HttpRequest) -> JsonResponse:
             "mimeType":   audio.get("mimeType", "audio/webm"),
             "createdAt":  audio.get("createdAt", ""),
             "status":     report.get("status", ""),
+            "category":   report.get("category", ""),
             "text":       report.get("content", ""),
         })
 
@@ -192,41 +203,46 @@ def training_download(request: HttpRequest):
             "doctor_name": doctor_name,
         })
 
-    # Build ZIP in memory
+    # Build ZIP in memory \u2014 one folder per category
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        # dataset.csv
+        # dataset.csv at root \u2014 global metadata
         csv_buf = io.StringIO()
         writer  = csvlib.writer(csv_buf, delimiter=";")
-        writer.writerow(["exam_id", "doctor", "date", "duration_s", "status", "audio_file", "text_file", "transcription"])
+        writer.writerow(["category", "exam_id", "doctor", "date", "duration_s", "status", "audio_file", "text_file", "transcription"])
         for p in pairs:
             audio  = p["audio"]
             report = p["report"]
             exam   = audio.get("examId", str(audio["_id"]))
             ext    = Path(audio.get("filename", "audio.webm")).suffix or ".webm"
+            cat_key = (report.get("category") or "autre").lower()
+            cat_folder = CATEGORY_FOLDERS.get(cat_key, "Autre")
             writer.writerow([
+                cat_folder,
                 exam,
                 p["doctor_name"],
                 audio.get("createdAt", "")[:10],
                 audio.get("duration", 0),
                 report.get("status", ""),
-                f"{exam}{ext}",
-                f"{exam}.txt",
+                f"{cat_folder}/{exam}{ext}",
+                f"{cat_folder}/{exam}.txt",
                 (report.get("content") or "").replace("\n", " ").strip(),
             ])
         zf.writestr("dataset.csv", "\uFEFF" + csv_buf.getvalue())
 
-        # Audio + text files
+        # Audio + text files, bucketed by category folder
         for p in pairs:
             audio  = p["audio"]
             report = p["report"]
             exam   = audio.get("examId", str(audio["_id"]))
             ext    = Path(audio.get("filename", "audio.webm")).suffix or ".webm"
+            cat_key = (report.get("category") or "autre").lower()
+            cat_folder = CATEGORY_FOLDERS.get(cat_key, "Autre")
             audio_path = _audios_dir() / audio.get("filename", "")
             if audio_path.exists():
-                zf.write(audio_path, f"{exam}{ext}")
-            # Text file
-            zf.writestr(f"{exam}.txt", report.get("content", ""))
+                zf.write(audio_path, f"{cat_folder}/{exam}{ext}")
+            # Text file alongside the audio in the same category folder
+            zf.writestr(f"{cat_folder}/{exam}.txt", report.get("content", ""))
 
     buf.seek(0)
     label    = "enregistres" if status_filter == "saved" else "tous"
