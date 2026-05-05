@@ -82,13 +82,13 @@ export default function Reclamations() {
                     {new Date(r.createdAt).toLocaleDateString("fr-FR")}
                   </p>
                 </div>
-                <span className={cn(getStatusBadgeClass(r.status), "shrink-0")}>
+                <span className={cn(getStatusBadgeClass(r.status, "complaint"), "shrink-0")}>
                   {getStatusLabel(r.status, "complaint")}
                 </span>
               </div>
               <p className="text-sm text-muted-foreground">{r.description}</p>
               {r.response && (
-                <div className={cn("mt-3 p-3", getStatusSurfaceClass("resolved"))}>
+                <div className={cn("mt-3 p-3", getStatusSurfaceClass("resolved", "complaint"))}>
                   <p className="text-xs font-semibold text-[#4D7F67] mb-1">Réponse de l'Admin IT :</p>
                   <p className="text-sm text-foreground">{r.response}</p>
                 </div>

@@ -42,6 +42,13 @@ const USER_TONE: Record<string, StatusTone> = {
   refused: "error",
 };
 
+/** Complaint-context tone override: yellow for pending, green for in-progress, blue for resolved. */
+const COMPLAINT_TONE: Record<string, StatusTone> = {
+  pending: "warning",
+  in_progress: "success",
+  resolved: "info",
+};
+
 const REPORT_LABELS: Record<string, string> = {
   draft: "Brouillon",
   validated: "Validé",
@@ -78,6 +85,7 @@ function titleCaseStatus(status: string) {
 
 export function getStatusTone(status: string, context: StatusContext = "generic"): StatusTone {
   if (context === "user" && USER_TONE[status]) return USER_TONE[status];
+  if (context === "complaint" && COMPLAINT_TONE[status]) return COMPLAINT_TONE[status];
   return STATUS_TONE[status] ?? "neutral";
 }
 

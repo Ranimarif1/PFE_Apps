@@ -45,7 +45,7 @@ export default function AdminITReclamations() {
           ].map(({ key, label }) => (
             <button key={key} onClick={() => setFilterStatus(key)}
               className={cn("pb-3 -mb-px text-sm transition-all",
-                filterStatus === key ? getActiveFilterTabClass(key) : INACTIVE_TAB_CLASS)}>
+                filterStatus === key ? getActiveFilterTabClass(key, "complaint") : INACTIVE_TAB_CLASS)}>
               {label}
             </button>
           ))}
@@ -63,7 +63,7 @@ export default function AdminITReclamations() {
                 <p className="font-semibold text-foreground">{r.title}</p>
                 <p className="text-xs text-muted-foreground">{new Date(r.createdAt).toLocaleDateString("fr-FR")}</p>
               </div>
-              <span className={cn(getStatusBadgeClass(r.status), "shrink-0")}>
+              <span className={cn(getStatusBadgeClass(r.status, "complaint"), "shrink-0")}>
                 {getStatusLabel(r.status, "complaint")}
               </span>
             </div>

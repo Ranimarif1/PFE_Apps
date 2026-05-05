@@ -71,16 +71,15 @@ function AppWithLoading() {
       <Route path="/mobile/record/:token" element={<MobileRecord />} />
 
       {/* Médecin */}
-      <Route path="/dashboard" element={<RouteGuard allowedRoles={["médecin", "admin"]}><MédecinDashboard /></RouteGuard>} />
+      <Route path="/dashboard" element={<RouteGuard allowedRoles={["médecin"]}><MédecinDashboard /></RouteGuard>} />
       <Route path="/rapport/nouveau" element={<RouteGuard allowedRoles={["médecin", "admin"]}><NouveauRapport /></RouteGuard>} />
       <Route path="/rapport/:id" element={<RouteGuard allowedRoles={["médecin", "admin"]}><RapportDetail /></RouteGuard>} />
       <Route path="/historique" element={<RouteGuard allowedRoles={["médecin", "admin"]}><Historique /></RouteGuard>} />
       <Route path="/reclamations" element={<RouteGuard allowedRoles={["médecin", "admin"]}><MédecinReclamations /></RouteGuard>} />
-      <Route path="/profil" element={<RouteGuard allowedRoles={["médecin", "admin"]}><MédecinProfil /></RouteGuard>} />
+      <Route path="/profil" element={<RouteGuard allowedRoles={["médecin"]}><MédecinProfil /></RouteGuard>} />
 
       {/* Admin */}
       <Route path="/admin/dashboard"     element={<RouteGuard allowedRoles={["admin"]}><AdminDashboard /></RouteGuard>} />
-      <Route path="/admin/statistiques"  element={<RouteGuard allowedRoles={["admin"]}><AdminStatistiques /></RouteGuard>} />
       <Route path="/admin/medecins"      element={<RouteGuard allowedRoles={["admin"]}><AdminMedecins /></RouteGuard>} />
       <Route path="/admin/export"        element={<RouteGuard allowedRoles={["admin"]}><AdminExport /></RouteGuard>} />
       <Route path="/admin/profil"        element={<RouteGuard allowedRoles={["admin"]}><AdminProfil /></RouteGuard>} />

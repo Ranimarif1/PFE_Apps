@@ -2,8 +2,6 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  Sun,
-  Moon,
   Mic,
   ShieldCheck,
   Activity,
@@ -19,15 +17,8 @@ import {
   Globe2,
   Sparkles,
 } from "lucide-react";
-import { useTheme } from "@/contexts/ThemeContext";
+import { PublicNavbar } from "@/components/PublicNavbar";
 import hospitalImg from "@/assets/téléchargement.jpeg";
-
-const navLinks = [
-  { href: "#about", label: "À propos" },
-  { href: "#features", label: "Fonctionnalités" },
-  { href: "#studies", label: "Études" },
-  { href: "#contact", label: "Contact" },
-];
 
 const features = [
   {
@@ -79,83 +70,9 @@ const studies = [
 ];
 
 export default function Index() {
-  const { theme, toggleTheme } = useTheme();
-
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* ───────── NAVBAR ───────── */}
-      <nav
-        className="fixed top-0 inset-x-0 z-50 border-b border-border"
-        aria-label="Navigation principale"
-        style={{
-          background: "rgba(255,255,255,0.92)",
-          backdropFilter: "blur(14px)",
-          WebkitBackdropFilter: "blur(14px)",
-        }}
-      >
-        <div className="w-full px-4 lg:px-6 h-16 flex items-center">
-          <div className="flex-1 flex items-center justify-start">
-            <a href="#top" className="flex items-center gap-2.5">
-              <div
-                className="w-10 h-10 rounded-xl overflow-hidden shrink-0"
-                style={{ boxShadow: "0 0 0 1px hsl(var(--border))" }}
-              >
-                <img src="/ReportEase.png" alt="ReportEase" className="w-full h-full object-cover" />
-              </div>
-              <div className="leading-tight">
-                <span className="font-bold text-base tracking-tight text-foreground">
-                  ReportEase
-                </span>
-                <p className="text-[10.5px] -mt-0.5 text-muted-foreground">
-                  Speech-to-Text Platform
-                </p>
-              </div>
-            </a>
-          </div>
-
-          <nav className="hidden md:flex items-center gap-7 shrink-0">
-            {navLinks.map((l) => (
-              <a
-                key={l.href}
-                href={l.href}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {l.label}
-              </a>
-            ))}
-          </nav>
-
-          <div className="flex-1 flex items-center justify-end gap-2">
-            <button
-              onClick={toggleTheme}
-              aria-label="Basculer le thème"
-              className="w-9 h-9 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/10 transition-colors"
-            >
-              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
-            <Link
-              to="/login"
-              className="hidden sm:inline-flex items-center gradient-hero text-white text-sm font-semibold px-4 py-2 rounded-lg"
-            >
-              Se connecter
-            </Link>
-            <Link
-              to="/register"
-              className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
-              style={{
-                background: "#FDE68A",
-                color: "#1F3D5C",
-                boxShadow: "0 2px 8px rgba(253,230,138,0.45)",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#FCD34D")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "#FDE68A")}
-            >
-              S'inscrire
-              <ArrowRight size={14} />
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <PublicNavbar />
 
       {/* ───────── HERO ───────── */}
       <section id="top" className="relative pt-16 overflow-hidden bg-[#0D1119]">

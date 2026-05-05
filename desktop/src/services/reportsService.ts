@@ -63,3 +63,7 @@ export async function updateReport(
 ): Promise<Report> {
   return api.put<Report>(`/api/reports/${id}`, payload);
 }
+
+export async function deleteReport(id: string): Promise<void> {
+  await api.delete(`/api/reports/${id}`);
+}

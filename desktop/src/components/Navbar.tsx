@@ -1,8 +1,11 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Bell, Sun, Moon, Search } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { getComplaints, type Complaint } from "@/services/complaintsService";
+import { getUsers, type BackendUserRecord } from "@/services/usersService";
 
 interface NavbarProps {
   title?: string;
@@ -13,23 +16,24 @@ interface NavbarProps {
 interface Notification {
   id: string;
   text: string;
-  time: string;
+  createdAt: string;
   link: string;
 }
 
-const médécinNotifications: Notification[] = [
-  { id: "1", text: "Votre réclamation a été traitée", time: "Il y a 2h", link: "/reclamations" },
-];
-
-const adminNotifications: Notification[] = [
-  { id: "1", text: "Nouveau médecin en attente de validation", time: "Il y a 30min", link: "/admin/dashboard?tab=medecins&filter=pending" },
-  { id: "2", text: "Nouveau médecin en attente de validation", time: "Il y a 1h", link: "/admin/dashboard?tab=medecins&filter=pending" },
-];
-
-const adminITNotifications: Notification[] = [
-  { id: "1", text: "Nouvelle réclamation soumise", time: "Il y a 15min", link: "/adminit/reclamations" },
-  { id: "2", text: "Nouvel admin en attente de validation", time: "Il y a 1h", link: "/adminit/admins" },
-];
+function formatRelative(iso: string): string {
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Math.max(0, Date.now() - t);
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return "À l'instant";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `Il y a ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `Il y a ${h} h`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `Il y a ${d} j`;
+  return new Date(iso).toLocaleDateString("fr-FR");
+}
 
 export function Navbar({ title, showSearch, onSearch }: NavbarProps) {
   const { user } = useAuth();
@@ -38,9 +42,70 @@ export function Navbar({ title, showSearch, onSearch }: NavbarProps) {
   const [showNotifs, setShowNotifs] = useState(false);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
-  const allNotifications = user?.rôle === "médecin" ? médécinNotifications
-    : user?.rôle === "admin" ? adminNotifications
-    : adminITNotifications;
+  const role      = user?.rôle;
+  const isAdmin   = role === "admin";
+  const isMédecin = role === "médecin";
+  const isAdminIT = role === "adminIT";
+
+  // Live data — only the queries relevant to the current role.
+  const { data: complaints = [] } = useQuery<Complaint[]>({
+    queryKey: ["complaints"],
+    queryFn: getComplaints,
+    enabled: !!user && (isMédecin || isAdminIT),
+  });
+  const { data: users = [] } = useQuery<BackendUserRecord[]>({
+    queryKey: ["users"],
+    queryFn: getUsers,
+    enabled: !!user && (isAdmin || isAdminIT),
+  });
+
+  const allNotifications = useMemo<Notification[]>(() => {
+    if (isMédecin) {
+      // Doctor's resolved complaints — they should know their reclamation got handled.
+      return complaints
+        .filter(c => c.status === "resolved")
+        .map(c => ({
+          id: `complaint-${c._id}`,
+          text: `Votre réclamation « ${c.title} » a été traitée`,
+          createdAt: c.createdAt,
+          link: "/reclamations",
+        }));
+    }
+    if (isAdmin) {
+      // Doctors awaiting validation.
+      return users
+        .filter(u => u.role === "doctor" && u.status === "pending")
+        .map(u => ({
+          id: `user-${u._id}`,
+          text: `Médecin Dr. ${u.prenom} ${u.nom} en attente de validation`,
+          createdAt: u.createdAt,
+          link: "/admin/medecins?filter=pending",
+        }));
+    }
+    if (isAdminIT) {
+      const pendingComplaints = complaints
+        .filter(c => c.status === "pending")
+        .map(c => ({
+          id: `complaint-${c._id}`,
+          text: `Nouvelle réclamation : ${c.title}`,
+          createdAt: c.createdAt,
+          link: "/adminit/reclamations",
+        }));
+      const pendingAdmins = users
+        .filter(u => (u.role === "admin" || u.role === "adminIT") && u.status === "pending")
+        .map(u => ({
+          id: `user-${u._id}`,
+          text: `Admin ${u.prenom} ${u.nom} en attente de validation`,
+          createdAt: u.createdAt,
+          link: "/adminit/admins",
+        }));
+      return [...pendingComplaints, ...pendingAdmins];
+    }
+    return [];
+  }, [isMédecin, isAdmin, isAdminIT, complaints, users])
+    .slice()
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 12);
 
   const unread = allNotifications.filter(n => !readIds.has(n.id)).length;
 
@@ -56,8 +121,6 @@ export function Navbar({ title, showSearch, onSearch }: NavbarProps) {
     navigate(notif.link);
   };
 
-  const isAdmin   = user?.rôle === "admin";
-  const isMédecin = user?.rôle === "médecin";
   const isDark = theme === "dark";
 
   // Theme-aware backgrounds
@@ -119,7 +182,11 @@ export function Navbar({ title, showSearch, onSearch }: NavbarProps) {
                 {unread === 0 && <p className="text-xs text-primary">Tout lu ✓</p>}
               </div>
               <div className="max-h-72 overflow-y-auto">
-                {allNotifications.map(n => (
+                {allNotifications.length === 0 ? (
+                  <p className="px-4 py-6 text-center text-xs text-muted-foreground">
+                    Aucune notification.
+                  </p>
+                ) : allNotifications.map(n => (
                   <button key={n.id} onClick={() => handleNotifClick(n)}
                     className="w-full text-left px-4 py-3 border-b last:border-0 transition-colors"
                     style={{
@@ -130,7 +197,7 @@ export function Navbar({ title, showSearch, onSearch }: NavbarProps) {
                     onMouseLeave={e => (e.currentTarget.style.background = !readIds.has(n.id) ? 'rgba(74,123,190,0.06)' : 'transparent')}
                   >
                     <p className="text-sm text-foreground">{n.text}</p>
-                    <p className="text-xs mt-0.5 text-muted-foreground">{n.time}</p>
+                    <p className="text-xs mt-0.5 text-muted-foreground">{formatRelative(n.createdAt)}</p>
                   </button>
                 ))}
               </div>

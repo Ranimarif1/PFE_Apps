@@ -270,7 +270,7 @@ export default function AdminITDashboard() {
                           <p className="text-xs font-medium text-foreground">{c.title ?? "—"}</p>
                           <p className="text-[10px] text-muted-foreground truncate">{c.description ?? "Sans description"}</p>
                         </div>
-                        <span className={cn(getStatusBadgeClass(c.status), "shrink-0")}>
+                        <span className={cn(getStatusBadgeClass(c.status, "complaint"), "shrink-0")}>
                           {getStatusLabel(c.status, "complaint")}
                         </span>
                       </div>

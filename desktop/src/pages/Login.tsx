@@ -1,46 +1,13 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { useTheme } from "@/contexts/ThemeContext";
-import { Sun, Moon, Eye, EyeOff } from "lucide-react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { PublicNavbar } from "@/components/PublicNavbar";
+import { LoginForm } from "@/components/auth/LoginForm";
 import hospitalImg from "@/assets/téléchargement.jpeg";
 
 export default function Login() {
-  const { login } = useAuth();
-  const { theme, toggleTheme } = useTheme();
-  const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    const result = await login(email, password);
-    setLoading(false);
-    if (!result.success) {
-      setError(result.message || "Erreur de connexion.");
-      return;
-    }
-    const user = JSON.parse(localStorage.getItem("auth_user") || "{}");
-    if (user.rôle === "admin") navigate("/admin/dashboard");
-    else if (user.rôle === "adminIT") navigate("/adminit/dashboard");
-    else navigate("/dashboard");
-  };
-
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8 sm:py-12">
-      <button
-        onClick={toggleTheme}
-        aria-label="Basculer le thème"
-        className="fixed top-4 right-4 z-10 w-9 h-9 rounded-lg border border-border bg-card flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-      >
-        {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-      </button>
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 pt-24 pb-8 sm:pt-28 sm:pb-12">
+      <PublicNavbar />
 
       <motion.div
         initial={{ opacity: 0, y: 16 }}
@@ -75,75 +42,7 @@ export default function Login() {
             <span className="font-bold text-lg text-foreground">ReportEase</span>
           </div>
 
-          <h2 className="text-2xl font-bold text-foreground mb-1">Connexion</h2>
-          <p className="text-muted-foreground text-sm mb-7">
-            Accédez à votre espace radiologie sécurisé
-          </p>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-foreground mb-1.5 block">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-3 text-sm"
-                placeholder="votre@email.com"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-foreground mb-1.5 block">Mot de passe</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 text-sm pr-11"
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </div>
-
-            <div className="flex justify-end -mt-1">
-              <Link to="/forgot-password" className="text-xs text-muted-foreground hover:text-primary transition-colors">
-                Mot de passe oublié ?
-              </Link>
-            </div>
-
-            {error && (
-              <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 text-destructive text-sm">
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full gradient-hero text-white font-semibold py-3 rounded-xl"
-            >
-              {loading ? "Connexion en cours..." : "Se connecter"}
-            </button>
-          </form>
-
-          <p className="text-center text-sm text-muted-foreground mt-6">
-            Pas encore de compte ?{" "}
-            <Link to="/register" className="text-primary font-medium hover:underline">
-              Créer un compte
-            </Link>
-          </p>
+          <LoginForm />
         </div>
       </motion.div>
     </div>

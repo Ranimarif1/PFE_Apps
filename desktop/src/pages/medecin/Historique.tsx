@@ -1,16 +1,17 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
-import { getReports, type Report } from "@/services/reportsService";
-import { useQuery } from "@tanstack/react-query";
+import { getReports, deleteReport, type Report } from "@/services/reportsService";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { Eye, Search, FileAudio, ArrowUpDown, X } from "lucide-react";
+import { Eye, Search, FileAudio, ArrowUpDown, X, Trash2, AlertTriangle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getStatusBadgeClass, getStatusLabel, getActiveFilterTabClass, INACTIVE_TAB_CLASS } from "@/styles/statusSystem";
 import { REPORT_CATEGORIES, getCategoryLabel } from "@/constants/reportCategories";
 
 export default function Historique() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const isAdmin = user?.rôle === "admin";
 
@@ -22,10 +23,24 @@ export default function Historique() {
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [searchId, setSearchId] = useState("");
   const [viewMode, setViewMode] = useState<"all" | "mine">(isAdmin ? "all" : "mine");
+  const [confirmDelete, setConfirmDelete] = useState<Report | null>(null);
+  const [deleteError, setDeleteError] = useState<string>("");
 
   const { data: reports = [] } = useQuery<Report[]>({
     queryKey: ["reports"],
     queryFn: getReports,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteReport(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+      setConfirmDelete(null);
+      setDeleteError("");
+    },
+    onError: (err: unknown) => {
+      setDeleteError(err instanceof Error ? err.message : "Erreur lors de la suppression.");
+    },
   });
 
   const visibleReports = isAdmin && viewMode === "mine"
@@ -92,6 +107,36 @@ export default function Historique() {
 
   return (
     <AppLayout title="Historique des rapports">
+      {/* ══ Delete confirmation banner ════════════════════════════════════════ */}
+      {confirmDelete && (
+        <div className="mb-4 bg-destructive/5 border border-destructive/40 rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
+          <div className="w-9 h-9 bg-destructive/10 rounded-lg flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-4 h-4 text-destructive" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground">
+              Supprimer le rapport <span className="font-mono">{confirmDelete.ID_Exam}</span> ?
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Cette action est <span className="font-semibold text-destructive">définitive</span>. L'audio associé restera dans la file d'attente.
+              {deleteError && <span className="block mt-1 text-destructive">{deleteError}</span>}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 ml-auto">
+            <button onClick={() => { setConfirmDelete(null); setDeleteError(""); }}
+              disabled={deleteMutation.isPending}
+              className="px-3 py-1.5 rounded-lg border border-border text-foreground hover:bg-muted disabled:opacity-60 transition-all text-xs font-medium">
+              Annuler
+            </button>
+            <button onClick={() => deleteMutation.mutate(confirmDelete._id)}
+              disabled={deleteMutation.isPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive text-white font-semibold hover:bg-destructive/90 disabled:opacity-60 transition-all text-xs">
+              {deleteMutation.isPending ? <><Loader2 size={12} className="animate-spin" /> Suppression…</> : <><Trash2 size={12} /> Supprimer</>}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
         <div className="px-6 py-4 border-b border-border flex flex-wrap gap-3 items-center">
 
@@ -268,10 +313,18 @@ export default function Historique() {
                       : <span className="text-xs text-muted-foreground">—</span>}
                   </td>
                   <td className="px-6 py-4">
-                    <button onClick={() => navigate(`/rapport/${r._id}`)}
-                      className="flex items-center gap-1.5 text-primary hover:text-primary/80 text-xs font-medium">
-                      <Eye size={13} /> Voir
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => navigate(`/rapport/${r._id}`)}
+                        className="flex items-center gap-1.5 text-primary hover:text-primary/80 text-xs font-medium">
+                        <Eye size={13} /> Voir
+                      </button>
+                      <button onClick={() => { setConfirmDelete(r); setDeleteError(""); }}
+                        className="text-muted-foreground hover:text-destructive transition-colors p-1 -m-1 rounded"
+                        title="Supprimer le rapport"
+                        aria-label="Supprimer le rapport">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -286,6 +339,7 @@ export default function Historique() {
           </table>
         </div>
       </div>
+
     </AppLayout>
   );
 }
