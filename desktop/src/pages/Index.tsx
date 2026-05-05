@@ -165,16 +165,10 @@ export default function Index() {
                 style={{ ringColor: scrolled ? "hsl(var(--border))" : "rgba(255,255,255,0.3)" }}>
                 <img src="/ReportEase.png" alt="ReportEase" className="w-full h-full object-cover" />
               </div>
-              <div className="leading-tight">
-                <span className="font-bold text-base tracking-tight transition-colors duration-500"
-                  style={{ color: scrolled ? "hsl(var(--foreground))" : "#ffffff" }}>
-                  ReportEase
-                </span>
-                <p className="text-[10.5px] -mt-0.5 transition-colors duration-500"
-                  style={{ color: scrolled ? "hsl(var(--muted-foreground))" : "rgba(255,255,255,0.6)" }}>
-                  Speech-to-Text Platform
-                </p>
-              </div>
+              <span className="font-bold text-base tracking-tight transition-colors duration-500"
+                style={{ color: scrolled ? "hsl(var(--foreground))" : "#ffffff" }}>
+                ReportEase
+              </span>
             </a>
           </div>
 
@@ -233,12 +227,12 @@ export default function Index() {
               onClick={() => setAuthMode("register")}
               className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg transition-all duration-200"
               style={{
-                background: isDark ? "hsl(var(--accent))" : "#FDE68A",
-                color: isDark ? "hsl(var(--accent-foreground))" : "#1F3D5C",
-                boxShadow: "0 2px 8px rgba(253,230,138,0.35)",
+                background: "#E5E7EB",
+                color: "#1F2937",
+                border: "1px solid #D1D5DB",
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = isDark ? "hsl(32deg 95% 65%)" : "#FCD34D"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = isDark ? "hsl(var(--accent))" : "#FDE68A"; }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#D1D5DB"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "#E5E7EB"; }}
             >
               S'inscrire
               <ArrowRight size={14} />
