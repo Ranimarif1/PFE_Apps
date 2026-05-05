@@ -268,10 +268,6 @@ export function Sidebar() {
                  : isMédecin ? médécinSections
                  :             adminITSections;
 
-  const subtitle = isAdmin   ? "ADMINISTRATION"
-                 : isMédecin ? "SERVICE RADIOLOGIE"
-                 :             "ADMIN SYSTÈME";
-
   return (
     <motion.aside
       animate={{ width: collapsed ? 64 : 220 }}
@@ -292,9 +288,6 @@ export function Sidebar() {
               className="overflow-hidden"
             >
               <p className="font-bold text-[15px] whitespace-nowrap leading-tight tracking-tight text-[#0F172A]">ReportEase</p>
-              <p className="whitespace-nowrap text-[9px] font-semibold mt-0.5" style={{ color: '#4A7BBE', letterSpacing: '0.12em' }}>
-                {subtitle}
-              </p>
             </motion.div>
           )}
         </AnimatePresence>

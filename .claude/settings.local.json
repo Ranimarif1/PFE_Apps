@@ -3,7 +3,8 @@
     "allow": [
       "Bash(curl -s http://localhost:8080/src/index.css)",
       "Bash(npm run *)",
-      "Bash(python -c \"import ast; [ast.parse\\(open\\(f, encoding='utf-8'\\).read\\(\\), f\\) for f in ['reports/views.py', 'audios/views.py']]; print\\('OK'\\)\")"
+      "Bash(python -c \"import ast; [ast.parse\\(open\\(f, encoding='utf-8'\\).read\\(\\), f\\) for f in ['reports/views.py', 'audios/views.py']]; print\\('OK'\\)\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost:8081/src/pages/medecin/NouveauRapport.tsx\")"
     ]
   }
 }

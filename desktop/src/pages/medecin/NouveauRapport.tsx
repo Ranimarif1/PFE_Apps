@@ -27,21 +27,6 @@ function isValidExamId(id: string): boolean {
   return getAllowedYears().has(parseInt(id.slice(0, 4), 10));
 }
 
-function examIdError(id: string): string | null {
-  if (id.length === 0) return null;
-  if (!/^\d+$/.test(id)) return "L'identifiant doit contenir uniquement des chiffres.";
-  if (id.length < 5) return null;
-  const yearPart = parseInt(id.slice(0, 4), 10);
-  const allowed = getAllowedYears();
-  if (!allowed.has(yearPart)) {
-    const currentYear = new Date().getFullYear();
-    if (new Date().getMonth() + 1 === 1)
-      return `L'identifiant doit commencer par ${currentYear} ou ${currentYear - 1} (exception janvier).`;
-    return `L'identifiant doit commencer par ${currentYear}.`;
-  }
-  return null;
-}
-
 const fmt = (s: number) =>
   `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 
@@ -54,10 +39,18 @@ export default function NouveauRapport() {
     _restore?: { etape: Etape; examId: string; category?: ReportCategory; méthode: Méthode };
   } | null;
 
+  const allowedYearsArr = Array.from(getAllowedYears()).sort((a, b) => b - a);
+  const restoredExamId = restore?._restore?.examId ?? "";
+  const restoredYearPart = parseInt(restoredExamId.slice(0, 4), 10);
+  const restoredYearValid = allowedYearsArr.includes(restoredYearPart);
+
   const [etape,    setEtape]    = useState<Etape>(restore?._restore?.etape ?? 1);
-  const [examId,   setExamId]   = useState(restore?._restore?.examId ?? "");
+  const [year,     setYear]     = useState<number>(restoredYearValid ? restoredYearPart : allowedYearsArr[0]);
+  const [suffix,   setSuffix]   = useState<string>(restoredYearValid ? restoredExamId.slice(4) : "");
   const [category, setCategory] = useState<ReportCategory | "">(restore?._restore?.category ?? "");
   const [méthode,  setMéthode]  = useState<Méthode>(restore?._restore?.méthode ?? null);
+
+  const examId = `${year}${suffix}`;
 
   // Step 1: async exam-id availability check
   const [idChecking,  setIdChecking]  = useState(false);
@@ -187,26 +180,47 @@ export default function NouveauRapport() {
               <div className="space-y-5">
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">ID Exam</label>
-                  <input
-                    value={examId}
-                    onChange={e => setExamId(e.target.value.replace(/\D/g, ""))}
-                    className={cn(
-                      "w-full px-4 py-3 rounded-xl border bg-background text-foreground font-mono focus:outline-none focus:ring-2 transition-all",
-                      examIdError(examId) ? "border-destructive focus:ring-destructive/30" : "border-border focus:ring-primary/30"
+                  <div className="flex gap-2">
+                    {allowedYearsArr.length > 1 ? (
+                      <select
+                        value={year}
+                        onChange={e => setYear(parseInt(e.target.value, 10))}
+                        className="px-3 py-3 font-mono font-semibold text-sm w-28 text-foreground"
+                        aria-label="Année"
+                      >
+                        {allowedYearsArr.map(y => (
+                          <option key={y} value={y}>{y}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="px-4 py-3 bg-muted/60 text-foreground font-mono font-semibold text-sm flex items-center justify-center rounded-xl border border-border w-28 select-none">
+                        {year}
+                      </div>
                     )}
-                    placeholder={`${new Date().getFullYear()}1`}
-                  />
-                  {examId.length > 0 && examIdError(examId) && (
-                    <p className="text-destructive text-xs mt-1">{examIdError(examId)}</p>
+                    <input
+                      value={suffix}
+                      onChange={e => setSuffix(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                      inputMode="numeric"
+                      className={cn(
+                        "flex-1 px-4 py-3 text-foreground font-mono focus:outline-none focus:ring-2 transition-all",
+                        suffix.length > 0 && idAvailable === false ? "border-destructive focus:ring-destructive/30" : "focus:ring-primary/30"
+                      )}
+                      placeholder="0001"
+                    />
+                  </div>
+                  {allowedYearsArr.length > 1 && (
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      Sélectionnez l'année — exception janvier permettant l'année précédente.
+                    </p>
                   )}
                   {isValidExamId(examId) && (
                     <p className={cn("text-xs mt-1 flex items-center gap-1", idChecking ? "text-muted-foreground" : idAvailable === true ? "text-success" : idAvailable === false ? "text-destructive" : "text-muted-foreground")}>
                       {idChecking ? (
                         <><Loader2 size={11} className="animate-spin" /> Vérification…</>
                       ) : idAvailable === true ? (
-                        <><CheckCircle size={11} /> Identifiant disponible</>
+                        <><CheckCircle size={11} /> Identifiant {examId} disponible</>
                       ) : idAvailable === false ? (
-                        <>✗ Cet identifiant est déjà utilisé</>
+                        <>✗ L'identifiant {examId} est déjà utilisé</>
                       ) : null}
                     </p>
                   )}

@@ -11,8 +11,6 @@ import { LoadingScreen } from "@/components/LoadingScreen";
 import { useEffect, useState } from "react";
 
 import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
@@ -64,8 +62,8 @@ function AppWithLoading() {
   return (
     <Routes>
       <Route path="/" element={<RootRedirect />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/login" element={<Navigate to="/?auth=login" replace />} />
+      <Route path="/register" element={<Navigate to="/?auth=register" replace />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/mobile/record/:token" element={<MobileRecord />} />

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { Sun, Moon, ArrowRight } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -19,7 +19,22 @@ export function PublicNavbar() {
   const { theme, toggleTheme } = useTheme();
   const { pathname } = useLocation();
   const onLanding = pathname === "/";
+  const [searchParams, setSearchParams] = useSearchParams();
   const [authMode, setAuthMode] = useState<AuthMode>(null);
+
+  // Auto-open the modal when arriving via /?auth=login or /?auth=register
+  // (e.g. from RouteGuard redirects, the legacy /login & /register routes,
+  // or any link in the app). The query param is stripped so refreshing the
+  // page doesn't keep popping the modal.
+  useEffect(() => {
+    const auth = searchParams.get("auth");
+    if (auth === "login" || auth === "register") {
+      setAuthMode(auth);
+      const next = new URLSearchParams(searchParams);
+      next.delete("auth");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   return (
     <>
