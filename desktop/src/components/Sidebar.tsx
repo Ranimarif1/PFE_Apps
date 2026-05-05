@@ -275,22 +275,15 @@ export function Sidebar() {
       className="h-screen flex flex-col bg-sidebar border-r border-sidebar-border relative z-20 shrink-0"
     >
       {/* ── Logo ── */}
-      <div className={cn("flex items-center gap-3 px-4 py-4 border-b border-sidebar-border", collapsed && "justify-center px-2")}>
-        <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 ring-1 ring-[#4A7BBE]/20">
-          <img src="/ReportEase.png" alt="ReportEase" className="w-full h-full object-cover" />
+      <div className={cn("flex items-center justify-center gap-2.5 px-4 h-16 border-b border-sidebar-border", collapsed && "px-2")}>
+        <div className="w-9 h-9 shrink-0">
+          <img src="/logo-icon.png" alt="ReportEase" className="w-full h-full object-contain" />
         </div>
-        <AnimatePresence>
-          {!collapsed && (
-            <motion.div
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: "auto" }}
-              exit={{ opacity: 0, width: 0 }}
-              className="overflow-hidden"
-            >
-              <p className="font-bold text-[15px] whitespace-nowrap leading-tight tracking-tight text-[#0F172A]">ReportEase</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {!collapsed && (
+          <span className="font-extrabold text-lg tracking-tight text-[#0F172A] whitespace-nowrap">
+            ReportEase
+          </span>
+        )}
       </div>
 
       {/* ── Nav sections ── */}

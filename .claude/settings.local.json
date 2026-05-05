@@ -4,7 +4,10 @@
       "Bash(curl -s http://localhost:8080/src/index.css)",
       "Bash(npm run *)",
       "Bash(python -c \"import ast; [ast.parse\\(open\\(f, encoding='utf-8'\\).read\\(\\), f\\) for f in ['reports/views.py', 'audios/views.py']]; print\\('OK'\\)\")",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost:8081/src/pages/medecin/NouveauRapport.tsx\")"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost:8081/src/pages/medecin/NouveauRapport.tsx\")",
+      "Bash(python -c \"from PIL import Image; im = Image.open\\('desktop/public/logo.png'\\); print\\(im.size, im.mode\\)\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} \\(%{size_download} bytes\\)\\\\n\" \"http://localhost:8081/logo.png\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost:8081/src/pages/Index.tsx\")"
     ]
   }
 }

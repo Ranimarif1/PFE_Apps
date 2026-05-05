@@ -49,14 +49,11 @@ export function PublicNavbar() {
       >
         <div className="w-full px-4 lg:px-6 h-16 flex items-center">
           <div className="flex-1 flex items-center justify-start">
-            <Link to="/" className="flex items-center gap-2.5">
-              <div
-                className="w-10 h-10 rounded-xl overflow-hidden shrink-0"
-                style={{ boxShadow: "0 0 0 1px hsl(var(--border))" }}
-              >
-                <img src="/ReportEase.png" alt="ReportEase" className="w-full h-full object-cover" />
+            <Link to="/" className="flex items-center gap-3">
+              <div className="w-11 h-11 shrink-0">
+                <img src="/logo-icon.png" alt="ReportEase" className="w-full h-full object-contain" />
               </div>
-              <span className="font-bold text-base tracking-tight text-foreground">
+              <span className="font-extrabold text-2xl tracking-tight text-foreground">
                 ReportEase
               </span>
             </Link>

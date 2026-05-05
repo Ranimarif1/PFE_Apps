@@ -54,11 +54,11 @@ export default function ResetPassword() {
     <div className="min-h-screen bg-background flex items-center justify-center p-8">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl overflow-hidden">
-              <img src="/ReportEase.png" alt="ReportEase" className="w-full h-full object-cover" />
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 shrink-0">
+              <img src="/logo-icon.png" alt="ReportEase" className="w-full h-full object-contain" />
             </div>
-            <span className="font-bold text-lg">ReportEase</span>
+            <span className="font-extrabold text-2xl tracking-tight">ReportEase</span>
           </div>
           <button onClick={toggleTheme} className="w-9 h-9 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
             {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}

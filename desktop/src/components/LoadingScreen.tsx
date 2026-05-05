@@ -19,7 +19,7 @@ export function LoadingScreen() {
         <div className="relative">
           <div className="w-24 h-24 rounded-3xl overflow-hidden"
             style={{ border: '2px solid rgba(255,255,255,0.40)', boxShadow: '0 8px 32px rgba(74,123,190,0.18)' }}>
-            <img src="/ReportEase.png" alt="ReportEase" className="w-full h-full object-cover" />
+            <img src="/logo-icon.png" alt="ReportEase" className="w-full h-full object-cover" />
           </div>
           <div className="absolute inset-0 rounded-3xl animate-pulse-ring"
             style={{ border: '2px solid rgba(74,123,190,0.45)' }} />

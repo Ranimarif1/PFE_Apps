@@ -160,12 +160,11 @@ export default function Index() {
 
           {/* Logo */}
           <div className="flex-1 flex items-center justify-start">
-            <a href="#top" className="flex items-center gap-2.5 group">
-              <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 ring-1 transition-all duration-200 group-hover:ring-primary/40"
-                style={{ ringColor: scrolled ? "hsl(var(--border))" : "rgba(255,255,255,0.3)" }}>
-                <img src="/ReportEase.png" alt="ReportEase" className="w-full h-full object-cover" />
+            <a href="#top" className="flex items-center gap-3 group">
+              <div className="w-11 h-11 shrink-0">
+                <img src="/logo-icon.png" alt="ReportEase" className="w-full h-full object-contain" />
               </div>
-              <span className="font-bold text-base tracking-tight transition-colors duration-500"
+              <span className="font-extrabold text-2xl tracking-tight transition-colors duration-500"
                 style={{ color: scrolled ? "hsl(var(--foreground))" : "#ffffff" }}>
                 ReportEase
               </span>
@@ -397,24 +396,35 @@ export default function Index() {
           >
             <p className="text-eyebrow mb-3">Notre histoire</p>
             <h2 className="text-display-lg lg:text-display-xl mb-5">
-              Née d'un besoin clinique, construite avec les soignants.
+              ReportEase est née sur le terrain, au plus près des soignants.
             </h2>
             <div className="space-y-4 text-muted-foreground leading-relaxed">
               <p>
-                ReportEase est née d'un constat simple : les radiologues passent une part
-                considérable de leur journée à dicter, corriger et structurer des comptes rendus.
-                Le temps gagné sur la transcription, c'est du temps rendu au patient.
+                En échangeant avec des radiologues, nous avons vite compris une réalité simple :
+                une grande partie de leur journée est consacrée à dicter, corriger et structurer
+                des comptes rendus. Derrière chaque minute passée sur la transcription, c'est du
+                temps en moins pour les patients.
+              </p>
+              <p>Alors nous avons voulu faire mieux.</p>
+              <p>
+                Avec l'équipe du service de radiologie de l'Hôpital Fattouma-Bourguiba de
+                Monastir, nous avons construit ReportEase main dans la main. Le projet est dédié
+                à l'hôpital et s'inscrit dans le cadre du Laboratoire Technologie et Imagerie
+                Médicale de Monastir.
               </p>
               <p>
-                Le projet a été imaginé en collaboration avec le service de radiologie de
-                l'Hôpital Fattouma-Bourguiba de Monastir. L'objectif : combiner la rigueur d'un
-                outil hospitalier — sécurité, traçabilité, gestion des rôles — avec la fluidité
-                d'une expérience moderne basée sur l'intelligence artificielle.
+                Notre objectif était de créer un outil à la fois fiable, sécurisé et conforme
+                aux exigences hospitalières, tout en restant simple, fluide et agréable à
+                utiliser.
               </p>
               <p>
-                Nous croyons qu'un bon outil ne s'impose pas, il s'efface. ReportEase tient ce
-                principe : une dictée naturelle, une transcription corrigée, un compte rendu prêt
-                à signer — le tout sans rupture dans le flux de travail.
+                Nous croyons profondément qu'un bon outil doit savoir se faire oublier. Il ne
+                doit pas ajouter de complexité, mais en enlever.
+              </p>
+              <p>
+                C'est dans cet esprit que nous avons conçu ReportEase : une dictée naturelle,
+                une transcription qui se corrige presque d'elle-même, et un compte rendu prêt à
+                être signé, sans jamais interrompre le flux de travail.
               </p>
             </div>
 
@@ -625,46 +635,10 @@ export default function Index() {
           style={{ background: "linear-gradient(135deg, rgba(74,123,190,0.04) 0%, transparent 60%)" }}
         />
 
-        <div className="relative max-w-7xl mx-auto px-6 lg:px-10 py-10">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-
-            {/* Brand */}
-            <a href="#top" className="flex items-center gap-2.5 group">
-              <div className="w-9 h-9 rounded-xl overflow-hidden ring-1 ring-border group-hover:ring-primary/40 transition-all duration-200">
-                <img src="/ReportEase.png" alt="ReportEase" className="w-full h-full object-cover" />
-              </div>
-              <div className="leading-tight">
-                <p className="text-sm font-bold group-hover:text-primary transition-colors duration-200">ReportEase</p>
-                <p className="text-[10.5px] text-muted-foreground">CHU Fattouma-Bourguiba · Monastir</p>
-              </div>
-            </a>
-
-            {/* Nav */}
-            <nav className="hidden sm:flex items-center gap-1">
-              {navLinks.map(l => (
-                <a
-                  key={l.href}
-                  href={l.href}
-                  className="text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 px-3 py-1.5 rounded-lg transition-all duration-200"
-                >
-                  {l.label}
-                </a>
-              ))}
-            </nav>
-
-            {/* Copyright */}
-            <p className="text-xs text-muted-foreground">
+        <div className="relative max-w-7xl mx-auto px-6 lg:px-10 py-8">
+          <div className="flex items-center justify-center">
+            <p className="text-xs text-muted-foreground/70 text-center">
               © {new Date().getFullYear()} ReportEase. Tous droits réservés.
-            </p>
-          </div>
-
-          {/* Bottom rule */}
-          <div
-            className="mt-8 pt-6 flex items-center justify-center"
-            style={{ borderTop: "1px solid hsl(var(--border))" }}
-          >
-            <p className="text-[10.5px] text-muted-foreground/60 text-center">
-              Plateforme de transcription médicale dédiée au service de radiologie — usage hospitalier interne uniquement.
             </p>
           </div>
         </div>

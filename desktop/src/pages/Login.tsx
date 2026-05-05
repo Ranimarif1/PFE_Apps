@@ -78,11 +78,13 @@ export default function Login() {
           <div className="absolute inset-0 bg-gradient-to-br from-[#0D1321]/25 via-transparent to-[#0D1321]/55" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0D1321]/85 via-[#0D1321]/10 to-transparent" />
 
-          <Link to="/" className="absolute top-6 left-6 flex items-center gap-2.5 z-10 group">
-            <div className="w-10 h-10 rounded-xl overflow-hidden ring-1 ring-white/30 group-hover:ring-white/55 transition-all duration-200">
-              <img src="/ReportEase.png" alt="ReportEase" className="w-full h-full object-cover" />
+          <Link to="/" className="absolute top-6 left-6 flex items-center gap-3 z-10 group">
+            <div className="w-11 h-11 shrink-0">
+              <img src="/logo-icon.png" alt="ReportEase" className="w-full h-full object-contain" />
             </div>
-            <span className="text-white font-bold text-base tracking-tight drop-shadow">ReportEase</span>
+            <span className="text-white font-extrabold text-2xl tracking-tight drop-shadow">
+              ReportEase
+            </span>
           </Link>
 
           <div className="absolute bottom-0 left-0 right-0 p-8 z-10">
@@ -110,11 +112,13 @@ export default function Login() {
           animate="visible"
           className="px-6 sm:px-10 py-10 sm:py-12 flex flex-col justify-center"
         >
-          <motion.div variants={itemVariants} className="flex items-center gap-2.5 mb-8 lg:hidden">
-            <div className="w-10 h-10 rounded-xl overflow-hidden ring-1 ring-border">
-              <img src="/ReportEase.png" alt="ReportEase" className="w-full h-full object-cover" />
+          <motion.div variants={itemVariants} className="flex items-center gap-3 mb-8 lg:hidden">
+            <div className="w-11 h-11 shrink-0">
+              <img src="/logo-icon.png" alt="ReportEase" className="w-full h-full object-contain" />
             </div>
-            <span className="font-bold text-lg text-foreground">ReportEase</span>
+            <span className="font-extrabold text-2xl tracking-tight text-foreground">
+              ReportEase
+            </span>
           </motion.div>
 
           <motion.span variants={itemVariants} className="text-eyebrow mb-3 block">

@@ -184,11 +184,11 @@ export default function Register() {
           transition={{ duration: 0.3 }}
           className="flex items-center justify-between mb-8"
         >
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-9 h-9 rounded-xl overflow-hidden ring-1 ring-border group-hover:ring-primary/35 transition-all duration-200">
-              <img src="/ReportEase.png" alt="ReportEase" className="w-full h-full object-cover" />
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="w-11 h-11 shrink-0">
+              <img src="/logo-icon.png" alt="ReportEase" className="w-full h-full object-contain" />
             </div>
-            <span className="font-bold text-lg">ReportEase</span>
+            <span className="font-extrabold text-2xl tracking-tight">ReportEase</span>
           </Link>
           <button
             onClick={toggleTheme}
