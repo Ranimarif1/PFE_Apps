@@ -322,9 +322,46 @@ _WHISPER_MISHEAR_RE = re.compile(
 )
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# 6c. COMMANDE "EFFACE ÇA" — supprime la dernière phrase
+# ──────────────────────────────────────────────────────────────────────────────
+# Le médecin dit "efface ça" (ou "effacer ça", "effacez ça"…) pour annuler la
+# dernière phrase dictée.  Whisper accepte aussi "ca" sans cédille.
+# Exemple : "première phrase. deuxième phrase efface ça" → "première phrase."
+
+_EFFACE_CMD_RE = re.compile(
+    r'effac(?:er|ez|es|e)\s+[çc]a\b[,.]?\s*',
+    flags=re.IGNORECASE,
+)
+
+
+def apply_delete_commands(text: str) -> str:
+    """Supprime la phrase précédant chaque occurrence de 'efface ça'."""
+    while True:
+        m = _EFFACE_CMD_RE.search(text)
+        if not m:
+            break
+        before = text[:m.start()].rstrip()
+        # Strip trailing sentence-end punct that Whisper may have auto-inserted
+        # at the end of the sentence being deleted (e.g. "phrase deux. efface ça")
+        before_no_trail = before.rstrip('.!?')
+        last_boundary = max(
+            (before_no_trail.rfind(c) for c in '.!?\n'),
+            default=-1,
+        )
+        kept = text[:last_boundary + 1] if last_boundary >= 0 else ''
+        rest = text[m.end():].lstrip()
+        if kept and rest:
+            text = kept + ' ' + rest
+        else:
+            text = (kept + rest).strip()
+    return text
+
+
 def normalize_spoken_punct(text: str) -> str:
     """Convertit les commandes de ponctuation dictées en sauts de ligne réels
     et supprime les variantes mal entendues par Whisper."""
+    text = apply_delete_commands(text)
     text = _NEW_LINE_RE.sub('\n', text)
     text = _DOT_SPACE_NL_RE.sub('.\n', text)   # ". \n" → ".\n"
     text = _WHISPER_MISHEAR_RE.sub(' ', text)
