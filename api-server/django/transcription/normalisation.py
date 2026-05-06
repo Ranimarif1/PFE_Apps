@@ -323,7 +323,25 @@ _WHISPER_MISHEAR_RE = re.compile(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 6c. COMMANDE "EFFACE ÇA" — supprime la dernière phrase
+# 6c. ALIAS DE SECTIONS — variantes dictées → noms canoniques
+# ──────────────────────────────────────────────────────────────────────────────
+# "renseignement clinique" / "renseignements cliniques" sont synonymes de
+# "Indication" dans les rapports de radiologie tunisiens.
+
+_SECTION_ALIASES: list[tuple[re.Pattern, str]] = [
+    (re.compile(r'\brenseignements?\s+cliniques?\b\s*:?', re.IGNORECASE), 'Indication:'),
+]
+
+
+def normalize_section_aliases(text: str) -> str:
+    """Remplace les alias de sections par leurs noms canoniques."""
+    for pattern, canonical in _SECTION_ALIASES:
+        text = pattern.sub(canonical, text)
+    return text
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 6d. COMMANDE "EFFACE ÇA" — supprime la dernière phrase
 # ──────────────────────────────────────────────────────────────────────────────
 # Le médecin dit "efface ça" (ou "effacer ça", "effacez ça"…) pour annuler la
 # dernière phrase dictée.  Whisper accepte aussi "ca" sans cédille.
@@ -500,6 +518,7 @@ def normalize(text: str) -> str:
     so the frontend can parse them into separate fields.
     """
     text = normalize_spoken_punct(text)
+    text = normalize_section_aliases(text)
     text = fix_asr_accents(text)
     text = normalize_dates(text)
     text = normalize_units(text)
