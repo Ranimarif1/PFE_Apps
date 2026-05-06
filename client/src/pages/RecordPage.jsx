@@ -77,7 +77,7 @@ export default function RecordPage() {
     return (
       <div className="rp-center">
         <div className="rp-center__icon">
-        <img src="/ReportEase.png" alt="ReportEase" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <img src="/logo-icon.png" alt="ReportEase" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       </div>
         <p className="rp-error-big">Session manquante</p>
         <p className="rp-hint">Scannez le QR code depuis l'application bureau pour accéder à cette page.</p>
@@ -97,7 +97,7 @@ export default function RecordPage() {
       <div className="rp-app-header">
         <div className="rp-brand">
           <div className="rp-logo">
-            <img src="/ReportEase.png" alt="ReportEase" className="rp-logo__img" />
+            <img src="/logo-icon.png" alt="ReportEase" className="rp-logo__img" />
           </div>
           <div className="rp-brand__text">
             <h1 className="rp-app-name">ReportEase</h1>
