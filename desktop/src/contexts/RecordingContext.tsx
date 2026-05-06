@@ -10,15 +10,22 @@ import type { ReportCategory } from "@/constants/reportCategories";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:4000";
 
-function structureContent(text: string): string {
+function structureContent(text: string, category?: ReportCategory | null): string {
   const iMatch = /[({]?\s*indication\s*[)}]?\s*:?\s*/i.exec(text);
+  const tMatch = /[({]?\s*technique\s*[)}]?\s*:?\s*/i.exec(text);
   const rMatch = /[({]?\s*r[eé]sultat\s*[)}]?\s*:?\s*/i.exec(text);
   const cMatch = /[({]?\s*conclusion\s*[)}]?\s*:?\s*/i.exec(text);
   const iIdx = iMatch?.index ?? -1;
+  const tIdx = tMatch?.index ?? -1;
   const rIdx = rMatch?.index ?? -1;
   const cIdx = cMatch?.index ?? -1;
-  if (iIdx === -1 && rIdx === -1 && cIdx === -1) {
-    return `Indication: \n\nResultat: ${text}\n\nConclusion: `;
+
+  const includeTechnique = category === "irm" || category === "scanner" || tIdx !== -1;
+
+  if (iIdx === -1 && tIdx === -1 && rIdx === -1 && cIdx === -1) {
+    return includeTechnique
+      ? `Indication: \n\nTechnique: \n\nResultat: ${text}\n\nConclusion: `
+      : `Indication: \n\nResultat: ${text}\n\nConclusion: `;
   }
   const extract = (match: RegExpExecArray | null, end: number) => {
     if (!match) return "";
@@ -31,7 +38,23 @@ function structureContent(text: string): string {
     const result = cleaned.length > 0 ? cleaned : raw;
     return result.charAt(0).toUpperCase() + result.slice(1);
   };
-  return `Indication: ${extract(iMatch, rIdx !== -1 ? rIdx : cIdx)}\n\nResultat: ${extract(rMatch, cIdx)}\n\nConclusion: ${extract(cMatch, -1)}`;
+  const nextAfter = (after: number, ...candidates: number[]) => {
+    const valid = candidates.filter(idx => idx > after);
+    return valid.length === 0 ? -1 : Math.min(...valid);
+  };
+
+  const indication = extract(iMatch, nextAfter(iIdx, tIdx, rIdx, cIdx));
+  const technique  = extract(tMatch, nextAfter(tIdx, rIdx, cIdx));
+  const resultat   = extract(rMatch, nextAfter(rIdx, cIdx));
+  const conclusion = extract(cMatch, -1);
+
+  const parts = [
+    `Indication: ${indication}`,
+    includeTechnique ? `Technique: ${technique}` : null,
+    `Resultat: ${resultat}`,
+    `Conclusion: ${conclusion}`,
+  ].filter(Boolean);
+  return parts.join("\n\n");
 }
 
 export type RecMéthode = "navigateur" | "smartphone" | null;
@@ -163,7 +186,7 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
       // ones are always backed by a report server-side.
       let draftId: string | null = null;
       try {
-        const content = structureContent(text);
+        const content = structureContent(text, cat);
         const r = await createReport({ ID_Exam: eid, content, category: cat, status: "draft", audioId: aid ?? undefined });
         draftId = r._id;
         if (aid) setAudioQueue(q => q.filter(a => a._id !== aid));
@@ -212,7 +235,7 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
       // the audio orphaned for retry.
       let draftId: string | null = null;
       try {
-        const content = structureContent(text);
+        const content = structureContent(text, cat);
         const r = await createReport({ ID_Exam: eid, content, category: cat, status: "draft", audioId: id });
         draftId = r._id;
       } catch { /* draft save failed — RapportDetail fallback will retry */ }

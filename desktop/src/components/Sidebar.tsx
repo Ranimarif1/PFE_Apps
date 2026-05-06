@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
 import { RecordingIndicator } from "@/components/RecordingIndicator";
 import { useRecording } from "@/contexts/RecordingContext";
 import { deleteAudio } from "@/services/audioService";
@@ -17,6 +18,7 @@ import { deleteAudio } from "@/services/audioService";
 // ── Audio Queue ────────────────────────────────────────────────────────────────
 function AudioQueue({ collapsed }: { collapsed: boolean }) {
   const recording = useRecording();
+  const queryClient = useQueryClient();
   const { audioQueue, transcribeById, isTranscribing, refreshQueue } = recording;
   const [transcribingId, setTranscribingId] = useState<string | null>(null);
   const [dismissingId, setDismissingId] = useState<string | null>(null);
@@ -31,11 +33,14 @@ function AudioQueue({ collapsed }: { collapsed: boolean }) {
   };
 
   const handleDismiss = async (id: string) => {
-    if (!confirm("Supprimer cet audio de la file d'attente ?")) return;
+    if (!confirm("Supprimer définitivement cet audio et son rapport associé ?")) return;
     setDismissingId(id);
     try {
       await deleteAudio(id);
       refreshQueue();
+      // Backend cascades: any linked report was also deleted — refetch the
+      // reports list so Historique / dashboards reflect the removal.
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
     } catch { /* ignore */ }
     finally { setDismissingId(null); }
   };
