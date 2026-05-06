@@ -14,6 +14,9 @@ media/exports/
 
 # Python virtual environment
 venv/
+.venv/
+env/
+.env-py/
 __pycache__/
 *.pyc
 *.pyo

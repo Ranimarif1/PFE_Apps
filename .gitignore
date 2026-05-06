@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 venv/
+.venv/
+env/
+.env-py/
 __pycache__/
 *.pyc
 *.pyo
