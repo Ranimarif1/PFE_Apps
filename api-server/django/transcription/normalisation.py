@@ -307,9 +307,14 @@ def strip_section_headers(text: str) -> str:
 #   etc.  Those phrases are never legitimate medical text → strip them.
 
 _NEW_LINE_RE = re.compile(
-    r'(?:\bdeux\s+points?\s+)?[àa]\s+la\s+ligne',
+    # "à la ligne" — accepte aussi "a" sans accent et "1" (Whisper mishear fréquent de "à")
+    r'(?:\bdeux\s+points?\s+)?\s*[àa1]\s+la\s+ligne',
     flags=re.IGNORECASE,
 )
+
+# Nettoyage de l'espace résiduel quand Whisper a déjà auto-ponctué "point" → "."
+# avant que la partie "à la ligne" soit convertie en \n  (". \n" → ".\n")
+_DOT_SPACE_NL_RE = re.compile(r'\.\s+\n')
 
 _WHISPER_MISHEAR_RE = re.compile(
     r'\bde\s+pan[a-z]*lyses?\b[\s,]*',
@@ -321,6 +326,7 @@ def normalize_spoken_punct(text: str) -> str:
     """Convertit les commandes de ponctuation dictées en sauts de ligne réels
     et supprime les variantes mal entendues par Whisper."""
     text = _NEW_LINE_RE.sub('\n', text)
+    text = _DOT_SPACE_NL_RE.sub('.\n', text)   # ". \n" → ".\n"
     text = _WHISPER_MISHEAR_RE.sub(' ', text)
     return text.strip()
 

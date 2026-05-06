@@ -12,6 +12,8 @@ import { QRCodeSVG } from "qrcode.react";
 import { useRecording } from "@/contexts/RecordingContext";
 import { checkExamId } from "@/services/reportsService";
 import { REPORT_CATEGORIES, type ReportCategory } from "@/constants/reportCategories";
+import { SonicMicButton } from "@/components/SonicMicButton";
+import { triggerPiP, closePiP } from "@/hooks/useRecordingPiP";
 type Etape  = 1 | 2 | 3;
 type Méthode = "navigateur" | "import" | "smartphone" | null;
 
@@ -140,6 +142,7 @@ export default function NouveauRapport() {
         recording.cancelRecording();
         if (timerRef.current) clearInterval(timerRef.current);
       }
+      closePiP(); // close floating window if doctor backs out before recording
       setMéthode(null);
       setEtape(2);
     }
@@ -267,7 +270,13 @@ export default function NouveauRapport() {
                     { id: "import",     icon: Upload,     title: "Importer un fichier audio",        desc: "MP3, WAV, M4A acceptés" },
                     { id: "smartphone", icon: Smartphone, title: "Enregistrer via smartphone",       desc: "Scannez un QR code pour continuer sur mobile" },
                   ].map(({ id, icon: Icon, title, desc }) => (
-                    <button key={id} onClick={() => { setMéthode(id as Méthode); setEtape(3); }}
+                    <button key={id} onClick={async () => {
+                      // Open PiP here — inside the click handler — so the browser
+                      // accepts the user-gesture requirement for requestWindow().
+                      // This covers both the "Démarrer" button and SonicMic hardware button.
+                      if (id === "navigateur") await triggerPiP();
+                      setMéthode(id as Méthode); setEtape(3);
+                    }}
                       className={cn(
                         "flex items-center gap-4 p-5 rounded-xl border-2 text-left transition-all hover:border-primary",
                         méthode === id ? "border-primary bg-primary/5" : "border-border bg-background"
@@ -336,6 +345,11 @@ export default function NouveauRapport() {
                             <Square size={15} /> Arrêter
                           </button>
                         </div>
+                        <SonicMicButton
+                          onStop={recording.stopRecording}
+                          onPause={recording.togglePause}
+                          className="mx-auto"
+                        />
                         <button onClick={() => navigate("/dashboard")}
                           className="flex items-center gap-1.5 mx-auto text-xs text-muted-foreground hover:text-foreground transition-colors">
                           <LayoutDashboard size={12} /> Aller au tableau de bord
@@ -354,11 +368,22 @@ export default function NouveauRapport() {
                           <Mic className="w-10 h-10 text-muted-foreground" />
                         </div>
                         <p className="text-muted-foreground text-sm">Prêt à enregistrer</p>
-                        <button onClick={() => category && recording.startMicRecording(examId, category)}
+                        <button
+                          onClick={() => category && recording.startMicRecording(examId, category)}
                           disabled={!category}
                           className="flex items-center gap-2 mx-auto gradient-hero text-white font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition-all disabled:opacity-40">
                           <Play className="w-5 h-5" /> Démarrer l'enregistrement
                         </button>
+                        <SonicMicButton
+                          onRecord={() => {
+                            if (!recording.isRecording && !recording.isPaused && category) {
+                              recording.startMicRecording(examId, category);
+                            }
+                          }}
+                          onStop={recording.stopRecording}
+                          onPause={recording.togglePause}
+                          className="mx-auto"
+                        />
                       </div>
                     )}
                   </div>
