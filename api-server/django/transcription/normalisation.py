@@ -300,24 +300,29 @@ def strip_section_headers(text: str) -> str:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 6b. PONCTUATION DICTÉE — "deux points à la ligne" et variantes ASR
+# 6b. PONCTUATION DICTÉE — "à la ligne" / "deux points à la ligne"
 # ──────────────────────────────────────────────────────────────────────────────
-# Whisper mishears "deux points à la ligne" (spoken colon+newline) as
-# "de pananalyses" / "de pananalyse" / "de panalyse" etc.
-# These phrases are never legitimate medical text so it is safe to strip them.
+# - "à la ligne" (avec ou sans préfixe "deux points") → saut de ligne réel.
+# - Whisper mishears "deux points à la ligne" as "de pananalyses" / "de panalyse"
+#   etc.  Those phrases are never legitimate medical text → strip them.
 
-_SPOKEN_PUNCT_RE = re.compile(
-    r'\b(?:'
-    r'deux\s+points?\s+[àa]\s+la\s+ligne'   # correct transcription
-    r'|de\s+pan[a-z]*lyses?'                 # Whisper mishearing variants
-    r')\b[\s,]*',
+_NEW_LINE_RE = re.compile(
+    r'(?:\bdeux\s+points?\s+)?[àa]\s+la\s+ligne',
+    flags=re.IGNORECASE,
+)
+
+_WHISPER_MISHEAR_RE = re.compile(
+    r'\bde\s+pan[a-z]*lyses?\b[\s,]*',
     flags=re.IGNORECASE,
 )
 
 
 def normalize_spoken_punct(text: str) -> str:
-    """Strip spoken punctuation commands and their Whisper misrecognitions."""
-    return _SPOKEN_PUNCT_RE.sub(' ', text).strip()
+    """Convertit les commandes de ponctuation dictées en sauts de ligne réels
+    et supprime les variantes mal entendues par Whisper."""
+    text = _NEW_LINE_RE.sub('\n', text)
+    text = _WHISPER_MISHEAR_RE.sub(' ', text)
+    return text.strip()
 
 
 # ──────────────────────────────────────────────────────────────────────────────

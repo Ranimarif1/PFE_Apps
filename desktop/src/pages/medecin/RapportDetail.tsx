@@ -60,16 +60,18 @@ function parseReport(text: string) {
   // Accent-tolerant, colon-optional, paren-tolerant regex matching
   // Whisper sometimes wraps keywords in parentheses: (Conclusion) → consume both parens
   const iMatch = /[({]?\s*indication\s*[)}]?\s*:?/i.exec(text);
+  const tMatch = /[({]?\s*technique\s*[)}]?\s*:?/i.exec(text);
   const rMatch = /[({]?\s*r[ée]sultat\s*[)}]?\s*:?/i.exec(text);
   const cMatch = /[({]?\s*conclusion\s*[)}]?\s*:?/i.exec(text);
 
   const iIdx = iMatch?.index ?? -1;
+  const tIdx = tMatch?.index ?? -1;
   const rIdx = rMatch?.index ?? -1;
   const cIdx = cMatch?.index ?? -1;
 
   // If none of the section keywords are present, put everything in résultat
-  if (iIdx === -1 && rIdx === -1 && cIdx === -1) {
-    return { indication: "", resultat: text.trim(), conclusion: "" };
+  if (iIdx === -1 && tIdx === -1 && rIdx === -1 && cIdx === -1) {
+    return { indication: "", technique: "", resultat: text.trim(), conclusion: "" };
   }
 
   const extract = (match: RegExpExecArray | null, end: number) => {
@@ -89,14 +91,27 @@ function parseReport(text: string) {
     return result.charAt(0).toUpperCase() + result.slice(1);
   };
 
+  // Find the earliest "later" section index that comes after a given starting index.
+  const nextAfter = (afterIdx: number, ...candidates: number[]) => {
+    const valid = candidates.filter(idx => idx > afterIdx);
+    return valid.length === 0 ? -1 : Math.min(...valid);
+  };
+
   return {
-    indication: extract(iMatch, rIdx !== -1 ? rIdx : cIdx),
-    resultat:   extract(rMatch, cIdx),
+    indication: extract(iMatch, nextAfter(iIdx, tIdx, rIdx, cIdx)),
+    technique:  extract(tMatch, nextAfter(tIdx, rIdx, cIdx)),
+    resultat:   extract(rMatch, nextAfter(rIdx, cIdx)),
     conclusion: extract(cMatch, -1),
   };
 }
-function buildContent(indication: string, resultat: string, conclusion: string) {
-  return `Indication: ${indication}\n\nResultat: ${resultat}\n\nConclusion: ${conclusion}`;
+function buildContent(indication: string, technique: string, resultat: string, conclusion: string) {
+  const parts = [
+    `Indication: ${indication}`,
+    technique.trim() ? `Technique: ${technique}` : null,
+    `Resultat: ${resultat}`,
+    `Conclusion: ${conclusion}`,
+  ].filter(Boolean);
+  return parts.join("\n\n");
 }
 
 /* ════════════════════════════════════════ */
@@ -113,6 +128,7 @@ export default function RapportDetail() {
   /* ── Report fields ── */
   const initialParsed = parseReport(fromState?.transcription || "");
   const [indication,  setIndication]  = useState(initialParsed.indication);
+  const [technique,   setTechnique]   = useState(initialParsed.technique);
   const [resultat,    setResultat]    = useState(initialParsed.resultat);
   const [conclusion,  setConclusion]  = useState(initialParsed.conclusion);
   const [examId,      setExamId]      = useState(fromState?.ID_Exam || "");
@@ -158,7 +174,7 @@ export default function RapportDetail() {
     }
   };
 
-  const contenu = buildContent(indication, resultat, conclusion);
+  const contenu = buildContent(indication, technique, resultat, conclusion);
 
   /* ── Auto-save as draft when arriving from transcription ── */
   useEffect(() => {
@@ -187,6 +203,7 @@ export default function RapportDetail() {
         .then(r => {
           const p = parseReport(r.content);
           setIndication(p.indication);
+          setTechnique(p.technique);
           setResultat(p.resultat);
           setConclusion(p.conclusion);
           setStatus(r.status);
@@ -210,7 +227,7 @@ export default function RapportDetail() {
       setOllamaDismissed(false);
       setOllamaClean(false);
       setOllamaLoading(true);
-      const text = buildContent(indication, resultat, conclusion);
+      const text = buildContent(indication, technique, resultat, conclusion);
       getSuggestion(text)
         .then(({ suggestion, changes }) => {
           if (changes.length > 0) {
@@ -230,6 +247,7 @@ export default function RapportDetail() {
     if (!ollamaSuggestion) return;
     const p = parseReport(ollamaSuggestion);
     setIndication(p.indication);
+    setTechnique(p.technique);
     setResultat(p.resultat);
     setConclusion(p.conclusion);
     setOllamaSuggestion(null);
@@ -416,6 +434,23 @@ export default function RapportDetail() {
                     <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3">{indication || "—"}</p>
                   )}
                 </div>
+
+                {/* Technique — IRM / Scanner only */}
+                {(category === "irm" || category === "scanner") && (
+                  <div>
+                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Technique</label>
+                    {editing && ollamaSuggestion && !ollamaDismissed && !ollamaLoading ? (
+                      <p className="text-foreground leading-relaxed text-sm bg-amber-50/60 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-200/50 dark:border-amber-800/30">
+                        <HighlightedText text={technique} changes={ollamaChanges} />
+                      </p>
+                    ) : editing ? (
+                      <AutoTextarea value={technique} onChange={setTechnique}
+                        className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
+                    ) : (
+                      <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3">{technique || "—"}</p>
+                    )}
+                  </div>
+                )}
 
                 {/* Résultat */}
                 <div>

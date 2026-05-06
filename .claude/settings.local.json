@@ -7,7 +7,10 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost:8081/src/pages/medecin/NouveauRapport.tsx\")",
       "Bash(python -c \"from PIL import Image; im = Image.open\\('desktop/public/logo.png'\\); print\\(im.size, im.mode\\)\")",
       "Bash(curl -s -o /dev/null -w \"%{http_code} \\(%{size_download} bytes\\)\\\\n\" \"http://localhost:8081/logo.png\")",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost:8081/src/pages/Index.tsx\")"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost:8081/src/pages/Index.tsx\")",
+      "Bash(cp desktop/public/logo.png client/public/logo.png)",
+      "Bash(cp desktop/public/logo-icon.png client/public/logo-icon.png)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('audios/views.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")"
     ]
   }
 }

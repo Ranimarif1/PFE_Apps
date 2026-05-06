@@ -288,6 +288,15 @@ def audio_detail(request: HttpRequest, audio_id: str) -> JsonResponse | FileResp
             filepath.unlink(missing_ok=True)
         except Exception:
             pass
+        # Cascade: also delete the linked report (if any) so removing an audio
+        # from the pending queue wipes everything associated with it.
+        report_id = doc.get("reportId")
+        if report_id:
+            try:
+                reports_col = get_collection("reports")
+                reports_col.delete_one({"_id": ObjectId(report_id)})
+            except Exception:
+                pass
         col.delete_one({"_id": oid})
         return JsonResponse({"detail": "Supprimé."})
 
