@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, Pause, Play, Square, X, Loader2 } from "lucide-react";
 import { useRecording } from "@/contexts/RecordingContext";
+import { SonicMicButton } from "@/components/SonicMicButton";
+import { useRecordingPiP } from "@/hooks/useRecordingPiP";
 import { cn } from "@/lib/utils";
 
 function fmt(s: number) {
@@ -16,6 +18,7 @@ interface Props {
 export function RecordingIndicator({ collapsed }: Props) {
   const recording = useRecording();
   const navigate  = useNavigate();
+  useRecordingPiP();
 
   const active = recording.isRecording
     || recording.isPaused
@@ -127,7 +130,7 @@ export function RecordingIndicator({ collapsed }: Props) {
                 exit={{ height: 0 }}
                 className="overflow-hidden"
               >
-                <div className="flex items-center gap-1 px-2 pb-2">
+                <div className="flex items-center gap-1 px-2 pb-1">
                   {/* Pause / Resume */}
                   <button
                     onClick={recording.togglePause}
@@ -163,6 +166,13 @@ export function RecordingIndicator({ collapsed }: Props) {
                     <X size={10} />
                   </button>
                 </div>
+
+                {/* SonicMic hardware buttons — stop/pause work even when navigated away */}
+                <SonicMicButton
+                  onStop={recording.stopRecording}
+                  onPause={recording.togglePause}
+                  className="mx-2 mb-2"
+                />
               </motion.div>
             )}
 

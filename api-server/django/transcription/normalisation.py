@@ -307,9 +307,14 @@ def strip_section_headers(text: str) -> str:
 #   etc.  Those phrases are never legitimate medical text → strip them.
 
 _NEW_LINE_RE = re.compile(
-    r'(?:\bdeux\s+points?\s+)?[àa]\s+la\s+ligne',
+    # "à la ligne" — accepte aussi "a" sans accent et "1" (Whisper mishear fréquent de "à")
+    r'(?:\bdeux\s+points?\s+)?\s*[àa1]\s+la\s+ligne',
     flags=re.IGNORECASE,
 )
+
+# Nettoyage de l'espace résiduel quand Whisper a déjà auto-ponctué "point" → "."
+# avant que la partie "à la ligne" soit convertie en \n  (". \n" → ".\n")
+_DOT_SPACE_NL_RE = re.compile(r'\.\s+\n')
 
 _WHISPER_MISHEAR_RE = re.compile(
     r'\bde\s+pan[a-z]*lyses?\b[\s,]*',
@@ -317,10 +322,66 @@ _WHISPER_MISHEAR_RE = re.compile(
 )
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# 6c. ALIAS DE SECTIONS — variantes dictées → noms canoniques
+# ──────────────────────────────────────────────────────────────────────────────
+# "renseignement clinique" / "renseignements cliniques" sont synonymes de
+# "Indication" dans les rapports de radiologie tunisiens.
+
+_SECTION_ALIASES: list[tuple[re.Pattern, str]] = [
+    (re.compile(r'\brenseignements?\s+cliniques?\b\s*:?', re.IGNORECASE), 'Indication:'),
+]
+
+
+def normalize_section_aliases(text: str) -> str:
+    """Remplace les alias de sections par leurs noms canoniques."""
+    for pattern, canonical in _SECTION_ALIASES:
+        text = pattern.sub(canonical, text)
+    return text
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 6d. COMMANDE "EFFACE ÇA" — supprime la dernière phrase
+# ──────────────────────────────────────────────────────────────────────────────
+# Le médecin dit "efface ça" (ou "effacer ça", "effacez ça"…) pour annuler la
+# dernière phrase dictée.  Whisper accepte aussi "ca" sans cédille.
+# Exemple : "première phrase. deuxième phrase efface ça" → "première phrase."
+
+_EFFACE_CMD_RE = re.compile(
+    r'effac(?:er|ez|es|e)\s+[çc]a\b[,.]?\s*',
+    flags=re.IGNORECASE,
+)
+
+
+def apply_delete_commands(text: str) -> str:
+    """Supprime la phrase précédant chaque occurrence de 'efface ça'."""
+    while True:
+        m = _EFFACE_CMD_RE.search(text)
+        if not m:
+            break
+        before = text[:m.start()].rstrip()
+        # Strip trailing sentence-end punct that Whisper may have auto-inserted
+        # at the end of the sentence being deleted (e.g. "phrase deux. efface ça")
+        before_no_trail = before.rstrip('.!?')
+        last_boundary = max(
+            (before_no_trail.rfind(c) for c in '.!?\n'),
+            default=-1,
+        )
+        kept = text[:last_boundary + 1] if last_boundary >= 0 else ''
+        rest = text[m.end():].lstrip()
+        if kept and rest:
+            text = kept + ' ' + rest
+        else:
+            text = (kept + rest).strip()
+    return text
+
+
 def normalize_spoken_punct(text: str) -> str:
     """Convertit les commandes de ponctuation dictées en sauts de ligne réels
     et supprime les variantes mal entendues par Whisper."""
+    text = apply_delete_commands(text)
     text = _NEW_LINE_RE.sub('\n', text)
+    text = _DOT_SPACE_NL_RE.sub('.\n', text)   # ". \n" → ".\n"
     text = _WHISPER_MISHEAR_RE.sub(' ', text)
     return text.strip()
 
@@ -457,6 +518,7 @@ def normalize(text: str) -> str:
     so the frontend can parse them into separate fields.
     """
     text = normalize_spoken_punct(text)
+    text = normalize_section_aliases(text)
     text = fix_asr_accents(text)
     text = normalize_dates(text)
     text = normalize_units(text)

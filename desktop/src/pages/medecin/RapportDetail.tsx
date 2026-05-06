@@ -59,7 +59,7 @@ function HighlightedText({ text, changes }: { text: string; changes: OllamaChang
 function parseReport(text: string) {
   // Accent-tolerant, colon-optional, paren-tolerant regex matching
   // Whisper sometimes wraps keywords in parentheses: (Conclusion) → consume both parens
-  const iMatch = /[({]?\s*indication\s*[)}]?\s*:?/i.exec(text);
+  const iMatch = /[({]?\s*(?:indication|renseignements?\s+cliniques?)\s*[)}]?\s*:?/i.exec(text);
   const tMatch = /[({]?\s*technique\s*[)}]?\s*:?/i.exec(text);
   const rMatch = /[({]?\s*r[ée]sultat\s*[)}]?\s*:?/i.exec(text);
   const cMatch = /[({]?\s*conclusion\s*[)}]?\s*:?/i.exec(text);
