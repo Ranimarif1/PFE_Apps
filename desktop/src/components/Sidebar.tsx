@@ -7,6 +7,7 @@ import {
   Users, Brain, LogOut, Sun, Moon,
   ChevronLeft, ChevronRight,
   AlertCircle, Plus, FileAudio, Sparkles, Loader2, Database, X, Download,
+  HelpCircle,
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -144,6 +145,12 @@ const médécinSections: Section[] = [
       { to: "/profil",          icon: User,            label: "Mon profil"      },
     ],
   },
+  {
+    label: "AIDE",
+    links: [
+      { to: "/aide",            icon: HelpCircle,      label: "Guide & commandes" },
+    ],
+  },
 ];
 
 // ── Admin sections ─────────────────────────────────────────────────────────────
@@ -165,6 +172,12 @@ const adminSections: Section[] = [
       { to: "/admin/profil",       icon: User,            label: "Mon profil"       },
     ],
   },
+  {
+    label: "AIDE",
+    links: [
+      { to: "/aide",               icon: HelpCircle,      label: "Guide & commandes" },
+    ],
+  },
 ];
 
 // ── Admin IT sections ──────────────────────────────────────────────────────────
@@ -183,6 +196,12 @@ const adminITSections: Section[] = [
       { to: "/adminit/modele",    icon: Brain,     label: "Modèle IA"         },
       { to: "/adminit/training",  icon: Database,  label: "Données entraîn."  },
       { to: "/adminit/profil",    icon: User,      label: "Mon profil"        },
+    ],
+  },
+  {
+    label: "AIDE",
+    links: [
+      { to: "/aide",              icon: HelpCircle, label: "Guide & commandes" },
     ],
   },
 ];

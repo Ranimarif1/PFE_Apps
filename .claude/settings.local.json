@@ -10,7 +10,9 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost:8081/src/pages/Index.tsx\")",
       "Bash(cp desktop/public/logo.png client/public/logo.png)",
       "Bash(cp desktop/public/logo-icon.png client/public/logo-icon.png)",
-      "Bash(python -c \"import ast; ast.parse\\(open\\('audios/views.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")"
+      "Bash(python -c \"import ast; ast.parse\\(open\\('audios/views.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('transcription/views.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('reports/views.py', encoding='utf-8'\\).read\\(\\)\\); print\\('Django OK'\\)\")"
     ]
   }
 }

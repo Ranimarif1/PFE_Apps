@@ -424,14 +424,14 @@ export default function RapportDetail() {
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Indication</label>
                   {editing && ollamaSuggestion && !ollamaDismissed && !ollamaLoading ? (
-                    <p className="text-foreground leading-relaxed text-sm bg-amber-50/60 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-200/50 dark:border-amber-800/30">
+                    <p className="text-foreground leading-relaxed text-sm bg-amber-50/60 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-200/50 dark:border-amber-800/30 whitespace-pre-wrap break-words min-h-[2.75rem]">
                       <HighlightedText text={indication} changes={ollamaChanges} />
                     </p>
                   ) : editing ? (
                     <AutoTextarea value={indication} onChange={setIndication}
                       className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                   ) : (
-                    <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3">{indication || "—"}</p>
+                    <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3 whitespace-pre-wrap break-words min-h-[2.75rem]">{indication || "—"}</p>
                   )}
                 </div>
 
@@ -440,14 +440,14 @@ export default function RapportDetail() {
                   <div>
                     <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Technique</label>
                     {editing && ollamaSuggestion && !ollamaDismissed && !ollamaLoading ? (
-                      <p className="text-foreground leading-relaxed text-sm bg-amber-50/60 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-200/50 dark:border-amber-800/30">
+                      <p className="text-foreground leading-relaxed text-sm bg-amber-50/60 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-200/50 dark:border-amber-800/30 whitespace-pre-wrap break-words min-h-[2.75rem]">
                         <HighlightedText text={technique} changes={ollamaChanges} />
                       </p>
                     ) : editing ? (
                       <AutoTextarea value={technique} onChange={setTechnique}
                         className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                     ) : (
-                      <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3">{technique || "—"}</p>
+                      <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3 whitespace-pre-wrap break-words min-h-[2.75rem]">{technique || "—"}</p>
                     )}
                   </div>
                 )}
@@ -456,14 +456,14 @@ export default function RapportDetail() {
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Résultat</label>
                   {editing && ollamaSuggestion && !ollamaDismissed && !ollamaLoading ? (
-                    <p className="text-foreground leading-relaxed text-sm bg-amber-50/60 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-200/50 dark:border-amber-800/30">
+                    <p className="text-foreground leading-relaxed text-sm bg-amber-50/60 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-200/50 dark:border-amber-800/30 whitespace-pre-wrap break-words min-h-[2.75rem]">
                       <HighlightedText text={resultat} changes={ollamaChanges} />
                     </p>
                   ) : editing ? (
                     <AutoTextarea value={resultat} onChange={setResultat}
                       className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                   ) : (
-                    <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3">{resultat || "—"}</p>
+                    <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3 whitespace-pre-wrap break-words min-h-[2.75rem]">{resultat || "—"}</p>
                   )}
                 </div>
 
@@ -471,14 +471,14 @@ export default function RapportDetail() {
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Conclusion</label>
                   {editing && ollamaSuggestion && !ollamaDismissed && !ollamaLoading ? (
-                    <p className="text-foreground leading-relaxed text-sm bg-amber-50/60 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-200/50 dark:border-amber-800/30">
+                    <p className="text-foreground leading-relaxed text-sm bg-amber-50/60 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-200/50 dark:border-amber-800/30 whitespace-pre-wrap break-words min-h-[2.75rem]">
                       <HighlightedText text={conclusion} changes={ollamaChanges} />
                     </p>
                   ) : editing ? (
                     <AutoTextarea value={conclusion} onChange={setConclusion}
                       className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                   ) : (
-                    <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3">{conclusion || "—"}</p>
+                    <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3 whitespace-pre-wrap break-words min-h-[2.75rem]">{conclusion || "—"}</p>
                   )}
                 </div>
               </div>

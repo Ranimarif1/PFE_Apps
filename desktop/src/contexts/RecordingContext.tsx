@@ -98,7 +98,7 @@ interface RecordingContextType {
   stopRecording:          () => void;
   startSmartphoneSession: (examId: string, category: ReportCategory) => Promise<void>;
   transcribeFile:         (examId: string, category: ReportCategory, file: File) => Promise<void>;
-  transcribeById:         (id: string, examId: string, category: ReportCategory) => Promise<void>; // re-transcribe from server (risk fallback)
+  transcribeById:         (id: string, examId: string, category?: ReportCategory) => Promise<void>; // re-transcribe from server (risk fallback) — category defaults to "autre"
   cancelRecording:        () => void;
   clearResult:            () => void;
   clearSavedAudio:        () => void;
@@ -224,7 +224,11 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
   }, [resetHardware, doTranscribe]);
 
   // ── Public: re-transcribe a queued audio from server (risk fallback) ───────
-  const transcribeById = useCallback(async (id: string, eid: string, cat: ReportCategory) => {
+  // Retry path used by the "audios en attente" queue. The audio document
+  // doesn't carry the originally-picked category, so the caller can omit it
+  // and we default to "scanner"; the doctor can correct the category in the
+  // RapportDetail page after the report opens.
+  const transcribeById = useCallback(async (id: string, eid: string, cat: ReportCategory = "scanner") => {
     setIsTranscribing(true);
     setError(null);
     try {
@@ -352,26 +356,33 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
   };
 
   // ── Import file — upload then show list (no auto-transcribe) ───────────────
+  // Import flow — upload then auto-transcribe (mirrors browser mic / smartphone
+  // behaviour). The "audios en attente" queue is for failure recovery only:
+  // if uploadAudio or doTranscribe fails, the audio sits there for retry.
   const transcribeFile = async (eid: string, cat: ReportCategory, file: File) => {
     setExamId(eid);
     setCategory(cat);
     setMéthode(null);
     setSavedAudio(null);
-    const dur = 0;
     pendingBlobRef.current = file;
     pendingEidRef.current  = eid;
     pendingCatRef.current  = cat;
     pendingMRef.current    = null;
     setAudioUploading(true);
     setError(null);
+    let savedId: string | null = null;
     try {
-      const saved = await uploadAudio(eid, file, dur);
+      const saved = await uploadAudio(eid, file, 0);
       setSavedAudio(saved);
+      savedId = saved._id;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur lors de la sauvegarde audio.");
-    } finally {
       setAudioUploading(false);
+      return; // upload failed — don't transcribe
     }
+    setAudioUploading(false);
+    // Auto-transcribe immediately using the in-memory file blob.
+    await doTranscribe(file, eid, cat, null, savedId);
   };
 
   const clearResult     = useCallback(() => { setResult(null); setExamId(null); setCategory(null); setMéthode(null); }, []);

@@ -15,7 +15,7 @@ from core.auth import CurrentUser, jwt_required
 from core.mongo import get_collection, serialize_document
 
 
-REPORT_CATEGORIES = {"scanner", "irm", "radiographie", "echographie", "mammographie", "autre"}
+REPORT_CATEGORIES = {"scanner", "irm", "radiographie", "echographie"}
 
 
 def _compute_accuracy(original: Optional[str], final: Optional[str]) -> Optional[float]:

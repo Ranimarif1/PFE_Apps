@@ -15,6 +15,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import MobileRecord from "./pages/MobileRecord";
+import Aide from "./pages/Aide";
 
 // Médecin
 import MédecinDashboard from "./pages/medecin/Dashboard";
@@ -89,6 +90,9 @@ function AppWithLoading() {
       <Route path="/adminit/modele" element={<RouteGuard allowedRoles={["adminIT"]}><AdminITModele /></RouteGuard>} />
       <Route path="/adminit/training" element={<RouteGuard allowedRoles={["adminIT"]}><AdminITTraining /></RouteGuard>} />
       <Route path="/adminit/profil" element={<RouteGuard allowedRoles={["adminIT"]}><AdminITProfil /></RouteGuard>} />
+
+      {/* Aide — accessible à tous les rôles authentifiés */}
+      <Route path="/aide" element={<RouteGuard allowedRoles={["médecin", "admin", "adminIT"]}><Aide /></RouteGuard>} />
 
       <Route path="*" element={<NotFound />} />
     </Routes>

@@ -307,10 +307,23 @@ def strip_section_headers(text: str) -> str:
 #   etc.  Those phrases are never legitimate medical text → strip them.
 
 _NEW_LINE_RE = re.compile(
-    # "à la ligne" — accepte aussi "a" sans accent et "1" (Whisper mishear fréquent de "à")
-    r'(?:\bdeux\s+points?\s+)?\s*[àa1]\s+la\s+ligne',
+    # "à la ligne" — accepte aussi "a" sans accent et "1" (Whisper mishear fréquent de "à").
+    # Le \s* en tête consomme l'espace qui sépare la commande du mot précédent
+    # afin qu'on n'ait pas d'espace orphelin avant le point auto-inséré.
+    r'\s*(?:\bdeux\s+points?\s+)?\s*[àa1]\s+la\s+ligne',
     flags=re.IGNORECASE,
 )
+
+
+def _replace_newline(match: 're.Match') -> str:
+    """Insère un vrai saut de ligne. Si la phrase précédente se termine par un
+    caractère alphanumérique (le médecin a oublié de dire « point »), on
+    rajoute automatiquement un point devant le \\n. Le nettoyage par
+    _DOT_SPACE_NL_RE juste après normalise « . \\n » en « .\\n »."""
+    preceding = match.string[:match.start()].rstrip()
+    if preceding and preceding[-1].isalnum():
+        return '. \n'
+    return '\n'
 
 # Nettoyage de l'espace résiduel quand Whisper a déjà auto-ponctué "point" → "."
 # avant que la partie "à la ligne" soit convertie en \n  (". \n" → ".\n")
@@ -319,6 +332,20 @@ _DOT_SPACE_NL_RE = re.compile(r'\.\s+\n')
 _WHISPER_MISHEAR_RE = re.compile(
     r'\bde\s+pan[a-z]*lyses?\b[\s,]*',
     flags=re.IGNORECASE,
+)
+
+# "deux points" non suivi de "à la ligne" → ":"  (le médecin dicte simplement
+# le séparateur entre l'intitulé d'une section et son contenu, par exemple
+# « Indication deux points HTA »).
+#
+# La règle ne s'applique que si la suite commence par une majuscule, un
+# chiffre, un saut de ligne ou la fin du texte — afin d'éviter les faux
+# positifs sur des phrases du type « les deux points de cicatrice ».
+# (Volontairement sans `re.IGNORECASE` : la classe de caractères de la
+# lookahead doit rester strictement en majuscules.)
+_COLON_CMD_RE = re.compile(
+    r'\b[Dd]eux\s+[Pp]oints?\b'
+    r'(?=\s*(?:[A-ZÀ-ÖØ-ÞŒ0-9]|\n|\Z))',
 )
 
 
@@ -380,8 +407,10 @@ def normalize_spoken_punct(text: str) -> str:
     """Convertit les commandes de ponctuation dictées en sauts de ligne réels
     et supprime les variantes mal entendues par Whisper."""
     text = apply_delete_commands(text)
-    text = _NEW_LINE_RE.sub('\n', text)
+    text = _NEW_LINE_RE.sub(_replace_newline, text)
     text = _DOT_SPACE_NL_RE.sub('.\n', text)   # ". \n" → ".\n"
+    # "deux points" restant (qui n'était pas suivi de "à la ligne") → ":"
+    text = _COLON_CMD_RE.sub(':', text)
     text = _WHISPER_MISHEAR_RE.sub(' ', text)
     return text.strip()
 
