@@ -2,8 +2,11 @@ from django.conf import settings
 from django.urls import include, path
 from django.views.static import serve
 
+from reports.views import analyse_report
+
 urlpatterns = [
     path("api/auth/", include("auth.urls")),
+    path("api/analyse/", analyse_report, name="analyse_report"),
     path("api/reports/", include("reports.urls")),
     path("api/complaints/", include("complaints.urls")),
     path("api/csv/", include("csvapp.urls")),

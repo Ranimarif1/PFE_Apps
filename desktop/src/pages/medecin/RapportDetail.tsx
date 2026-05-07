@@ -2,11 +2,12 @@ import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { getReport, createReport, updateReport } from "@/services/reportsService";
-import { CheckCircle, Edit3, Save, FileText, Sparkles, Check, X, Loader2, ArrowLeft, Pencil } from "lucide-react";
+import { CheckCircle, Edit3, Save, FileText, Check, X, Loader2, ArrowLeft, Pencil, Wand2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRecording } from "@/contexts/RecordingContext";
-import { getSuggestion, type OllamaChange } from "@/services/transcriptionService";
+import { analyseReport, type SentenceAnalysis } from "@/services/transcriptionService";
+import { SentenceCorrector } from "@/components/SentenceCorrector";
 import { getStatusBadgeClass, getStatusLabel } from "@/styles/statusSystem";
 import { REPORT_CATEGORIES, type ReportCategory } from "@/constants/reportCategories";
 
@@ -30,30 +31,6 @@ function AutoTextarea({ value, onChange, className }: { value: string; onChange:
   );
 }
 
-/* ── Highlight words suggested by Ollama ── */
-function HighlightedText({ text, changes }: { text: string; changes: OllamaChange[] }) {
-  if (!text) return <span className="text-muted-foreground">—</span>;
-  if (!changes.length) return <span>{text}</span>;
-
-  const escaped = changes.map(c => c.original.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-  const re = new RegExp(`\\b(${escaped.join("|")})\\b`, "gi");
-
-  const parts: React.ReactNode[] = [];
-  let last = 0, m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    if (m.index > last) parts.push(text.slice(last, m.index));
-    const fix = changes.find(c => c.original.toLowerCase() === m![0].toLowerCase());
-    parts.push(
-      <mark key={m.index} title={`→ ${fix?.corrected}`}
-        style={{ background: "rgba(251,191,36,0.30)", borderRadius: "3px", padding: "0 2px", borderBottom: "2px solid rgba(217,119,6,0.6)" }}>
-        {m[0]}
-      </mark>
-    );
-    last = m.index + m[0].length;
-  }
-  if (last < text.length) parts.push(text.slice(last));
-  return <>{parts}</>;
-}
 
 /* ── Content parser / builder ── */
 function parseReport(text: string) {
@@ -146,12 +123,10 @@ export default function RapportDetail() {
   const [savedAsValidated,     setSavedAsValidated]     = useState<"validate" | "save" | false>(false);
   const [error,                setError]                = useState("");
 
-  /* ── Ollama suggestion banner ── */
-  const [ollamaSuggestion,   setOllamaSuggestion]   = useState<string | null>(null);
-  const [ollamaChanges,      setOllamaChanges]      = useState<OllamaChange[]>([]);
-  const [ollamaDismissed,    setOllamaDismissed]    = useState(false);
-  const [ollamaLoading,      setOllamaLoading]      = useState(false);
-  const [ollamaClean,        setOllamaClean]        = useState(false);
+  /* ── Sentence-level correction ── */
+  const [analyseSentences,   setAnalyseSentences]   = useState<SentenceAnalysis[] | null>(null);
+  const [analyseLoading,     setAnalyseLoading]     = useState(false);
+  const [analyseError,       setAnalyseError]       = useState<string | null>(null);
 
   /* ── Category auto-save (for already-saved/validated reports) ── */
   const [categorySaving,     setCategorySaving]     = useState(false);
@@ -217,41 +192,43 @@ export default function RapportDetail() {
     }
   }, [id, isNew]);
 
-  /* ── Toggle edit mode + fire Ollama when entering ── */
-  const handleToggleEdit = () => {
-    const next = !editing;
-    setEditing(next);
-    if (next) {
-      setOllamaSuggestion(null);
-      setOllamaChanges([]);
-      setOllamaDismissed(false);
-      setOllamaClean(false);
-      setOllamaLoading(true);
-      const text = buildContent(indication, technique, resultat, conclusion);
-      getSuggestion(text)
-        .then(({ suggestion, changes }) => {
-          if (changes.length > 0) {
-            setOllamaSuggestion(suggestion);
-            setOllamaChanges(changes);
-          } else {
-            setOllamaClean(true);
-          }
-        })
-        .catch((err) => console.error("[Ollama]", err))
-        .finally(() => setOllamaLoading(false));
-    }
+  /* ── Toggle edit mode ── */
+  const handleToggleEdit = () => setEditing(prev => !prev);
+
+  /* ── Apply a single word correction across all sections ── */
+  const applyCorrection = (original: string, suggestion: string) => {
+    const escaped = original.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`(?<![A-Za-zÀ-ÖØ-öø-ÿ])${escaped}(?![A-Za-zÀ-ÖØ-öø-ÿ])`, "");
+    const sub = (t: string) => t.replace(re, suggestion);
+    setIndication(p => sub(p));
+    setTechnique(p => sub(p));
+    setResultat(p => sub(p));
+    setConclusion(p => sub(p));
   };
 
-  /* ── Accept Ollama suggestion ── */
-  const acceptOllamaSuggestion = () => {
-    if (!ollamaSuggestion) return;
-    const p = parseReport(ollamaSuggestion);
-    setIndication(p.indication);
-    setTechnique(p.technique);
-    setResultat(p.resultat);
-    setConclusion(p.conclusion);
-    setOllamaSuggestion(null);
-    setOllamaDismissed(true);
+  /* ── Trigger sentence-level analysis ── */
+  const handleAnalyse = async () => {
+    console.log("[Analyse] bouton cliqué");
+    setAnalyseLoading(true);
+    setAnalyseSentences(null);
+    setAnalyseError(null);
+    const text = buildContent(indication, technique, resultat, conclusion).trim();
+    console.log("[Analyse] texte envoyé :", text.slice(0, 120));
+    if (!text) {
+      setAnalyseError("Le rapport est vide.");
+      setAnalyseLoading(false);
+      return;
+    }
+    try {
+      const result = await analyseReport(text);
+      console.log("[Analyse] réponse :", result);
+      setAnalyseSentences(result.sentences ?? []);
+    } catch (err) {
+      console.error("[Analyse] erreur :", err);
+      setAnalyseError(err instanceof Error ? err.message : "Erreur lors de l'analyse.");
+    } finally {
+      setAnalyseLoading(false);
+    }
   };
 
   /* ── Save ── */
@@ -327,7 +304,7 @@ export default function RapportDetail() {
           <div className="space-y-6 animate-fade-in">
 
             {/* ── Header card ── */}
-            <div className="bg-card rounded-xl border border-border shadow-card p-6">
+            <div className="bg-card rounded-xl border border-border shadow-card p-4 sm:p-6">
               <div className="flex items-center gap-2 mb-4">
                 {!isNew && status && (
                   <span className={`${getStatusBadgeClass(status)} capitalize`}>
@@ -408,10 +385,22 @@ export default function RapportDetail() {
             <div className="flex gap-4 items-start">
 
               {/* Transcription card */}
-              <div className="bg-card rounded-xl border border-border shadow-card p-6 space-y-5 flex-1 min-w-0">
+              <div className="bg-card rounded-xl border border-border shadow-card p-4 sm:p-6 space-y-5 flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-foreground">Transcription</h3>
                   <div className="flex items-center gap-2">
+                    {editing && (
+                      <button
+                        onClick={handleAnalyse}
+                        disabled={analyseLoading}
+                        className="flex items-center gap-1.5 text-sm text-violet-500 hover:text-violet-400 disabled:opacity-50 transition-colors"
+                      >
+                        {analyseLoading
+                          ? <Loader2 size={14} className="animate-spin" />
+                          : <Wand2 size={14} />}
+                        {analyseLoading ? "Analyse…" : "Assistant IA"}
+                      </button>
+                    )}
                     {(isNew || status === "draft") && (
                       <button onClick={handleToggleEdit} className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors">
                         <Edit3 size={14} /> {editing ? "Lecture" : "Modifier"}
@@ -423,11 +412,7 @@ export default function RapportDetail() {
                 {/* Indication */}
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Indication</label>
-                  {editing && ollamaSuggestion && !ollamaDismissed && !ollamaLoading ? (
-                    <p className="text-foreground leading-relaxed text-sm bg-amber-50/60 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-200/50 dark:border-amber-800/30 whitespace-pre-wrap break-words min-h-[2.75rem]">
-                      <HighlightedText text={indication} changes={ollamaChanges} />
-                    </p>
-                  ) : editing ? (
+                  {editing ? (
                     <AutoTextarea value={indication} onChange={setIndication}
                       className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                   ) : (
@@ -439,11 +424,7 @@ export default function RapportDetail() {
                 {(category === "irm" || category === "scanner") && (
                   <div>
                     <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Technique</label>
-                    {editing && ollamaSuggestion && !ollamaDismissed && !ollamaLoading ? (
-                      <p className="text-foreground leading-relaxed text-sm bg-amber-50/60 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-200/50 dark:border-amber-800/30 whitespace-pre-wrap break-words min-h-[2.75rem]">
-                        <HighlightedText text={technique} changes={ollamaChanges} />
-                      </p>
-                    ) : editing ? (
+                    {editing ? (
                       <AutoTextarea value={technique} onChange={setTechnique}
                         className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                     ) : (
@@ -455,11 +436,7 @@ export default function RapportDetail() {
                 {/* Résultat */}
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Résultat</label>
-                  {editing && ollamaSuggestion && !ollamaDismissed && !ollamaLoading ? (
-                    <p className="text-foreground leading-relaxed text-sm bg-amber-50/60 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-200/50 dark:border-amber-800/30 whitespace-pre-wrap break-words min-h-[2.75rem]">
-                      <HighlightedText text={resultat} changes={ollamaChanges} />
-                    </p>
-                  ) : editing ? (
+                  {editing ? (
                     <AutoTextarea value={resultat} onChange={setResultat}
                       className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                   ) : (
@@ -470,11 +447,7 @@ export default function RapportDetail() {
                 {/* Conclusion */}
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Conclusion</label>
-                  {editing && ollamaSuggestion && !ollamaDismissed && !ollamaLoading ? (
-                    <p className="text-foreground leading-relaxed text-sm bg-amber-50/60 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-200/50 dark:border-amber-800/30 whitespace-pre-wrap break-words min-h-[2.75rem]">
-                      <HighlightedText text={conclusion} changes={ollamaChanges} />
-                    </p>
-                  ) : editing ? (
+                  {editing ? (
                     <AutoTextarea value={conclusion} onChange={setConclusion}
                       className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                   ) : (
@@ -482,81 +455,73 @@ export default function RapportDetail() {
                   )}
                 </div>
               </div>
-
-              {/* ── Ollama suggestion panel (right) ── */}
-              <AnimatePresence>
-                {editing && (ollamaLoading || ollamaClean || (ollamaSuggestion && !ollamaDismissed)) && (
-                  <motion.div
-                    initial={{ opacity: 0, x: 40, width: 0 }}
-                    animate={{ opacity: 1, x: 0, width: 300 }}
-                    exit={{ opacity: 0, x: 40, width: 0 }}
-                    transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                    className="flex-shrink-0"
-                  >
-                    <div className="bg-card rounded-xl border border-border shadow-card p-5 w-[300px]">
-                      <div className="flex items-center gap-2 mb-4">
-                        <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(74,123,190,0.10)" }}>
-                          {ollamaLoading ? <Loader2 size={14} className="animate-spin" style={{ color: "#4A7BBE" }} /> : <Sparkles size={14} style={{ color: "#4A7BBE" }} />}
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-sm text-foreground">Correction IA</h4>
-                          <p className="text-[10px] text-muted-foreground -mt-0.5">
-                            {ollamaLoading ? "Analyse en cours…" : ollamaClean ? "Texte correct" : `${ollamaChanges.length} correction${ollamaChanges.length > 1 ? "s" : ""} détectée${ollamaChanges.length > 1 ? "s" : ""}`}
-                          </p>
-                        </div>
-                        {!ollamaLoading && (
-                          <button onClick={() => { setOllamaSuggestion(null); setOllamaChanges([]); setOllamaDismissed(true); setOllamaClean(false); }} className="text-muted-foreground hover:text-foreground">
-                            <X size={14} />
-                          </button>
-                        )}
-                      </div>
-
-                      {ollamaLoading ? (
-                        <div className="flex flex-col items-center justify-center py-8 text-center">
-                          <Loader2 size={24} className="animate-spin text-primary mb-3" />
-                          <p className="text-sm text-muted-foreground">Ollama analyse le texte…</p>
-                        </div>
-                      ) : ollamaClean ? (
-                        <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
-                          <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "rgba(16,185,129,0.12)" }}>
-                            <Check size={20} style={{ color: "#10B981" }} />
-                          </div>
-                          <p className="text-sm font-medium" style={{ color: "#10B981" }}>Aucune correction nécessaire</p>
-                          <p className="text-xs text-muted-foreground">Le texte ne contient pas de fautes détectées.</p>
-                        </div>
-                      ) : ollamaSuggestion && !ollamaDismissed ? (
-                        <>
-                          <div className="space-y-1.5 mb-4 max-h-[320px] overflow-y-auto pr-1">
-                            {ollamaChanges.map((c, i) => (
-                              <div key={i} className="flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-md border border-border bg-muted/30">
-                                <span className="line-through text-destructive/70 font-mono">{c.original}</span>
-                                <span className="text-muted-foreground">→</span>
-                                <span className="text-success font-mono font-medium">{c.corrected}</span>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={acceptOllamaSuggestion}
-                              className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded-lg transition-colors"
-                              style={{ background: "rgba(74,123,190,0.12)", color: "#4A7BBE" }}
-                            >
-                              <Check size={12} /> Accepter
-                            </button>
-                            <button
-                              onClick={() => { setOllamaSuggestion(null); setOllamaChanges([]); setOllamaDismissed(true); }}
-                              className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-lg bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
-                            >
-                              <X size={12} /> Ignorer
-                            </button>
-                          </div>
-                        </>
-                      ) : null}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
+
+            {/* ── Sentence correction panel ── */}
+            <AnimatePresence>
+              {analyseError && (
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 16 }}
+                  className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 flex items-center justify-between text-destructive text-sm"
+                >
+                  <span><strong>Analyse échouée :</strong> {analyseError}</span>
+                  <button onClick={() => setAnalyseError(null)} className="ml-3 hover:opacity-70"><X size={14} /></button>
+                </motion.div>
+              )}
+              {analyseSentences !== null && (
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 16 }}
+                  transition={{ type: "spring", damping: 28, stiffness: 220 }}
+                  className="bg-card rounded-xl border border-border shadow-card p-5 space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Wand2 size={15} className="text-violet-500" />
+                      <h4 className="font-semibold text-sm text-foreground">Assistant IA</h4>
+                      {analyseSentences.some(s => s.corrections.length > 0) && (
+                        <span className="text-xs text-muted-foreground">
+                          {analyseSentences.filter(s => s.corrections.length > 0).length} phrase
+                          {analyseSentences.filter(s => s.corrections.length > 0).length > 1 ? "s" : ""} avec corrections
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setAnalyseSentences(null)}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+
+                  {analyseSentences.every(s => s.corrections.length === 0) ? (
+                    <div className="flex items-center gap-3 py-4">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(16,185,129,0.12)" }}>
+                        <Check size={16} style={{ color: "#10B981" }} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium" style={{ color: "#10B981" }}>Aucune correction détectée</p>
+                        <p className="text-xs text-muted-foreground">Le rapport ne contient pas de fautes détectées phrase par phrase.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    analyseSentences
+                      .filter(s => s.corrections.length > 0)
+                      .map(s => (
+                        <SentenceCorrector
+                          key={s.sentence_index}
+                          data={s}
+                          onAcceptWord={applyCorrection}
+                          onAcceptAll={() => s.corrections.forEach(c => applyCorrection(c.mot_original, c.suggestion))}
+                        />
+                      ))
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {error && (
               <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 text-destructive text-sm">{error}</div>
@@ -574,7 +539,7 @@ export default function RapportDetail() {
                 Enregistrer
               </button>
             ) : isNew ? (
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button onClick={() => handleAction("draft")} disabled={saving !== null}
                   className="flex-1 flex items-center justify-center gap-2 bg-muted hover:bg-muted/80 text-foreground font-semibold py-3 rounded-xl disabled:opacity-60 transition-all text-sm border border-border">
                   {saving === "draft" ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
@@ -592,7 +557,7 @@ export default function RapportDetail() {
                 </button>
               </div>
             ) : (
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button onClick={() => handleAction("validate")} disabled={saving !== null}
                   className="flex-1 flex items-center justify-center gap-2 border border-primary text-primary font-semibold py-3 rounded-xl hover:bg-primary/10 disabled:opacity-60 transition-all text-sm">
                   {saving === "validate" ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}

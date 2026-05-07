@@ -15,6 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { RecordingIndicator } from "@/components/RecordingIndicator";
 import { useRecording } from "@/contexts/RecordingContext";
 import { deleteAudio } from "@/services/audioService";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // ── Audio Queue ────────────────────────────────────────────────────────────────
 function AudioQueue({ collapsed }: { collapsed: boolean }) {
@@ -280,10 +281,16 @@ function SectionBlock({ section, collapsed, first }: { section: Section; collaps
 }
 
 // ── Main Sidebar ───────────────────────────────────────────────────────────────
-export function Sidebar() {
+interface SidebarProps {
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+}
+
+export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
+  const isMobile = useIsMobile();
 
   const isAdmin   = user?.rôle === "admin";
   const isMédecin = user?.rôle === "médecin";
@@ -292,6 +299,86 @@ export function Sidebar() {
                  : isMédecin ? médécinSections
                  :             adminITSections;
 
+  // On mobile: fixed overlay, slide in/out
+  if (isMobile) {
+    return (
+      <motion.aside
+        animate={{ x: mobileOpen ? 0 : -240 }}
+        transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+        className="fixed inset-y-0 left-0 z-40 w-[220px] h-screen flex flex-col bg-sidebar border-r border-sidebar-border shadow-xl"
+      >
+        {/* ── Logo + close ── */}
+        <div className="flex items-center justify-between gap-2 px-4 h-16 border-b border-sidebar-border">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 shrink-0">
+              <img src="/logo-icon.png" alt="ReportEase" className="w-full h-full object-contain" />
+            </div>
+            <span className="font-extrabold text-lg tracking-tight text-[#0F172A] whitespace-nowrap">
+              ReportEase
+            </span>
+          </div>
+          <button
+            onClick={onMobileClose}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* ── Nav sections ── */}
+        <nav className="flex-1 py-2 px-2 overflow-y-auto scrollbar-thin" onClick={onMobileClose}>
+          {sections.map((section, i) => (
+            <SectionBlock key={section.label} section={section} collapsed={false} first={i === 0} />
+          ))}
+        </nav>
+
+        {/* ── Audio queue ── */}
+        <AudioQueue collapsed={false} />
+
+        {/* ── Recording indicator ── */}
+        <RecordingIndicator collapsed={false} />
+
+        {/* ── Footer ── */}
+        <div className="border-t border-sidebar-border">
+          <div className="px-2 pt-2">
+            <button
+              onClick={toggleTheme}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] hover:bg-sidebar-accent transition-all"
+              style={{ color: '#64748B' }}
+            >
+              {theme === "dark" ? <Sun size={15} className="shrink-0" /> : <Moon size={15} className="shrink-0" />}
+              <span className="whitespace-nowrap overflow-hidden">
+                {theme === "dark" ? "Mode clair" : "Mode sombre"}
+              </span>
+            </button>
+          </div>
+          <div className="flex items-center gap-2.5 px-3 py-3">
+            <div className="w-7 h-7 rounded-full shrink-0 border overflow-hidden flex items-center justify-center text-[10px] font-bold"
+              style={{ background: 'rgba(74,123,190,0.12)', borderColor: 'rgba(74,123,190,0.25)', color: '#4A7BBE' }}>
+              {user?.photo
+                ? <img src={user.photo} alt="" className="w-full h-full object-cover" />
+                : <>{user?.prénom?.[0]}{user?.nom?.[0]}</>
+              }
+            </div>
+            <div className="overflow-hidden min-w-0 flex-1">
+              <p className="text-[11px] font-medium whitespace-nowrap truncate" style={{ color: '#334155' }}>
+                {isMédecin ? `Dr. ${user?.prénom} ${user?.nom}` : `${user?.prénom} ${user?.nom}`}
+              </p>
+              <p className="text-[9px] whitespace-nowrap" style={{ color: '#94A3B8' }}>
+                {isAdmin ? "Administrateur" : isMédecin ? "Radiologue" : "Admin IT"}
+              </p>
+            </div>
+            <button onClick={logout} title="Déconnexion"
+              className="text-destructive hover:bg-destructive/10 w-6 h-6 rounded flex items-center justify-center shrink-0 transition-colors">
+              <LogOut size={13} />
+            </button>
+          </div>
+        </div>
+      </motion.aside>
+    );
+  }
+
+  // Desktop: collapsible sidebar
   return (
     <motion.aside
       animate={{ width: collapsed ? 64 : 220 }}

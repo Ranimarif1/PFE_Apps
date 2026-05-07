@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { Bell, Sun, Moon, Search } from "lucide-react";
+import { Bell, Sun, Moon, Search, Menu } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -33,6 +33,8 @@ interface NavbarProps {
   title?: string;
   showSearch?: boolean;
   onSearch?: (q: string) => void;
+  onToggleSidebar?: () => void;
+  isMobile?: boolean;
 }
 
 interface Notification {
@@ -57,7 +59,7 @@ function formatRelative(iso: string): string {
   return new Date(iso).toLocaleDateString("fr-FR");
 }
 
-export function Navbar({ title, showSearch, onSearch }: NavbarProps) {
+export function Navbar({ title, showSearch, onSearch, onToggleSidebar, isMobile }: NavbarProps) {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -159,16 +161,27 @@ export function Navbar({ title, showSearch, onSearch }: NavbarProps) {
   const section = isAdmin ? "Administration" : isMédecin ? "Médecin" : "Admin Système";
 
   return (
-    <header className="h-16 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-between px-6 sticky top-0 z-10">
+    <header className="h-16 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-between px-3 sm:px-6 sticky top-0 z-10">
 
-      {/* ── Left: breadcrumb + search ── */}
-      <div className="flex items-center gap-4">
+      {/* ── Left: hamburger (mobile) + breadcrumb + search ── */}
+      <div className="flex items-center gap-2 sm:gap-4">
+        {/* Hamburger — only on mobile */}
+        {isMobile && (
+          <button
+            onClick={onToggleSidebar}
+            aria-label="Ouvrir le menu"
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 text-muted-foreground hover:text-foreground"
+            style={{ background: btnBg, border: "1px solid hsl(var(--border))" }}
+          >
+            <Menu size={18} />
+          </button>
+        )}
         {title && (
           <nav className="flex flex-col gap-0.5">
             <span className="text-[10px] font-bold tracking-[0.14em] uppercase text-muted-foreground/70">
               {section}
             </span>
-            <h1 className="text-[18px] font-bold tracking-tight text-foreground leading-none">
+            <h1 className="text-[15px] sm:text-[18px] font-bold tracking-tight text-foreground leading-none">
               {title}
             </h1>
           </nav>
@@ -181,7 +194,7 @@ export function Navbar({ title, showSearch, onSearch }: NavbarProps) {
               size={15}
             />
             <input
-              className="pl-9 pr-4 py-2 text-sm rounded-xl border w-60 transition-all duration-200"
+              className="pl-9 pr-4 py-2 text-sm rounded-xl border w-36 sm:w-60 transition-all duration-200"
               style={{ background: btnBg, borderColor: "hsl(var(--border))" }}
               placeholder="Recherche par ID Exam..."
               onChange={e => onSearch?.(e.target.value)}
@@ -229,9 +242,8 @@ export function Navbar({ title, showSearch, onSearch }: NavbarProps) {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: -6 }}
                 transition={{ duration: 0.16, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className="absolute right-0 top-11 rounded-2xl border z-50 overflow-hidden notif-dropdown"
+                className="absolute right-0 top-11 rounded-2xl border z-50 overflow-hidden notif-dropdown w-[310px] max-w-[90vw]"
                 style={{
-                  width: "310px",
                   background: dropdownBg,
                   borderColor: "hsl(var(--border))",
                   backdropFilter: "blur(20px)",

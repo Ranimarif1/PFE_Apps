@@ -17,6 +17,7 @@ onnxruntime>=1.18.0
 # torchaudio>=2.0.0
 librosa>=0.10.0
 soundfile>=0.12.0
+httpx>=0.27.0,<1.0
 # Optional post-processing (gracefully skipped if not installed)
 # deepmultilingualpunctuation  # auto punctuation restoration
 # language_tool_python         # French grammar/spellcheck

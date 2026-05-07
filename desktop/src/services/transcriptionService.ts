@@ -40,6 +40,46 @@ export interface OllamaSuggestion {
   changes:    OllamaChange[];
 }
 
+export interface SentenceCorrection {
+  mot_original: string;
+  suggestion:   string;
+  position:     number;
+}
+
+export interface SentenceAnalysis {
+  sentence_index: number;
+  sentence:       string;
+  corrections:    SentenceCorrection[];
+}
+
+export interface AnalyseResult {
+  sentences: SentenceAnalysis[];
+}
+
+export async function analyseReport(text: string): Promise<AnalyseResult> {
+  const token = localStorage.getItem("access_token");
+  const res = await fetch(`${BASE_URL}/api/analyse/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ text }),
+  });
+
+  if (res.status === 401) {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("auth_user");
+    window.location.href = "/login";
+    throw new Error("Session expirée. Veuillez vous reconnecter.");
+  }
+
+  if (!res.ok) throw new Error(`Erreur ${res.status}`);
+  const data = await res.json().catch(() => ({}));
+  return data as AnalyseResult;
+}
+
 export async function getSuggestion(text: string): Promise<OllamaSuggestion> {
   const token = localStorage.getItem("access_token");
 

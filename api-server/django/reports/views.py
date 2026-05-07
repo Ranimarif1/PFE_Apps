@@ -3,6 +3,8 @@ from __future__ import annotations
 import datetime as dt
 import difflib
 import json
+import re
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -343,4 +345,119 @@ def get_or_update_report(request: HttpRequest, report_id: str):
         return JsonResponse({"detail": "Supprimé."}, status=200)
 
     return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Analyse par phrase via Ollama mistral — prompt radiologie neurovasculaire
+# ──────────────────────────────────────────────────────────────────────────────
+
+_ANALYSE_URL   = "http://localhost:11434/api/chat"
+_ANALYSE_MODEL = "mistral:latest"
+_ANALYSE_PROMPT = (
+    "Tu es un expert en radiologie neurovasculaire francophone.\n"
+    "Analyse la phrase et détecte :\n"
+    "- fautes d'orthographe médicale\n"
+    "- termes anatomiques déformés (ex: \"vis\" → \"Willis\", \"deff\" → \"diffusion\")\n"
+    "- mots incohérents issus d'une transcription vocale automatique\n"
+    "- séquences IRM mal écrites (FLAIR, T1, T2, DWI, 3D, écho de gradient...)\n\n"
+    "Retourne UNIQUEMENT ce JSON, sans markdown, sans explication :\n"
+    "{\"corrections\": [{\"mot_original\": \"...\", \"suggestion\": \"...\", \"position\": 0}]}\n"
+    "Si aucune erreur : {\"corrections\": []}\n\n"
+    "Sois strict : un texte de radiologie contient souvent des erreurs de transcription vocale.\n\n"
+    "Ne remplace JAMAIS un terme médical correct par un synonyme moins précis.\n"
+    "encéphale ≠ cerveau (encéphale est le terme radiologique exact).\n"
+    "Corrige uniquement les vraies erreurs, pas les variations terminologiques."
+)
+
+
+def _call_ollama_analyse(sentence: str) -> List[Dict[str, Any]]:
+    """Appelle Ollama avec le prompt radiologie et retourne les corrections validées."""
+    import urllib.request as _urllib
+
+    payload = json.dumps({
+        "model": _ANALYSE_MODEL,
+        "messages": [
+            {"role": "system", "content": _ANALYSE_PROMPT},
+            {"role": "user",   "content": f"Phrase : {sentence}"},
+        ],
+        "stream": False,
+        "options": {"temperature": 0.0, "seed": 0},
+    }).encode("utf-8")
+
+    req = _urllib.Request(
+        _ANALYSE_URL,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+    )
+    with _urllib.urlopen(req, timeout=60) as resp:
+        raw = json.loads(resp.read()).get("message", {}).get("content", "").strip()
+
+    if not raw:
+        return []
+
+    # Parse JSON avec fallback regex si le modèle ajoute du texte autour
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        m = re.search(r'\{.*\}', raw, re.DOTALL)
+        parsed = json.loads(m.group()) if m else {}
+
+    corrections = []
+    words = sentence.split()
+    for c in parsed.get("corrections", []):
+        original  = (c.get("mot_original") or "").strip()
+        suggestion = (c.get("suggestion")  or "").strip()
+        if not original or not suggestion or original == suggestion:
+            continue
+        orig_alpha = re.sub(r'[^\w]', '', original,  flags=re.UNICODE)
+        corr_alpha = re.sub(r'[^\w]', '', suggestion, flags=re.UNICODE)
+        # Rejeter les anagrammes purs (IRM → MRI, même lettres réarrangées)
+        if sorted(orig_alpha.lower()) == sorted(corr_alpha.lower()):
+            continue
+        # Trouver la position du mot dans la phrase
+        position = c.get("position", 0)
+        if not isinstance(position, int) or not (0 <= position < len(words)):
+            position = 0
+            for i, w in enumerate(words):
+                clean_w = re.sub(r'^[^\w]+|[^\w]+$', '', w, flags=re.UNICODE)
+                if clean_w.lower() == original.lower():
+                    position = i
+                    break
+        corrections.append({
+            "mot_original": original,
+            "suggestion":   suggestion,
+            "position":     int(position),
+        })
+    return corrections
+
+
+@csrf_exempt
+@jwt_required(roles={"doctor", "admin", "adminIT"})
+def analyse_report(request: HttpRequest) -> JsonResponse:
+    """POST /api/analyse/ — correction médicale par phrase via Ollama."""
+    if request.method != "POST":
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+
+    data = _parse_body(request)
+    text = (data.get("text") or "").strip()
+    if not text:
+        return JsonResponse({"detail": "Le champ 'text' est requis."}, status=400)
+
+    raw_parts = re.split(r'(?<=[.!?])\s+', text)
+    sentences = [s.strip() for s in raw_parts if s.strip()]
+
+    result_sentences = []
+    for idx, sentence in enumerate(sentences):
+        corrections: List[Dict[str, Any]] = []
+        try:
+            corrections = _call_ollama_analyse(sentence)
+        except Exception as e:
+            print(f"[warn] Ollama analyse phrase {idx}: {e}", file=sys.stderr)
+        result_sentences.append({
+            "sentence_index": idx,
+            "sentence":       sentence,
+            "corrections":    corrections,
+        })
+
+    return JsonResponse({"sentences": result_sentences})
 
