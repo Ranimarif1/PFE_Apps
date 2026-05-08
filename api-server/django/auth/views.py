@@ -15,7 +15,7 @@ from django.core.mail import send_mail
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from core.auth import create_access_token, create_refresh_token, get_current_user, hash_password, verify_password
+from core.auth import create_access_token, create_refresh_token, decode_token, get_current_user, hash_password, verify_password
 from core.mongo import get_collection, serialize_document
 
 from .validators import validate_email_format, validate_password_strength
@@ -679,3 +679,56 @@ def reset_password(request: HttpRequest) -> JsonResponse:
 
     return JsonResponse({"detail": "Mot de passe réinitialisé avec succès."})
 
+
+
+@csrf_exempt
+def refresh_token_view(request: HttpRequest) -> JsonResponse:
+    """Renouvelle l'access token à partir d'un refresh token valide."""
+    if request.method != "POST":
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+
+    data = _parse_body(request)
+    refresh = data.get("refresh", "").strip()
+    if not refresh:
+        return JsonResponse({"detail": "Refresh token manquant."}, status=400)
+
+    payload = decode_token(refresh)
+    if not payload or payload.get("type") != "refresh":
+        return JsonResponse({"detail": "Refresh token invalide ou expiré."}, status=401)
+
+    blacklist_col = get_collection("token_blacklist")
+    if blacklist_col.find_one({"token": refresh}):
+        return JsonResponse({"detail": "Session révoquée. Veuillez vous reconnecter."}, status=401)
+
+    users_col = get_collection("users")
+    user_doc = users_col.find_one({"_id": ObjectId(payload["sub"])})
+    if not user_doc:
+        return JsonResponse({"detail": "Utilisateur introuvable."}, status=401)
+
+    new_access = create_access_token(user_doc)
+    return JsonResponse({"access": new_access})
+
+
+@csrf_exempt
+def logout_view(request: HttpRequest) -> JsonResponse:
+    """Blackliste le refresh token pour invalider la session côté serveur."""
+    if request.method != "POST":
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+
+    data = _parse_body(request)
+    refresh = data.get("refresh", "").strip()
+    if refresh:
+        payload = decode_token(refresh)
+        if payload and payload.get("type") == "refresh":
+            blacklist_col = get_collection("token_blacklist")
+            blacklist_col.update_one(
+                {"token": refresh},
+                {"$set": {
+                    "token": refresh,
+                    "user_id": payload.get("sub"),
+                    "exp": payload.get("exp"),
+                    "blacklisted_at": dt.datetime.utcnow().isoformat(),
+                }},
+                upsert=True,
+            )
+    return JsonResponse({"detail": "Déconnecté."})

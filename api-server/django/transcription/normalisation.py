@@ -334,6 +334,12 @@ _WHISPER_MISHEAR_RE = re.compile(
     flags=re.IGNORECASE,
 )
 
+# "Ladigne" / "la digne" / "ladigne" — Whisper mishear fréquent de "à la ligne"
+_LADIGNE_RE = re.compile(
+    r'\s*\b(?:la\s*digne|ladigne|la\s*ligne(?!\s+(?:de|du|des|en|est|les|la|le)))\b\s*',
+    flags=re.IGNORECASE,
+)
+
 # "deux points" non suivi de "à la ligne" → ":"  (le médecin dicte simplement
 # le séparateur entre l'intitulé d'une section et son contenu, par exemple
 # « Indication deux points HTA »).
@@ -356,7 +362,23 @@ _COLON_CMD_RE = re.compile(
 # "Indication" dans les rapports de radiologie tunisiens.
 
 _SECTION_ALIASES: list[tuple[re.Pattern, str]] = [
-    (re.compile(r'\brenseignements?\s+cliniques?\b\s*:?', re.IGNORECASE), 'Indication:'),
+    # "Renseignement(s) clinique(s)" — pattern générique qui capture toutes les
+    # variantes Whisper : Renseignement, Réseignement, Enségnement, Enseignement…
+    # Le mot varie mais se termine toujours par "gnement" suivi de "clinique".
+    (re.compile(r'\b\w*gnements?\s+cliniques?\b\s*:?', re.IGNORECASE), 'Indication:'),
+    # Technique variants (Whisper mishears / alternate dictation forms)
+    (re.compile(r'\btechniques?\s+utilis[eé]e?s?\b\s*:?', re.IGNORECASE), 'Technique:'),
+    (re.compile(r'\ben\s+technique\b\s*:?', re.IGNORECASE), 'Technique:'),
+    (re.compile(r'\bprotocole\s+technique\b\s*:?', re.IGNORECASE), 'Technique:'),
+    # Conclusion variants
+    (re.compile(r'\ben\s+conclusion\b\s*:?', re.IGNORECASE), 'Conclusion:'),
+    (re.compile(r'\bconclusions\b\s*:?', re.IGNORECASE), 'Conclusion:'),
+    (re.compile(r'\bconclure\b\s*:?', re.IGNORECASE), 'Conclusion:'),
+    (re.compile(r'\bà\s+conclure\b\s*:?', re.IGNORECASE), 'Conclusion:'),
+    # Résultat variants
+    (re.compile(r'\br[eé]sultats\b\s*:?', re.IGNORECASE), 'Resultat:'),
+    (re.compile(r'\bconstata(?:tion|tions)\b\s*:?', re.IGNORECASE), 'Resultat:'),
+    (re.compile(r'\bdescription\b\s*:?', re.IGNORECASE), 'Resultat:'),
 ]
 
 
@@ -412,6 +434,8 @@ def normalize_spoken_punct(text: str) -> str:
     # "deux points" restant (qui n'était pas suivi de "à la ligne") → ":"
     text = _COLON_CMD_RE.sub(':', text)
     text = _WHISPER_MISHEAR_RE.sub(' ', text)
+    # "Ladigne" / "la digne" → saut de ligne (mishear Whisper de "à la ligne")
+    text = _LADIGNE_RE.sub('\n', text)
     return text.strip()
 
 

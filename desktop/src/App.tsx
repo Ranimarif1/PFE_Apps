@@ -10,6 +10,51 @@ import { RouteGuard } from "@/components/RouteGuard";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { useEffect, useState } from "react";
 
+function InactivityWarning() {
+  const { showInactivityWarning, resetInactivityTimer, logout } = useAuth();
+  if (!showInactivityWarning) return null;
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 9999,
+      background: "rgba(0,0,0,0.6)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <div style={{
+        background: "white", borderRadius: 12, padding: "2rem",
+        maxWidth: 400, width: "90%", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+      }}>
+        <div style={{ fontSize: 48, marginBottom: 12 }}>⚠️</div>
+        <h2 style={{ margin: "0 0 8px", fontSize: 20, fontWeight: 700, color: "#1a1a1a" }}>
+          Session inactive
+        </h2>
+        <p style={{ color: "#555", marginBottom: 24, lineHeight: 1.5 }}>
+          Vous allez être déconnecté automatiquement dans <strong>1 minute</strong> pour des raisons de sécurité.
+        </p>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+          <button
+            onClick={resetInactivityTimer}
+            style={{
+              padding: "10px 24px", borderRadius: 8, border: "none", cursor: "pointer",
+              background: "#2563eb", color: "white", fontWeight: 600, fontSize: 15,
+            }}
+          >
+            Rester connecté
+          </button>
+          <button
+            onClick={logout}
+            style={{
+              padding: "10px 24px", borderRadius: 8, border: "1px solid #ddd",
+              cursor: "pointer", background: "white", color: "#555", fontSize: 15,
+            }}
+          >
+            Se déconnecter
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 import Index from "./pages/Index";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -124,6 +169,7 @@ const App = () => {
                 <div style={{ position: 'relative', zIndex: 1 }}>
                   <AppWithLoading />
                 </div>
+                <InactivityWarning />
               </BrowserRouter>
             </TooltipProvider>
           </RecordingProvider>

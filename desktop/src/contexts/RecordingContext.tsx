@@ -22,11 +22,13 @@ function structureContent(text: string, category?: ReportCategory | null): strin
 
   const includeTechnique = category === "irm" || category === "scanner" || tIdx !== -1;
 
+  // No sections detected at all → full text goes to Résultat as fallback
   if (iIdx === -1 && tIdx === -1 && rIdx === -1 && cIdx === -1) {
     return includeTechnique
       ? `Indication: \n\nTechnique: \n\nResultat: ${text}\n\nConclusion: `
       : `Indication: \n\nResultat: ${text}\n\nConclusion: `;
   }
+
   const extract = (match: RegExpExecArray | null, end: number) => {
     if (!match) return "";
     const raw = text.slice(match.index + match[0].length, end === -1 ? text.length : end).trim();
@@ -43,10 +45,62 @@ function structureContent(text: string, category?: ReportCategory | null): strin
     return valid.length === 0 ? -1 : Math.min(...valid);
   };
 
-  const indication = extract(iMatch, nextAfter(iIdx, tIdx, rIdx, cIdx));
-  const technique  = extract(tMatch, nextAfter(tIdx, rIdx, cIdx));
-  const resultat   = extract(rMatch, nextAfter(rIdx, cIdx));
-  const conclusion = extract(cMatch, -1);
+  // Resolve text before the first detected section
+  let indication: string;
+  let technique: string;
+
+  if (iMatch) {
+    // "Indication" keyword found → extract normally
+    indication = extract(iMatch, nextAfter(iIdx, tIdx, rIdx, cIdx));
+    technique  = extract(tMatch, nextAfter(tIdx, rIdx, cIdx));
+  } else if (tMatch) {
+    // No "Indication" but "Technique" found → text before Technique → Indication
+    const firstSection = tIdx;
+    const raw = text.slice(0, firstSection).trim();
+    indication = raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : "";
+    technique  = extract(tMatch, nextAfter(tIdx, rIdx, cIdx));
+  } else {
+    // Neither "Indication" nor "Technique" found
+    const firstSection = nextAfter(-1, rIdx, cIdx);
+    const orphan = firstSection > 0 ? text.slice(0, firstSection).trim() : "";
+
+    if (includeTechnique && orphan) {
+      // IRM/Scanner: first line → Indication, rest → Technique (Option C)
+      const firstBreak = orphan.search(/\n/);
+      if (firstBreak > 0) {
+        const firstLine = orphan.slice(0, firstBreak).trim();
+        const rest      = orphan.slice(firstBreak + 1).trim();
+        indication = firstLine ? firstLine.charAt(0).toUpperCase() + firstLine.slice(1) : "";
+        technique  = rest      ? rest.charAt(0).toUpperCase()      + rest.slice(1)      : "";
+      } else {
+        // Single block, no line break → all to Indication (can't split)
+        indication = orphan ? orphan.charAt(0).toUpperCase() + orphan.slice(1) : "";
+        technique  = "";
+      }
+    } else {
+      // Écho/Radio/Autre: all orphan text → Indication
+      indication = orphan ? orphan.charAt(0).toUpperCase() + orphan.slice(1) : "";
+      technique  = "";
+    }
+  }
+  let resultat    = extract(rMatch, nextAfter(rIdx, cIdx));
+  let conclusion  = extract(cMatch, -1);
+
+  // ── Safety net ────────────────────────────────────────────────────────────
+  // Verify no text was silently lost. Compare total captured characters
+  // against the original. Any significant orphaned text is appended to
+  // Résultat so the doctor can always see it and move it manually.
+  const captured = [indication, technique, resultat, conclusion]
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const original = text.replace(/\s+/g, " ").trim();
+
+  if (original.length > 20 && captured.length < original.length * 0.6) {
+    // More than 40% of text is unaccounted for — append raw text to Résultat
+    const fallback = `[Texte non classifié — à déplacer dans la bonne section]\n${text.trim()}`;
+    resultat = resultat ? `${resultat}\n\n${fallback}` : fallback;
+  }
 
   const parts = [
     `Indication: ${indication}`,

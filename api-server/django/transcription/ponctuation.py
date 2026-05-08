@@ -62,7 +62,12 @@ def strip_whisper_punctuation(text: str) -> str:
 
 
 def apply_verbal_commands(text: str) -> str:
-    """Remplace les commandes verbales par les symboles de ponctuation."""
+    """Remplace les commandes verbales par les symboles de ponctuation.
+
+    Toute la ponctuation auto de Whisper est supprimée d'abord, puis les mots
+    de ponctuation dictés (virgule, point, à la ligne…) sont convertis en
+    symboles réels.
+    """
     result = strip_whisper_punctuation(text)
     result = result.lower()
 
