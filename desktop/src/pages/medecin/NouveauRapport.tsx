@@ -671,6 +671,9 @@ function VocalCommandsCard() {
                 </div>
               ))}
             </div>
+            <div className="mx-5 mb-5 px-4 py-3 rounded-xl bg-warning/10 border border-warning/30 text-xs text-muted-foreground">
+              ⚠️ <span className="text-foreground font-medium">Déconnexion automatique</span> — après 30 min d'inactivité, un message d'avertissement s'affiche. Vous avez <span className="font-medium text-foreground">1 minute</span> pour rester connecté, sinon la session se ferme.
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

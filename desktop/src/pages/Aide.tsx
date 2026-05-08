@@ -419,6 +419,22 @@ export default function Aide() {
           </Section>
         )}
 
+        {/* Session */}
+        <div className="bg-warning/10 border border-warning/30 rounded-2xl p-5 flex gap-3">
+          <AlertCircle size={18} className="text-warning shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-foreground mb-1">Déconnexion automatique</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Pour des raisons de sécurité (poste partagé), si vous restez{" "}
+              <span className="text-foreground font-medium">30 minutes sans activité</span>,
+              un avertissement apparaît à l'écran. Vous avez alors{" "}
+              <span className="text-foreground font-medium">1 minute</span> pour cliquer sur{" "}
+              <span className="font-medium text-foreground">« Rester connecté »</span>, sinon
+              vous serez déconnecté automatiquement.
+            </p>
+          </div>
+        </div>
+
         {/* Contact */}
         <div className="bg-card rounded-2xl border border-border shadow-card p-6 text-center">
           <p className="text-xs text-muted-foreground">
