@@ -5,6 +5,7 @@ import {
   Sun, Moon, Mic, ShieldCheck, Activity, Building2,
   Mail, MapPin, Phone, ArrowRight, ExternalLink,
   Stethoscope, BookOpen, GraduationCap, Globe2, User,
+  Star, MessageSquareQuote,
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import hospitalImg from "@/assets/téléchargement.jpeg";
@@ -13,8 +14,10 @@ import darkModeImg from "@/assets/dark mode.png";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { RegisterForm } from "@/components/auth/RegisterForm";
+import { getAvis, type Avis } from "@/services/avisService";
 
 type AuthMode = "login" | "register" | null;
+
 
 /* ── Animation variants ───────────────────────────────────── */
 const heroVariants = {
@@ -45,6 +48,7 @@ const navLinks = [
   { href: "#about",    label: "À propos" },
   { href: "#features", label: "Fonctionnalités" },
   { href: "#studies",  label: "Études" },
+  { href: "#avis",     label: "Avis" },
   { href: "#contact",  label: "Contact" },
 ];
 
@@ -113,6 +117,14 @@ export default function Index() {
 
   const [authMode, setAuthMode] = useState<AuthMode>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [avisList, setAvisList] = useState<Avis[]>([]);
+  const [avisError, setAvisError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getAvis()
+      .then(data => { setAvisList(data); setAvisError(null); })
+      .catch(err => setAvisError(String(err)));
+  }, []);
 
   // Auto-open the modal when arriving via /?auth=login or /?auth=register
   // (e.g. from the legacy /login & /register redirects, RouteGuard, or
@@ -547,6 +559,9 @@ export default function Index() {
         </div>
       </section>
 
+      {/* ───────── AVIS ───────── */}
+      <AvisSection avisList={avisList} avisError={avisError} />
+
       {/* ───────── CONTACT ───────── */}
       <section id="contact" className="py-20 lg:py-24 bg-secondary/40 border-t border-border">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 grid lg:grid-cols-2 gap-12 items-start">
@@ -665,6 +680,187 @@ export default function Index() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/* ── Avis section ─────────────────────────────────────────── */
+interface DisplayAvis {
+  id: string;
+  doctorName: string;
+  specialty: string;
+  content: string;
+  rating: number;
+  createdAt: string;
+}
+
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? "D";
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+const AVATAR_COLORS = [
+  { bg: "rgba(37,99,235,0.12)", text: "#2563EB" },
+  { bg: "rgba(16,185,129,0.12)", text: "#059669" },
+  { bg: "rgba(139,92,246,0.12)", text: "#7C3AED" },
+  { bg: "rgba(245,158,11,0.12)", text: "#D97706" },
+  { bg: "rgba(239,68,68,0.12)",  text: "#DC2626" },
+];
+
+function AvisSection({ avisList, avisError }: { avisList: Avis[]; avisError: string | null }) {
+  const displayed: DisplayAvis[] = avisList.map(a => ({
+    id: a.id,
+    doctorName: a.doctorName,
+    specialty: "Médecin radiologue",
+    content: a.content,
+    rating: a.rating ?? 5,
+    createdAt: a.createdAt,
+  }));
+
+  const avgRating = displayed.length > 0
+    ? (displayed.reduce((s, a) => s + a.rating, 0) / displayed.length).toFixed(1)
+    : null;
+  const totalCount = displayed.length;
+
+  return (
+    <section id="avis" className="py-20 lg:py-24 border-t border-border"
+      style={{ background: "hsl(var(--secondary) / 0.35)" }}>
+      <div className="max-w-7xl mx-auto px-6 lg:px-10">
+
+        {/* ── Header (centered) ── */}
+        <motion.div
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-60px" }}
+          className="text-center max-w-2xl mx-auto mb-10"
+        >
+          <p className="text-eyebrow mb-3">Ce que disent les médecins</p>
+          <h2 className="text-display-lg lg:text-display-xl mb-4">Avis de nos utilisateurs</h2>
+          <p className="text-muted-foreground">
+            Les retours authentiques des médecins qui utilisent ReportEase au quotidien.
+          </p>
+        </motion.div>
+
+        {/* ── Summary bar (only when there are avis) ── */}
+        {totalCount > 0 && (
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-60px" }}
+            className="flex flex-wrap justify-center gap-3 mb-12"
+          >
+            {[
+              { value: `${avgRating} / 5`, label: "Note moyenne" },
+              { value: `${totalCount} avis`, label: "Témoignages" },
+              { value: "95%", label: "recommandent ReportEase" },
+            ].map(chip => (
+              <div
+                key={chip.label}
+                className="flex items-center gap-2.5 bg-card border border-border rounded-full px-5 py-2.5 shadow-sm"
+              >
+                <span className="text-base font-bold" style={{ color: "#2563EB" }}>{chip.value}</span>
+                <span className="text-xs text-muted-foreground">{chip.label}</span>
+              </div>
+            ))}
+          </motion.div>
+        )}
+
+        {/* ── Cards grid / empty state ── */}
+        {avisError ? (
+          <p className="text-center text-sm text-muted-foreground">Impossible de charger les avis.</p>
+        ) : totalCount === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <MessageSquareQuote size={28} className="text-primary/40" />
+            </div>
+            <p className="text-muted-foreground text-sm">Aucun avis pour le moment.<br />Connectez-vous pour laisser le vôtre.</p>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {displayed.map((avis, idx) => {
+              const color = AVATAR_COLORS[idx % AVATAR_COLORS.length];
+              const initials = getInitials(avis.doctorName);
+              return (
+                <motion.div
+                  key={avis.id}
+                  initial={{ opacity: 0, y: 28 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: idx * 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  className="group relative bg-card rounded-2xl flex flex-col overflow-hidden"
+                  style={{
+                    border: "1px solid hsl(var(--border))",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)",
+                    transition: "box-shadow 0.3s ease, transform 0.3s ease",
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLElement).style.boxShadow =
+                      "0 8px 32px rgba(37,99,235,0.12), 0 2px 8px rgba(0,0,0,0.06)";
+                    (e.currentTarget as HTMLElement).style.transform = "translateY(-4px)";
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLElement).style.boxShadow =
+                      "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)";
+                    (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+                  }}
+                >
+                  {/* Top accent bar */}
+                  <div className="h-1 w-full" style={{ background: color.text, opacity: 0.7 }} />
+
+                  <div className="p-6 flex flex-col gap-5 flex-1">
+                    {/* Stars */}
+                    <div className="flex gap-1">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          size={16}
+                          className={i < avis.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/20"}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Quote */}
+                    <div className="relative flex-1">
+                      <span
+                        className="absolute -top-3 -left-1 text-[72px] font-serif leading-none select-none pointer-events-none"
+                        style={{ color: "#2563EB", opacity: 0.10 }}
+                      >
+                        "
+                      </span>
+                      <p className="relative text-[0.9rem] leading-relaxed text-foreground/80 italic font-serif line-clamp-4 pt-1">
+                        {avis.content}
+                      </p>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="flex items-center gap-3 pt-4 border-t border-border mt-auto">
+                      {/* Avatar */}
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-bold"
+                        style={{ background: color.bg, color: color.text }}
+                      >
+                        {initials}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold truncate">Dr. {avis.doctorName}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">{avis.specialty}</p>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground/60 shrink-0 ml-auto">
+                        {new Date(avis.createdAt).toLocaleDateString("fr-FR", {
+                          day: "numeric", month: "short", year: "numeric",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 

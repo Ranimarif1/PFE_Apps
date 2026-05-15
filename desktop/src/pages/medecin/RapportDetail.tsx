@@ -1,8 +1,8 @@
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { getReport, createReport, updateReport } from "@/services/reportsService";
-import { CheckCircle, Edit3, Save, FileText, Check, X, Loader2, ArrowLeft, Pencil, Wand2 } from "lucide-react";
+import { CheckCircle, Edit3, Save, FileText, Check, X, Loader2, ArrowLeft, Pencil, Wand2, CloudUpload } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRecording } from "@/contexts/RecordingContext";
@@ -128,6 +128,12 @@ export default function RapportDetail() {
   const [analyseLoading,     setAnalyseLoading]     = useState(false);
   const [analyseError,       setAnalyseError]       = useState<string | null>(null);
 
+  /* ── Auto-save ── */
+  const autoSaveTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoAnalyseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [autoSaving,  setAutoSaving]  = useState(false);
+  const [autoSavedAt, setAutoSavedAt] = useState<Date | null>(null);
+
   /* ── Category auto-save (for already-saved/validated reports) ── */
   const [categorySaving,     setCategorySaving]     = useState(false);
   const [categorySaved,      setCategorySaved]      = useState(false);
@@ -150,6 +156,40 @@ export default function RapportDetail() {
   };
 
   const contenu = buildContent(indication, technique, resultat, conclusion);
+
+  /* ── Auto-save on every change (draft reports only, while editing) ── */
+  const doAutoSave = useCallback(async (content: string, cat: string, reportId: string) => {
+    setAutoSaving(true);
+    try {
+      await updateReport(reportId, { content, status: "draft", category: cat as ReportCategory });
+      setAutoSavedAt(new Date());
+    } catch {
+      // silently ignore — user can still save manually
+    } finally {
+      setAutoSaving(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isNew || !id || status !== "draft" || !editing) return;
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      doAutoSave(contenu, category || "autre", id);
+    }, 1500);
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contenu, editing]);
+
+  /* ── Auto-analyse: trigger suggestions 3s after last change (edit mode only) ── */
+  useEffect(() => {
+    if (!editing || !contenu.trim()) return;
+    if (autoAnalyseTimer.current) clearTimeout(autoAnalyseTimer.current);
+    autoAnalyseTimer.current = setTimeout(() => {
+      handleAnalyse();
+    }, 3000);
+    return () => { if (autoAnalyseTimer.current) clearTimeout(autoAnalyseTimer.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contenu, editing]);
 
   /* ── Auto-save as draft when arriving from transcription ── */
   useEffect(() => {
@@ -313,7 +353,7 @@ export default function RapportDetail() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-sm">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-sm">
                 <div>
                   <p className="text-muted-foreground text-xs mb-0.5">ID Exam</p>
                   {(isNew || status === "draft") && editingId ? (
@@ -381,26 +421,26 @@ export default function RapportDetail() {
               </div>
             </div>
 
-            {/* ── Content + Ollama panel side by side ── */}
-            <div className="flex gap-4 items-start">
+            {/* ── Content + AI Sidebar ── */}
+            <div className="flex flex-col lg:flex-row gap-4 items-start">
 
               {/* Transcription card */}
               <div className="bg-card rounded-xl border border-border shadow-card p-4 sm:p-6 space-y-5 flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-foreground">Transcription</h3>
-                  <div className="flex items-center gap-2">
-                    {editing && (
-                      <button
-                        onClick={handleAnalyse}
-                        disabled={analyseLoading}
-                        className="flex items-center gap-1.5 text-sm text-violet-500 hover:text-violet-400 disabled:opacity-50 transition-colors"
-                      >
-                        {analyseLoading
-                          ? <Loader2 size={14} className="animate-spin" />
-                          : <Wand2 size={14} />}
-                        {analyseLoading ? "Analyse…" : "Assistant IA"}
-                      </button>
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-semibold text-foreground">Transcription</h3>
+                    {/* Auto-save indicator */}
+                    {!isNew && status === "draft" && editing && (
+                      <span className="flex items-center gap-1 text-[11px]">
+                        {autoSaving ? (
+                          <><Loader2 size={10} className="animate-spin text-muted-foreground" /><span className="text-muted-foreground">Sauvegarde…</span></>
+                        ) : autoSavedAt ? (
+                          <><CloudUpload size={10} className="text-success" /><span className="text-success">Sauvegardé à {autoSavedAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span></>
+                        ) : null}
+                      </span>
                     )}
+                  </div>
+                  <div className="flex items-center gap-2">
                     {(isNew || status === "draft") && (
                       <button onClick={handleToggleEdit} className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors">
                         <Edit3 size={14} /> {editing ? "Lecture" : "Modifier"}
@@ -455,73 +495,110 @@ export default function RapportDetail() {
                   )}
                 </div>
               </div>
+
+              {/* ── AI Suggestions Sidebar ── */}
+              <AnimatePresence>
+                {editing && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ type: "spring", damping: 30, stiffness: 260 }}
+                    className="w-full lg:w-[22rem] lg:shrink-0 lg:sticky lg:top-4"
+                  >
+                    <div className="w-full bg-card rounded-xl border border-border shadow-card overflow-hidden">
+
+                      {/* Sidebar header */}
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-border"
+                        style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.08) 0%, transparent 100%)" }}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-md bg-violet-500/10 flex items-center justify-center">
+                            <Wand2 size={13} className="text-violet-500" />
+                          </div>
+                          <span className="text-sm font-semibold text-foreground">Assistant IA</span>
+                          {analyseSentences !== null && analyseSentences.some(s => s.corrections.length > 0) && (
+                            <span className="text-[10px] bg-violet-500/10 text-violet-600 dark:text-violet-400 font-medium px-1.5 py-0.5 rounded-full">
+                              {analyseSentences.filter(s => s.corrections.length > 0).length} correction{analyseSentences.filter(s => s.corrections.length > 0).length > 1 ? "s" : ""}
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={handleAnalyse}
+                          disabled={analyseLoading}
+                          title="Relancer l'analyse"
+                          className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-violet-500 hover:bg-violet-500/10 transition-all disabled:opacity-40"
+                        >
+                          {analyseLoading
+                            ? <Loader2 size={12} className="animate-spin text-violet-500" />
+                            : <Wand2 size={12} />}
+                        </button>
+                      </div>
+
+                      {/* Sidebar body */}
+                      <div className="p-3 space-y-2 max-h-[70vh] overflow-y-auto">
+
+                        {/* Loading skeleton */}
+                        {analyseLoading && (
+                          <div className="space-y-2 py-2">
+                            {[1, 2, 3].map(i => (
+                              <div key={i} className="rounded-lg bg-muted/60 animate-pulse h-14" style={{ opacity: 1 - i * 0.2 }} />
+                            ))}
+                            <p className="text-[11px] text-center text-muted-foreground pt-1">Analyse du texte en cours…</p>
+                          </div>
+                        )}
+
+                        {/* Error */}
+                        {!analyseLoading && analyseError && (
+                          <div className="flex items-start gap-2 bg-destructive/8 border border-destructive/20 rounded-lg px-3 py-2.5">
+                            <X size={13} className="text-destructive mt-0.5 shrink-0" />
+                            <p className="text-xs text-destructive">{analyseError}</p>
+                          </div>
+                        )}
+
+                        {/* Waiting for first analysis */}
+                        {!analyseLoading && !analyseError && analyseSentences === null && (
+                          <div className="flex flex-col items-center justify-center py-8 gap-2 text-center">
+                            <div className="w-10 h-10 rounded-xl bg-violet-500/8 flex items-center justify-center">
+                              <Wand2 size={18} className="text-violet-400" />
+                            </div>
+                            <p className="text-xs text-muted-foreground">L'analyse démarrera automatiquement<br />après 3 secondes d'inactivité.</p>
+                          </div>
+                        )}
+
+                        {/* All clean */}
+                        {!analyseLoading && !analyseError && analyseSentences !== null && analyseSentences.every(s => s.corrections.length === 0) && (
+                          <div className="flex items-center gap-3 bg-success/8 border border-success/20 rounded-lg px-3 py-3">
+                            <div className="w-7 h-7 rounded-full bg-success/15 flex items-center justify-center shrink-0">
+                              <Check size={14} className="text-success" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold text-success">Aucune correction détectée</p>
+                              <p className="text-[11px] text-muted-foreground mt-0.5">Le texte semble correct.</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Corrections list */}
+                        {!analyseLoading && !analyseError && analyseSentences !== null && analyseSentences.some(s => s.corrections.length > 0) && (
+                          <div className="space-y-2">
+                            {analyseSentences
+                              .filter(s => s.corrections.length > 0)
+                              .map(s => (
+                                <SentenceCorrector
+                                  key={s.sentence_index}
+                                  data={s}
+                                  onAcceptWord={applyCorrection}
+                                  onAcceptAll={() => s.corrections.forEach(c => applyCorrection(c.mot_original, c.suggestion))}
+                                />
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-
-            {/* ── Sentence correction panel ── */}
-            <AnimatePresence>
-              {analyseError && (
-                <motion.div
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 16 }}
-                  className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 flex items-center justify-between text-destructive text-sm"
-                >
-                  <span><strong>Analyse échouée :</strong> {analyseError}</span>
-                  <button onClick={() => setAnalyseError(null)} className="ml-3 hover:opacity-70"><X size={14} /></button>
-                </motion.div>
-              )}
-              {analyseSentences !== null && (
-                <motion.div
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 16 }}
-                  transition={{ type: "spring", damping: 28, stiffness: 220 }}
-                  className="bg-card rounded-xl border border-border shadow-card p-5 space-y-3"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Wand2 size={15} className="text-violet-500" />
-                      <h4 className="font-semibold text-sm text-foreground">Assistant IA</h4>
-                      {analyseSentences.some(s => s.corrections.length > 0) && (
-                        <span className="text-xs text-muted-foreground">
-                          {analyseSentences.filter(s => s.corrections.length > 0).length} phrase
-                          {analyseSentences.filter(s => s.corrections.length > 0).length > 1 ? "s" : ""} avec corrections
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => setAnalyseSentences(null)}
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-
-                  {analyseSentences.every(s => s.corrections.length === 0) ? (
-                    <div className="flex items-center gap-3 py-4">
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(16,185,129,0.12)" }}>
-                        <Check size={16} style={{ color: "#10B981" }} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium" style={{ color: "#10B981" }}>Aucune correction détectée</p>
-                        <p className="text-xs text-muted-foreground">Le rapport ne contient pas de fautes détectées phrase par phrase.</p>
-                      </div>
-                    </div>
-                  ) : (
-                    analyseSentences
-                      .filter(s => s.corrections.length > 0)
-                      .map(s => (
-                        <SentenceCorrector
-                          key={s.sentence_index}
-                          data={s}
-                          onAcceptWord={applyCorrection}
-                          onAcceptAll={() => s.corrections.forEach(c => applyCorrection(c.mot_original, c.suggestion))}
-                        />
-                      ))
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
 
             {error && (
               <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 text-destructive text-sm">{error}</div>

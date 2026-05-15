@@ -9,6 +9,7 @@ urlpatterns = [
     path("api/analyse/", analyse_report, name="analyse_report"),
     path("api/reports/", include("reports.urls")),
     path("api/complaints/", include("complaints.urls")),
+    path("api/avis/", include("avis.urls")),
     path("api/csv/", include("csvapp.urls")),
     path("api/transcribe/", include("transcription.urls")),
     path("api/audios/", include("audios.urls")),
