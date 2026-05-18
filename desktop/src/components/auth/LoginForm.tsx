@@ -4,16 +4,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Eye, EyeOff } from "lucide-react";
 
 interface LoginFormProps {
-  /** Optional hook fired after a successful login (e.g. close a parent modal).
-   *  Navigation to the role-specific dashboard happens regardless. */
   onSuccess?: () => void;
-  /** Override the "Créer un compte" link (e.g. to swap a modal pane). Default: <Link to="/register">. */
   onSwitchToRegister?: () => void;
-  /** Hide the heading row (when the parent already provides one, e.g. inside a Dialog). */
+  onForgotPassword?: () => void;
   hideHeader?: boolean;
 }
 
-export function LoginForm({ onSuccess, onSwitchToRegister, hideHeader }: LoginFormProps) {
+export function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword, hideHeader }: LoginFormProps) {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -89,9 +86,19 @@ export function LoginForm({ onSuccess, onSwitchToRegister, hideHeader }: LoginFo
         </div>
 
         <div className="flex justify-end -mt-1">
-          <Link to="/forgot-password" className="text-xs text-muted-foreground hover:text-primary transition-colors">
-            Mot de passe oublié ?
-          </Link>
+          {onForgotPassword ? (
+            <button
+              type="button"
+              onClick={onForgotPassword}
+              className="text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              Mot de passe oublié ?
+            </button>
+          ) : (
+            <Link to="/forgot-password" className="text-xs text-muted-foreground hover:text-primary transition-colors">
+              Mot de passe oublié ?
+            </Link>
+          )}
         </div>
 
         {error && (

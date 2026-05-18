@@ -355,18 +355,21 @@ _ANALYSE_URL   = "http://localhost:11434/api/chat"
 _ANALYSE_MODEL = "mistral:latest"
 _ANALYSE_PROMPT = (
     "Tu es un expert en radiologie neurovasculaire francophone.\n"
-    "Analyse la phrase et détecte :\n"
-    "- fautes d'orthographe médicale\n"
-    "- termes anatomiques déformés (ex: \"vis\" → \"Willis\", \"deff\" → \"diffusion\")\n"
+    "Analyse la phrase et détecte UNIQUEMENT :\n"
+    "- fautes d'orthographe médicale (ex: \"athéromateux\" mal orthographié)\n"
+    "- termes anatomiques déformés par la transcription vocale (ex: \"vis\" → \"Willis\", \"deff\" → \"diffusion\")\n"
     "- mots incohérents issus d'une transcription vocale automatique\n"
     "- séquences IRM mal écrites (FLAIR, T1, T2, DWI, 3D, écho de gradient...)\n\n"
+    "RÈGLES ABSOLUES — violations = réponse invalide :\n"
+    "1. Ne JAMAIS remplacer un mot français par un mot anglais ou latin.\n"
+    "   Exemples INTERDITS : artères→arteries, spectres→spectra, diffus→distributed, axes→axis, artériels→arterial, calcique→calcified\n"
+    "2. Toutes les suggestions doivent être en FRANÇAIS médical uniquement.\n"
+    "3. Ne corriger que les vraies fautes de frappe ou erreurs vocales, pas les termes corrects.\n"
+    "4. encéphale ≠ cerveau, artères ≠ vaisseaux (ne pas remplacer par synonyme moins précis).\n"
+    "5. Si le mot est correct en français médical, NE PAS le signaler.\n\n"
     "Retourne UNIQUEMENT ce JSON, sans markdown, sans explication :\n"
     "{\"corrections\": [{\"mot_original\": \"...\", \"suggestion\": \"...\", \"position\": 0}]}\n"
-    "Si aucune erreur : {\"corrections\": []}\n\n"
-    "Sois strict : un texte de radiologie contient souvent des erreurs de transcription vocale.\n\n"
-    "Ne remplace JAMAIS un terme médical correct par un synonyme moins précis.\n"
-    "encéphale ≠ cerveau (encéphale est le terme radiologique exact).\n"
-    "Corrige uniquement les vraies erreurs, pas les variations terminologiques."
+    "Si aucune erreur : {\"corrections\": []}"
 )
 
 
@@ -402,17 +405,35 @@ def _call_ollama_analyse(sentence: str) -> List[Dict[str, Any]]:
         m = re.search(r'\{.*\}', raw, re.DOTALL)
         parsed = json.loads(m.group()) if m else {}
 
+    # Caractères accentués français — présents dans les termes médicaux français
+    _FR_ACCENTS = re.compile(r'[àâäéèêëîïôùûüçæœÀÂÄÉÈÊËÎÏÔÙÛÜÇÆŒ]')
+    # Suffixes anglais typiques dans le contexte médical
+    _EN_SUFFIXES = re.compile(
+        r'(eries|arteries|eries|spectra|spectrums|'
+        r'distributed|arterial|supraaortic|calcified|'
+        r'measured|circulatory|vertebral|axis|'
+        r'atheromatous|axis)$',
+        re.IGNORECASE,
+    )
+
     corrections = []
     words = sentence.split()
     for c in parsed.get("corrections", []):
-        original  = (c.get("mot_original") or "").strip()
+        original   = (c.get("mot_original") or "").strip()
         suggestion = (c.get("suggestion")  or "").strip()
         if not original or not suggestion or original == suggestion:
             continue
-        orig_alpha = re.sub(r'[^\w]', '', original,  flags=re.UNICODE)
-        corr_alpha = re.sub(r'[^\w]', '', suggestion, flags=re.UNICODE)
-        # Rejeter les anagrammes purs (IRM → MRI, même lettres réarrangées)
+        orig_alpha = re.sub(r'[^\w]', '', original,   flags=re.UNICODE)
+        corr_alpha = re.sub(r'[^\w]', '', suggestion,  flags=re.UNICODE)
+        # Rejeter les anagrammes purs (IRM → MRI)
         if sorted(orig_alpha.lower()) == sorted(corr_alpha.lower()):
+            continue
+        # Rejeter si le mot original a des accents français mais la suggestion n'en a pas
+        # → traduction anglaise déguisée en correction
+        if _FR_ACCENTS.search(original) and not _FR_ACCENTS.search(suggestion):
+            continue
+        # Rejeter explicitement les suffixes anglais courants
+        if _EN_SUFFIXES.search(suggestion):
             continue
         # Trouver la position du mot dans la phrase
         position = c.get("position", 0)
@@ -442,6 +463,9 @@ def analyse_report(request: HttpRequest) -> JsonResponse:
     text = (data.get("text") or "").strip()
     if not text:
         return JsonResponse({"detail": "Le champ 'text' est requis."}, status=400)
+
+    # Normaliser : remplacer sauts de ligne et espaces multiples par un seul espace
+    text = re.sub(r'\s+', ' ', text).strip()
 
     raw_parts = re.split(r'(?<=[.!?])\s+', text)
     sentences = [s.strip() for s in raw_parts if s.strip()]

@@ -55,16 +55,16 @@ function parseReport(text: string) {
     if (!match) return "";
     const afterKeyword = match.index + match[0].length;
     const raw = text.slice(afterKeyword, end === -1 ? text.length : end).trim();
+    // Normalize whitespace: collapse newlines/multiple spaces to single space
+    // (transcription arrives word-by-word with \n between tokens)
+    const normalized = raw.replace(/\n+/g, " ").replace(/[ \t]+/g, " ").trim();
     // Strip Whisper noise at section start (mishearings of "deux points à la ligne").
-    // Pattern: Whisper mishears "deux"→"de/d'" and "points"→p-word (pont, panne, pan...).
-    // No `i` flag: real content always starts uppercase (IRM, Présence, État...).
-    const cleaned = raw
+    const cleaned = normalized
       .replace(/^(?:de\s+p[a-z]+|d[''][a-z]{0,4}\s+p[a-z]+|et\s+[a-z]{3,6})\s+/, "")
-      .replace(/^[-—]+\s*/, "")  // strip leading dash artifacts from auto-punctuation
+      .replace(/^[-—]+\s*/, "")
       .trim();
-    // If only dashes/punctuation remain, treat section as empty
     if (/^[-—\s]*$/.test(cleaned)) return "";
-    const result = cleaned.length > 0 ? cleaned : raw;
+    const result = cleaned.length > 0 ? cleaned : normalized;
     return result.charAt(0).toUpperCase() + result.slice(1);
   };
 
