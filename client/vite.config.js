@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import fs from 'fs';
 import path from 'path';
@@ -16,25 +16,28 @@ function loadCert(ip) {
   return null;
 }
 
-const LAN_IP = process.env.VITE_LAN_IP || '192.168.1.31';
-const tlsFiles = loadCert(LAN_IP);
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const LAN_IP = env.VITE_LAN_IP || '192.168.1.31';
+  const tlsFiles = loadCert(LAN_IP);
 
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    host: true,
-    port: 5173,
-    ...(tlsFiles ? { https: { key: fs.readFileSync(tlsFiles.key), cert: fs.readFileSync(tlsFiles.cert) } } : {}),
-    proxy: {
-      '/api': {
-        target: 'http://localhost:4000',
-        changeOrigin: true,
-      },
-      '/socket.io': {
-        target: 'http://localhost:4000',
-        ws: true,
-        changeOrigin: true,
+  return {
+    plugins: [react()],
+    server: {
+      host: true,
+      port: 5173,
+      ...(tlsFiles ? { https: { key: fs.readFileSync(tlsFiles.key), cert: fs.readFileSync(tlsFiles.cert) } } : {}),
+      proxy: {
+        '/api': {
+          target: 'http://localhost:4000',
+          changeOrigin: true,
+        },
+        '/socket.io': {
+          target: 'http://localhost:4000',
+          ws: true,
+          changeOrigin: true,
+        },
       },
     },
-  },
+  };
 });

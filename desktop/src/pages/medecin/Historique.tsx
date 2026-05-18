@@ -4,7 +4,17 @@ import { AppLayout } from "@/components/AppLayout";
 import { getReports, deleteReport, type Report } from "@/services/reportsService";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { Eye, Search, FileAudio, ArrowUpDown, X, Trash2, AlertTriangle, Loader2 } from "lucide-react";
+import { Eye, Search, FileAudio, ArrowUpDown, X, Trash2, Loader2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { getStatusBadgeClass, getStatusLabel, getActiveFilterTabClass, INACTIVE_TAB_CLASS } from "@/styles/statusSystem";
 import { REPORT_CATEGORIES, getCategoryLabel } from "@/constants/reportCategories";
@@ -107,35 +117,31 @@ export default function Historique() {
 
   return (
     <AppLayout title="Historique des rapports">
-      {/* ══ Delete confirmation banner ════════════════════════════════════════ */}
-      {confirmDelete && (
-        <div className="mb-4 bg-destructive/5 border border-destructive/40 rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
-          <div className="w-9 h-9 bg-destructive/10 rounded-lg flex items-center justify-center shrink-0">
-            <AlertTriangle className="w-4 h-4 text-destructive" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-foreground">
-              Supprimer le rapport <span className="font-mono">{confirmDelete.ID_Exam}</span> ?
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Cette action est <span className="font-semibold text-destructive">définitive</span>. L'audio associé restera dans la file d'attente.
-              {deleteError && <span className="block mt-1 text-destructive">{deleteError}</span>}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 ml-auto">
-            <button onClick={() => { setConfirmDelete(null); setDeleteError(""); }}
+      {/* ══ Delete confirmation modal ══════════════════════════════════════════ */}
+      <AlertDialog open={!!confirmDelete} onOpenChange={open => { if (!open) { setConfirmDelete(null); setDeleteError(""); } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer le rapport ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Rapport <span className="font-mono font-semibold text-foreground">{confirmDelete?.ID_Exam}</span> — cette action est{" "}
+              <span className="font-semibold text-destructive">définitive</span>. L'audio associé restera dans la file d'attente.
+              {deleteError && <span className="block mt-2 text-destructive text-sm">{deleteError}</span>}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => confirmDelete && deleteMutation.mutate(confirmDelete._id)}
               disabled={deleteMutation.isPending}
-              className="px-3 py-1.5 rounded-lg border border-border text-foreground hover:bg-muted disabled:opacity-60 transition-all text-xs font-medium">
-              Annuler
-            </button>
-            <button onClick={() => deleteMutation.mutate(confirmDelete._id)}
-              disabled={deleteMutation.isPending}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive text-white font-semibold hover:bg-destructive/90 disabled:opacity-60 transition-all text-xs">
-              {deleteMutation.isPending ? <><Loader2 size={12} className="animate-spin" /> Suppression…</> : <><Trash2 size={12} /> Supprimer</>}
-            </button>
-          </div>
-        </div>
-      )}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending
+                ? <><Loader2 size={13} className="animate-spin mr-1.5" /> Suppression…</>
+                : <><Trash2 size={13} className="mr-1.5" /> Supprimer</>}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
         <div className="px-6 py-4 border-b border-border flex flex-wrap gap-3 items-center">
