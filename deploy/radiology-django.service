@@ -1,0 +1,28 @@
+[Unit]
+Description=Radiology Platform — Django API (Gunicorn)
+After=network.target mongod.service
+Requires=mongod.service
+
+[Service]
+Type=notify
+User=www-data
+Group=www-data
+WorkingDirectory=APP_DIR/api-server/django
+Environment="DJANGO_SETTINGS_MODULE=settings"
+ExecStart=APP_DIR/venv/bin/gunicorn \
+    --workers 4 \
+    --worker-class sync \
+    --bind 127.0.0.1:8000 \
+    --timeout 120 \
+    --access-logfile /var/log/radiology/django-access.log \
+    --error-logfile  /var/log/radiology/django-error.log \
+    wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+[Unit]
+Description=Radiology Platform — Node.js Socket Server
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=APP_DIR/api-server/server
+ExecStart=/usr/bin/node src/index.js
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/var/log/radiology/node.log
+StandardError=append:/var/log/radiology/node-error.log
+
+[Install]
+WantedBy=multi-user.target
