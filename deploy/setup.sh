@@ -141,6 +141,17 @@ log "Writing production environment files..."
 DJANGO_SECRET=$(python3 -c "import secrets; print(secrets.token_hex(50))")
 JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_hex(32))")
 
+# Prompt for email credentials (used for registration verification + password reset)
+echo ""
+echo "─────────────────────────────────────────────────────"
+echo "  Email configuration (for registration & password reset)"
+echo "  Recommended: create a dedicated Gmail account and"
+echo "  generate an App Password at myaccount.google.com/apppasswords"
+echo "─────────────────────────────────────────────────────"
+read -rp "  Gmail address      : " EMAIL_USER
+read -rsp "  Gmail App Password : " EMAIL_PASS
+echo ""
+
 cat > "$APP_DIR/api-server/django/.env" <<EOF
 DJANGO_SECRET_KEY=$DJANGO_SECRET
 DEBUG=0
@@ -149,6 +160,13 @@ JWT_SECRET_KEY=$JWT_SECRET
 MONGODB_URI=mongodb://localhost:27017
 MONGODB_DB_NAME=radiology_platform
 FRONTEND_URL=https://$SERVER_IP
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=1
+EMAIL_HOST_USER=$EMAIL_USER
+EMAIL_HOST_PASSWORD=$EMAIL_PASS
+DEFAULT_FROM_EMAIL=$EMAIL_USER
 EOF
 
 cat > "$APP_DIR/api-server/server/.env" <<EOF
@@ -205,6 +223,10 @@ if command -v ufw &>/dev/null; then
     ufw allow 22/tcp    comment "SSH"
     ufw --force enable
 fi
+
+# ── 16. Create first AdminIT account ─────────────────────────────────────────
+log "Creating first AdminIT account..."
+"$APP_DIR/venv/bin/python" "$APP_DIR/deploy/create-admin.py"
 
 # ── Done ──────────────────────────────────────────────────────────────────────
 echo ""
