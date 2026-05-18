@@ -88,7 +88,7 @@ log "SSL cert valid for 10 years → $SSL_DIR/"
 # ── 7. App directory ──────────────────────────────────────────────────────────
 log "Setting up app directory at $APP_DIR..."
 mkdir -p "$APP_DIR" "$WEB_DIR/desktop" "$WEB_DIR/mobile" "/var/log/radiology"
-chown www-data:www-data "/var/log/radiology"
+chown -R www-data:www-data "/var/log/radiology" "$WEB_DIR"
 
 # Copy source if not already there (assumes script is run from repo root)
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -97,6 +97,8 @@ if [[ "$SCRIPT_DIR" != "$APP_DIR" ]]; then
           --exclude='__pycache__' --exclude='*.pyc' \
           "$SCRIPT_DIR/" "$APP_DIR/"
 fi
+
+chown -R www-data:www-data "$APP_DIR"
 
 # ── 8. Python virtual environment + dependencies ──────────────────────────────
 log "Installing Python dependencies..."
