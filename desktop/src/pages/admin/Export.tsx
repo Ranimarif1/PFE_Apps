@@ -3,19 +3,23 @@ import { AppLayout } from "@/components/AppLayout";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import JSZip from "jszip";
 import { getReports, type Report } from "@/services/reportsService";
-import { Eye, FileText, Download, Calendar } from "lucide-react";
+import { generateReportPdf, pdfFilenameForReport } from "@/lib/reportPdf";
+import { getCategoryLabel } from "@/constants/reportCategories";
+import { Eye, FileText, Download, Calendar, Loader2 } from "lucide-react";
 
 export default function AdminExport() {
   const navigate = useNavigate();
   const [exportStart, setExportStart] = useState("");
   const [exportEnd,   setExportEnd]   = useState("");
+  const [exporting,   setExporting]   = useState(false);
 
   const { data: reports = [] } = useQuery<Report[]>({ queryKey: ["reports"], queryFn: getReports });
 
   const savedReports = reports.filter(r => r.status === "saved");
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (exportStart && exportEnd && exportStart > exportEnd) {
       toast.error("Plage de dates invalide", { description: "La date de début doit précéder la date de fin." });
       return;
@@ -30,25 +34,69 @@ export default function AdminExport() {
       toast.warning("Aucun rapport", { description: "Aucun rapport enregistré dans la période sélectionnée." });
       return;
     }
-    const header = ["ID Examen", "Médecin", "Date"];
-    const rows = filtered.map(r => [
-      r.ID_Exam,
-      r.doctorName || "",
-      new Date(r.createdAt).toLocaleDateString("fr-FR"),
-    ]);
-    const csv = [header, ...rows]
-      .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";"))
-      .join("\n");
-    const blob = new Blob([String.fromCharCode(0xFEFF) + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    const suffix = exportStart || exportEnd
-      ? `${exportStart || "debut"}_${exportEnd || "fin"}`
-      : new Date().toISOString().slice(0, 10);
-    a.download = `rapports_${suffix}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+
+    setExporting(true);
+    try {
+      const zip = new JSZip();
+      const suffix = exportStart || exportEnd
+        ? `${exportStart || "debut"}_${exportEnd || "fin"}`
+        : new Date().toISOString().slice(0, 10);
+      const folderName = `rapports_${suffix}`;
+      const root = zip.folder(folderName)!;
+      const pdfsFolder = root.folder("pdfs")!;
+
+      // Build PDF filenames first (need them for CSV + index.html links)
+      const seen = new Set<string>();
+      const enriched = filtered.map(r => {
+        let name = pdfFilenameForReport(r);
+        if (seen.has(name)) {
+          const base = name.replace(/\.pdf$/, "");
+          let n = 2;
+          while (seen.has(`${base}_${n}.pdf`)) n++;
+          name = `${base}_${n}.pdf`;
+        }
+        seen.add(name);
+        return { report: r, pdfName: name };
+      });
+
+      // Generate every PDF
+      for (const { report, pdfName } of enriched) {
+        const blob = generateReportPdf(report);
+        pdfsFolder.file(pdfName, blob);
+      }
+
+      // CSV — adds a "Fichier" column referencing the PDF path
+      const header = ["ID Examen", "Médecin", "Type", "Date", "Fichier"];
+      const rows = enriched.map(({ report, pdfName }) => [
+        report.ID_Exam,
+        report.doctorName || "",
+        getCategoryLabel(report.category),
+        new Date(report.createdAt).toLocaleDateString("fr-FR"),
+        `pdfs/${pdfName}`,
+      ]);
+      const csv = [header, ...rows]
+        .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";"))
+        .join("\n");
+      root.file("rapports.csv", String.fromCharCode(0xFEFF) + csv);
+
+      // index.html — the clickable view recipients will use
+      root.file("index.html", buildIndexHtml(enriched, exportStart, exportEnd));
+
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${folderName}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.success("Export généré", { description: `${filtered.length} rapport${filtered.length > 1 ? "s" : ""} exporté${filtered.length > 1 ? "s" : ""}.` });
+    } catch (err) {
+      console.error("[Export] échec :", err);
+      toast.error("Échec de l'export", { description: err instanceof Error ? err.message : "Erreur inconnue." });
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -89,9 +137,11 @@ export default function AdminExport() {
               )}
               <button
                 onClick={handleExport}
-                className="flex items-center gap-1.5 text-xs px-2.5 py-1 border border-border bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
+                disabled={exporting}
+                className="flex items-center gap-1.5 text-xs px-2.5 py-1 border border-border bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <Download size={11} /> Exporter
+                {exporting ? <Loader2 size={11} className="animate-spin" /> : <Download size={11} />}
+                {exporting ? "Génération…" : "Exporter (ZIP)"}
               </button>
             </div>
           </div>
@@ -135,4 +185,75 @@ export default function AdminExport() {
       </div>
     </AppLayout>
   );
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function buildIndexHtml(
+  rows: { report: Report; pdfName: string }[],
+  exportStart: string,
+  exportEnd: string,
+): string {
+  const periodLabel = exportStart || exportEnd
+    ? `Période : ${exportStart || "…"} → ${exportEnd || "…"}`
+    : "Tous les rapports enregistrés";
+
+  const tbody = rows.map(({ report, pdfName }) => {
+    const date = new Date(report.createdAt).toLocaleDateString("fr-FR");
+    return `<tr>
+      <td><a href="pdfs/${escapeHtml(pdfName)}" target="_blank" rel="noopener">${escapeHtml(report.ID_Exam)}</a></td>
+      <td>${escapeHtml(report.doctorName || "—")}</td>
+      <td>${escapeHtml(getCategoryLabel(report.category))}</td>
+      <td>${escapeHtml(date)}</td>
+    </tr>`;
+  }).join("\n");
+
+  return `<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>Export de rapports radiologiques</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f7f7f9; color: #1f2937; padding: 32px 24px; }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; color: #111827; }
+  .sub { font-size: 13px; color: #6b7280; margin-bottom: 24px; }
+  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead tr { background: #f3f4f6; }
+  th { text-align: left; padding: 12px 16px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; font-weight: 600; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 12px 16px; border-bottom: 1px solid #f1f3f5; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover { background: #fafafa; }
+  td a { color: #4f46e5; font-weight: 600; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; text-decoration: none; }
+  td a:hover { text-decoration: underline; }
+  .footer { margin-top: 16px; font-size: 11px; color: #9ca3af; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Export de rapports radiologiques</h1>
+  <div class="sub">${escapeHtml(periodLabel)} · ${rows.length} rapport${rows.length > 1 ? "s" : ""}</div>
+  <div class="card">
+    <table>
+      <thead><tr><th>ID Examen</th><th>Médecin</th><th>Type</th><th>Date</th></tr></thead>
+      <tbody>
+${tbody}
+      </tbody>
+    </table>
+  </div>
+  <div class="footer">Cliquez sur un ID d'examen pour ouvrir le PDF correspondant.</div>
+</div>
+</body>
+</html>`;
 }

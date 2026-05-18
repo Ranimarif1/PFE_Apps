@@ -1,0 +1,410 @@
+<mxfile host="app.diagrams.net" agent="Claude" version="24.0.0" type="device">
+  <diagram name="S'inscrire" id="inscrire">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1240" pageHeight="1250" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="Diagramme de s&#233;quence : S'inscrire" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1140" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ll_user" value="Utilisateur" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;participant=umlActor;" vertex="1" parent="1">
+          <mxGeometry x="60" y="60" width="120" height="1130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ll_ihm" value=":IHM_Inscription" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="270" y="60" width="160" height="1130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ll_api" value=":APIDjango" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;participant=umlControl;" vertex="1" parent="1">
+          <mxGeometry x="510" y="60" width="160" height="1130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ll_bd" value=":BD" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;participant=umlEntity;" vertex="1" parent="1">
+          <mxGeometry x="750" y="60" width="160" height="1130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ll_email" value=":ServiceEmail" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;participant=umlControl;" vertex="1" parent="1">
+          <mxGeometry x="990" y="60" width="160" height="1130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="m1" value="1 : saisir(email, mdp, mdpConfirm, nom, prenom)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="170" as="sourcePoint" />
+            <mxPoint x="350" y="170" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="m2" value="2 : cliquer(&quot;S'inscrire&quot;)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="205" as="sourcePoint" />
+            <mxPoint x="350" y="205" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="m3" value="3 : verifierFormatEmail(email)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;rounded=0;edgeStyle=orthogonalEdgeStyle;curved=0;startSize=8;endSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="350" y="240" as="sourcePoint" />
+            <mxPoint x="350" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="450" y="240" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="m4" value="4 : verifierFormatMotDePasse(mdp)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;rounded=0;edgeStyle=orthogonalEdgeStyle;curved=0;startSize=8;endSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="350" y="295" as="sourcePoint" />
+            <mxPoint x="350" y="330" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="450" y="295" />
+              <mxPoint x="450" y="330" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="m5" value="5 : verifierConcordance(mdp, mdpConfirm)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;rounded=0;edgeStyle=orthogonalEdgeStyle;curved=0;startSize=8;endSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="350" y="350" as="sourcePoint" />
+            <mxPoint x="350" y="385" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="450" y="350" />
+              <mxPoint x="450" y="385" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="alt1" value="alt" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;width=50;height=24;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="50" y="405" width="1110" height="770" as="geometry" />
+        </mxCell>
+
+        <mxCell id="alt1_c1" value="[format email invalide]" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="430" width="220" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="m6a" value="6a : afficher(&quot;Format email invalide&quot;)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=open;endFill=0;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="350" y="460" as="sourcePoint" />
+            <mxPoint x="120" y="460" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="alt1_div1" value="" style="line;strokeWidth=1;direction=east;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="485" width="1110" height="10" as="geometry" />
+        </mxCell>
+
+        <mxCell id="alt1_c2" value="[mot de passe trop faible]" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="495" width="220" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="m6b" value="6b : afficher(&quot;Mot de passe trop faible&quot;)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=open;endFill=0;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="350" y="525" as="sourcePoint" />
+            <mxPoint x="120" y="525" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="alt1_div2" value="" style="line;strokeWidth=1;direction=east;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="550" width="1110" height="10" as="geometry" />
+        </mxCell>
+
+        <mxCell id="alt1_c3" value="[mdp et confirmation non identiques]" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="560" width="280" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="m6c" value="6c : afficher(&quot;Les mots de passe ne correspondent pas&quot;)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=open;endFill=0;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="350" y="590" as="sourcePoint" />
+            <mxPoint x="120" y="590" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="alt1_div3" value="" style="line;strokeWidth=1;direction=east;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="615" width="1110" height="10" as="geometry" />
+        </mxCell>
+
+        <mxCell id="alt1_c4" value="[tous les formats valides]" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="625" width="220" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="m7" value="7 : inscrire(donnees)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="350" y="660" as="sourcePoint" />
+            <mxPoint x="590" y="660" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="m8" value="8 : verifierExistence(email)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="590" y="695" as="sourcePoint" />
+            <mxPoint x="830" y="695" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="m9" value="9 : resultat" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=open;endFill=0;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="830" y="730" as="sourcePoint" />
+            <mxPoint x="590" y="730" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="alt2" value="alt" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;width=50;height=24;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="80" y="750" width="1070" height="410" as="geometry" />
+        </mxCell>
+
+        <mxCell id="alt2_c1" value="[email d&#233;j&#224; utilis&#233;]" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="775" width="220" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="m10a" value="10a : erreur(&quot;Email d&#233;j&#224; utilis&#233;&quot;)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=open;endFill=0;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="590" y="805" as="sourcePoint" />
+            <mxPoint x="350" y="805" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="m11a" value="11a : afficher(&quot;Email d&#233;j&#224; utilis&#233;&quot;)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=open;endFill=0;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="350" y="835" as="sourcePoint" />
+            <mxPoint x="120" y="835" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="alt2_div" value="" style="line;strokeWidth=1;direction=east;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="860" width="1070" height="10" as="geometry" />
+        </mxCell>
+
+        <mxCell id="alt2_c2" value="[email disponible]" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="870" width="200" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="m10b" value="10b : creerCompteInactif(donnees)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="590" y="900" as="sourcePoint" />
+            <mxPoint x="830" y="900" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="m11b" value="11b : ok(idUser)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=open;endFill=0;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="830" y="930" as="sourcePoint" />
+            <mxPoint x="590" y="930" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="m12b" value="12b : genererCode()" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;rounded=0;edgeStyle=orthogonalEdgeStyle;curved=0;startSize=8;endSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="590" y="950" as="sourcePoint" />
+            <mxPoint x="590" y="985" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="690" y="950" />
+              <mxPoint x="690" y="985" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="m13b" value="13b : enregistrerCode(idUser, code)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="590" y="1005" as="sourcePoint" />
+            <mxPoint x="830" y="1005" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="m14b" value="14b : ok" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=open;endFill=0;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="830" y="1035" as="sourcePoint" />
+            <mxPoint x="590" y="1035" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="m15b" value="15b : envoyerEmail(email, code)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="590" y="1065" as="sourcePoint" />
+            <mxPoint x="1070" y="1065" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="m16b" value="16b : envoy&#233;" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=open;endFill=0;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1070" y="1095" as="sourcePoint" />
+            <mxPoint x="590" y="1095" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="m17b" value="17b : compteCr&#233;&#233;(emailEnvoy&#233;)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=open;endFill=0;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="590" y="1125" as="sourcePoint" />
+            <mxPoint x="350" y="1125" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="m18b" value="18b : afficher(&quot;Saisissez le code re&#231;u par email&quot;)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=open;endFill=0;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="350" y="1155" as="sourcePoint" />
+            <mxPoint x="120" y="1155" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Confirmer email" id="confirmer">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title2" value="Diagramme de s&#233;quence : Confirmer email" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="900" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ll2_user" value="Utilisateur" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;participant=umlActor;" vertex="1" parent="1">
+          <mxGeometry x="60" y="60" width="120" height="780" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ll2_ihm" value=":IHM_Inscription" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="270" y="60" width="160" height="780" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ll2_api" value=":APIDjango" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;participant=umlControl;" vertex="1" parent="1">
+          <mxGeometry x="510" y="60" width="160" height="780" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ll2_bd" value=":BD" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;participant=umlEntity;" vertex="1" parent="1">
+          <mxGeometry x="750" y="60" width="160" height="780" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n1" value="1 : saisirCode(code)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="170" as="sourcePoint" />
+            <mxPoint x="350" y="170" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="n2" value="2 : cliquer(&quot;V&#233;rifier&quot;)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="205" as="sourcePoint" />
+            <mxPoint x="350" y="205" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="n3" value="3 : verifierLongueur(code)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;rounded=0;edgeStyle=orthogonalEdgeStyle;curved=0;startSize=8;endSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="350" y="240" as="sourcePoint" />
+            <mxPoint x="350" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="450" y="240" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="alt_n1" value="alt" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;width=50;height=24;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="50" y="300" width="880" height="510" as="geometry" />
+        </mxCell>
+
+        <mxCell id="alt_n1_c1" value="[longueur &#8800; 5]" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="325" width="220" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n4a" value="4a : afficher(&quot;Le code doit comporter 5 chiffres&quot;)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=open;endFill=0;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="350" y="355" as="sourcePoint" />
+            <mxPoint x="120" y="355" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="alt_n1_div" value="" style="line;strokeWidth=1;direction=east;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="380" width="880" height="10" as="geometry" />
+        </mxCell>
+
+        <mxCell id="alt_n1_c2" value="[longueur OK]" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="390" width="220" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n4b" value="4b : verifyEmailCode(email, code)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="350" y="425" as="sourcePoint" />
+            <mxPoint x="590" y="425" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="n5" value="5 : chercherCodeStock&#233;(email)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="590" y="460" as="sourcePoint" />
+            <mxPoint x="830" y="460" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="n6" value="6 : codeStock&#233;, expiration" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=open;endFill=0;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="830" y="495" as="sourcePoint" />
+            <mxPoint x="590" y="495" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="alt_n2" value="alt" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;width=50;height=24;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="80" y="515" width="840" height="285" as="geometry" />
+        </mxCell>
+
+        <mxCell id="alt_n2_c1" value="[code invalide ou expir&#233;]" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="540" width="240" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n7a" value="7a : erreur(&quot;Code invalide&quot;)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=open;endFill=0;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="590" y="570" as="sourcePoint" />
+            <mxPoint x="350" y="570" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="n8a" value="8a : afficher(&quot;Code invalide&quot;)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=open;endFill=0;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="350" y="600" as="sourcePoint" />
+            <mxPoint x="120" y="600" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="alt_n2_div" value="" style="line;strokeWidth=1;direction=east;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="625" width="840" height="10" as="geometry" />
+        </mxCell>
+
+        <mxCell id="alt_n2_c2" value="[code valide]" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="635" width="200" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n7b" value="7b : activerCompte(idUser)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="590" y="665" as="sourcePoint" />
+            <mxPoint x="830" y="665" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="n8b" value="8b : ok" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=open;endFill=0;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="830" y="695" as="sourcePoint" />
+            <mxPoint x="590" y="695" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="n9b" value="9b : succ&#232;s(emailV&#233;rifi&#233;)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=open;endFill=0;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="590" y="725" as="sourcePoint" />
+            <mxPoint x="350" y="725" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="n10b" value="10b : afficher(&quot;Compte activ&#233;&quot;)" style="html=1;verticalAlign=bottom;startSize=8;endSize=8;endArrow=open;endFill=0;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="350" y="755" as="sourcePoint" />
+            <mxPoint x="120" y="755" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
