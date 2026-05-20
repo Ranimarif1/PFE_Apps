@@ -2,7 +2,7 @@ import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { getReport, createReport, updateReport } from "@/services/reportsService";
-import { CheckCircle, Edit3, Save, FileText, Check, X, Loader2, ArrowLeft, Pencil, Wand2, CloudUpload } from "lucide-react";
+import { CheckCircle, Edit3, Save, FileText, Check, X, Loader2, ArrowLeft, Pencil, Wand2, CloudUpload, AlertTriangle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRecording } from "@/contexts/RecordingContext";
@@ -69,6 +69,7 @@ export default function RapportDetail() {
   const [analyseSentences,   setAnalyseSentences]   = useState<SentenceAnalysis[] | null>(null);
   const [analyseLoading,     setAnalyseLoading]     = useState(false);
   const [analyseError,       setAnalyseError]       = useState<string | null>(null);
+  const [ollamaUnavailable,  setOllamaUnavailable]  = useState(false);
 
   /* ── Auto-save ── */
   const autoSaveTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -194,6 +195,7 @@ export default function RapportDetail() {
     setAnalyseLoading(true);
     setAnalyseSentences(null);
     setAnalyseError(null);
+    setOllamaUnavailable(false);
     const text = buildContent(indication, technique, resultat, conclusion).trim();
     console.log("[Analyse] texte envoyé :", text.slice(0, 120));
     if (!text) {
@@ -205,6 +207,7 @@ export default function RapportDetail() {
       const result = await analyseReport(text);
       console.log("[Analyse] réponse :", result);
       setAnalyseSentences(result.sentences ?? []);
+      setOllamaUnavailable(!!result.ollama_unavailable);
     } catch (err) {
       console.error("[Analyse] erreur :", err);
       setAnalyseError(err instanceof Error ? err.message : "Erreur lors de l'analyse.");
@@ -507,8 +510,21 @@ export default function RapportDetail() {
                           </div>
                         )}
 
+                        {/* Ollama unavailable */}
+                        {!analyseLoading && !analyseError && analyseSentences !== null && ollamaUnavailable && (
+                          <div className="flex items-start gap-3 bg-amber-500/8 border border-amber-500/30 rounded-lg px-3 py-3">
+                            <div className="w-7 h-7 rounded-full bg-amber-500/15 flex items-center justify-center shrink-0">
+                              <AlertTriangle size={14} className="text-amber-600 dark:text-amber-400" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">Problème de connexion à l'assistant IA</p>
+                              <p className="text-[11px] text-muted-foreground mt-0.5">Impossible de joindre Ollama. Vérifiez que le service est démarré, puis réessayez.</p>
+                            </div>
+                          </div>
+                        )}
+
                         {/* All clean */}
-                        {!analyseLoading && !analyseError && analyseSentences !== null && analyseSentences.every(s => s.corrections.length === 0) && (
+                        {!analyseLoading && !analyseError && !ollamaUnavailable && analyseSentences !== null && analyseSentences.every(s => s.corrections.length === 0) && (
                           <div className="flex items-center gap-3 bg-success/8 border border-success/20 rounded-lg px-3 py-3">
                             <div className="w-7 h-7 rounded-full bg-success/15 flex items-center justify-center shrink-0">
                               <Check size={14} className="text-success" />

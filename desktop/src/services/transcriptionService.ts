@@ -53,7 +53,8 @@ export interface SentenceAnalysis {
 }
 
 export interface AnalyseResult {
-  sentences: SentenceAnalysis[];
+  sentences:           SentenceAnalysis[];
+  ollama_unavailable?: boolean;
 }
 
 export async function analyseReport(text: string): Promise<AnalyseResult> {

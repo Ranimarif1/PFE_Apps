@@ -5,7 +5,7 @@ import { getReports, type Report } from "@/services/reportsService";
 import { useQuery } from "@tanstack/react-query";
 import {
   FileText, CheckCircle, Clock, Plus,
-  History, Mic, Star, MessageSquarePlus,
+  History, Mic,
 } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -13,10 +13,6 @@ import {
 } from "recharts";
 import { DASHBOARD_ACCENTS, type DashboardAccent } from "@/styles/dashboardAccents";
 import { REPORT_CATEGORIES } from "@/constants/reportCategories";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { submitAvis, getMyAvis } from "@/services/avisService";
-import { useAuth } from "@/contexts/AuthContext";
-import { useEffect } from "react";
 
 /* ─── helpers ─────────────────────────────────────────────────────────────── */
 function buildChartData(reports: Report[], days = 30) {
@@ -144,41 +140,6 @@ function Kpi({ value, label, delta, accent, icon: Icon }: {
 ══════════════════════════════════════════════════════════════════════════════ */
 export default function Dashboard() {
   const { data: reports = [] } = useQuery<Report[]>({ queryKey: ["reports"], queryFn: getReports });
-  const { user } = useAuth();
-
-  /* ── avis dialog ── */
-  const [avisOpen, setAvisOpen] = useState(false);
-  const [avisContent, setAvisContent] = useState("");
-  const [avisRating, setAvisRating] = useState<number>(5);
-  const [avisSubmitting, setAvisSubmitting] = useState(false);
-  const [avisSuccess, setAvisSuccess] = useState(false);
-  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
-
-  useEffect(() => {
-    getMyAvis().then(existing => setAlreadySubmitted(existing !== null));
-  }, []);
-
-  const handleSubmitAvis = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!avisContent.trim()) return;
-    setAvisSubmitting(true);
-    try {
-      await submitAvis({
-        doctorName: user ? `${user.prénom} ${user.nom}` : "Médecin",
-        content: avisContent.trim(),
-        rating: avisRating,
-      });
-      setAlreadySubmitted(true);
-      setAvisSuccess(true);
-      setAvisContent("");
-      setAvisRating(5);
-      setTimeout(() => { setAvisOpen(false); setAvisSuccess(false); }, 1800);
-    } catch {
-      // keep dialog open on error
-    } finally {
-      setAvisSubmitting(false);
-    }
-  };
 
   /* ── computed ── */
   const total     = reports.length;
@@ -348,89 +309,12 @@ export default function Dashboard() {
                     <FileText size={14} className="text-muted-foreground" />
                     Soumettre une réclamation →
                   </Link>
-                  <button
-                    type="button"
-                    onClick={() => !alreadySubmitted && setAvisOpen(true)}
-                    disabled={alreadySubmitted}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-primary/30 bg-primary/5 hover:bg-primary/10 text-sm text-foreground transition-colors w-full text-left disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    <Star size={14} className={alreadySubmitted ? "text-yellow-400 fill-yellow-400" : "text-yellow-500"} />
-                    {alreadySubmitted ? "Avis déjà soumis ✓" : "Laisser un avis →"}
-                  </button>
                 </div>
             </div>
           </div>
         </div>
       </div>
       </div>
-
-      {/* ── Avis dialog ── */}
-      <Dialog open={avisOpen} onOpenChange={setAvisOpen}>
-        <DialogContent className="max-w-md w-[95vw] p-6 bg-card border-border rounded-2xl">
-          {avisSuccess ? (
-            <div className="flex flex-col items-center justify-center py-8 gap-3">
-              <div className="w-14 h-14 rounded-full bg-green-500/10 flex items-center justify-center">
-                <Star size={28} className="text-green-500 fill-green-500" />
-              </div>
-              <p className="text-base font-semibold text-foreground">Merci pour votre avis !</p>
-              <p className="text-sm text-muted-foreground text-center">Votre retour a été publié sur la page d'accueil.</p>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmitAvis} className="space-y-5">
-              <div className="flex items-center gap-3 mb-1">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <MessageSquarePlus size={18} className="text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold leading-none">Laisser un avis</h3>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">Votre retour apparaîtra sur la page d'accueil.</p>
-                </div>
-              </div>
-
-              {/* Star rating */}
-              <div>
-                <label className="text-sm font-medium mb-2 block">Note</label>
-                <div className="flex gap-1">
-                  {[1, 2, 3, 4, 5].map(n => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => setAvisRating(n)}
-                      className="transition-transform hover:scale-110"
-                    >
-                      <Star
-                        size={26}
-                        className={n <= avisRating ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/30"}
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Text */}
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">Votre avis</label>
-                <textarea
-                  value={avisContent}
-                  onChange={e => setAvisContent(e.target.value)}
-                  required
-                  rows={4}
-                  placeholder="Partagez votre expérience avec ReportEase…"
-                  className="w-full px-4 py-2.5 text-sm resize-none rounded-xl border border-border bg-background"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={avisSubmitting || !avisContent.trim()}
-                className="w-full gradient-hero text-white font-semibold py-2.5 rounded-xl inline-flex items-center justify-center gap-2 disabled:opacity-60"
-              >
-                {avisSubmitting ? "Envoi…" : "Publier mon avis"}
-              </button>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
     </AppLayout>
   );
 }

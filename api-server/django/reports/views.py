@@ -471,11 +471,13 @@ def analyse_report(request: HttpRequest) -> JsonResponse:
     sentences = [s.strip() for s in raw_parts if s.strip()]
 
     result_sentences = []
+    failures = 0
     for idx, sentence in enumerate(sentences):
         corrections: List[Dict[str, Any]] = []
         try:
             corrections = _call_ollama_analyse(sentence)
         except Exception as e:
+            failures += 1
             print(f"[warn] Ollama analyse phrase {idx}: {e}", file=sys.stderr)
         result_sentences.append({
             "sentence_index": idx,
@@ -483,5 +485,11 @@ def analyse_report(request: HttpRequest) -> JsonResponse:
             "corrections":    corrections,
         })
 
-    return JsonResponse({"sentences": result_sentences})
+    # If every sentence's Ollama call raised, Ollama is almost certainly unreachable.
+    ollama_unavailable = bool(sentences) and failures == len(sentences)
+
+    return JsonResponse({
+        "sentences":          result_sentences,
+        "ollama_unavailable": ollama_unavailable,
+    })
 

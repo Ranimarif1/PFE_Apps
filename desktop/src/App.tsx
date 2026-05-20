@@ -61,6 +61,7 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import MobileRecord from "./pages/MobileRecord";
 import Aide from "./pages/Aide";
+import Avis from "./pages/Avis";
 
 // Médecin
 import MédecinDashboard from "./pages/medecin/Dashboard";
@@ -138,6 +139,7 @@ function AppWithLoading() {
 
       {/* Aide — accessible à tous les rôles authentifiés */}
       <Route path="/aide" element={<RouteGuard allowedRoles={["médecin", "admin", "adminIT"]}><Aide /></RouteGuard>} />
+      <Route path="/avis" element={<RouteGuard allowedRoles={["médecin", "admin"]}><Avis /></RouteGuard>} />
 
       <Route path="*" element={<NotFound />} />
     </Routes>
