@@ -24,12 +24,15 @@ export function parseReport(text: string): ParsedReport {
     if (!match) return "";
     const afterKeyword = match.index + match[0].length;
     const raw = text.slice(afterKeyword, end === -1 ? text.length : end).trim();
-    const cleaned = raw
+    // Transcription arrives word-by-word with \n between tokens — collapse to single spaces.
+    const normalized = raw.replace(/\n+/g, " ").replace(/[ \t]+/g, " ").trim();
+    // Strip Whisper noise at section start (mishearings of "deux points à la ligne").
+    const cleaned = normalized
       .replace(/^(?:de\s+p[a-z]+|d[''][a-z]{0,4}\s+p[a-z]+|et\s+[a-z]{3,6})\s+/, "")
       .replace(/^[-—]+\s*/, "")
       .trim();
     if (/^[-—\s]*$/.test(cleaned)) return "";
-    const result = cleaned.length > 0 ? cleaned : raw;
+    const result = cleaned.length > 0 ? cleaned : normalized;
     return result.charAt(0).toUpperCase() + result.slice(1);
   };
 

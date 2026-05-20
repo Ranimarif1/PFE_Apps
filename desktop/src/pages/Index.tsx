@@ -14,9 +14,10 @@ import darkModeImg from "@/assets/dark mode.png";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { RegisterForm } from "@/components/auth/RegisterForm";
+import { ForgotPasswordForm } from "@/components/auth/ForgotPasswordForm";
 import { getAvis, type Avis } from "@/services/avisService";
 
-type AuthMode = "login" | "register" | null;
+type AuthMode = "login" | "register" | "forgot-password" | null;
 
 
 /* ── Animation variants ───────────────────────────────────── */
@@ -132,7 +133,7 @@ export default function Index() {
   // doesn't keep popping the modal.
   useEffect(() => {
     const auth = searchParams.get("auth");
-    if (auth === "login" || auth === "register") {
+    if (auth === "login" || auth === "register" || auth === "forgot-password") {
       setAuthMode(auth);
       const next = new URLSearchParams(searchParams);
       next.delete("auth");
@@ -583,7 +584,7 @@ export default function Index() {
 
             <div className="space-y-4">
               {[
-                { icon: Mail,   label: "Email",     value: "contact@reportease.health", href: "mailto:contact@reportease.health" },
+                { icon: Mail,   label: "Email",     value: "contact.reportease@gmail.com", href: "mailto:contact.reportease@gmail.com" },
                 { icon: MapPin, label: "Adresse",   value: "Hôpital Fattouma-Bourguiba, 5000 Monastir, Tunisie", href: undefined },
                 { icon: Phone,  label: "Téléphone", value: "+216 73 461 144", href: "tel:+21673461144" },
               ].map(({ icon: Icon, label, value, href }) => {
@@ -669,12 +670,18 @@ export default function Index() {
             <LoginForm
               onSuccess={() => setAuthMode(null)}
               onSwitchToRegister={() => setAuthMode("register")}
+              onForgotPassword={() => setAuthMode("forgot-password")}
             />
           )}
           {authMode === "register" && (
             <RegisterForm
               onSwitchToLogin={() => setAuthMode("login")}
               onAfterSuccess={() => setAuthMode("login")}
+            />
+          )}
+          {authMode === "forgot-password" && (
+            <ForgotPasswordForm
+              onSwitchToLogin={() => setAuthMode("login")}
             />
           )}
         </DialogContent>
@@ -874,7 +881,7 @@ function ContactForm() {
     e.preventDefault();
     const subject = encodeURIComponent(`[ReportEase] Message de ${name || "Visiteur"}`);
     const body = encodeURIComponent(`Nom : ${name}\nEmail : ${email}\n\n${message}`);
-    window.location.href = `mailto:contact@reportease.health?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:contact.reportease@gmail.com?subject=${subject}&body=${body}`;
   };
 
   return (
