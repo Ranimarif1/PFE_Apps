@@ -153,6 +153,15 @@
     @apply border-border;
   }
 
+  /*
+   * Proportional viewport scaling.
+   * Reference: 1536px viewport (the design's native width).
+   * Every screen sees the EXACT same layout scaled to fit — every
+   * pixel, including hardcoded sizes and chart fonts, scales together.
+   * zoom = 1 on the reference screen; >1 on bigger, <1 on smaller.
+   */
+  html { zoom: calc(100vw / 1536); }
+
   html { background-color: hsl(220, 17%, 98%); }
   html.dark { background-color: hsl(222, 32%, 8%); }
 
