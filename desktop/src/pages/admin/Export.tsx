@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import JSZip from "jszip";
 import { getReports, type Report } from "@/services/reportsService";
 import { generateReportPdf, pdfFilenameForReport } from "@/lib/reportPdf";
+import { parseReport } from "@/lib/reportContent";
 import { getCategoryLabel } from "@/constants/reportCategories";
 import { Eye, FileText, Download, Calendar, Loader2 } from "lucide-react";
 
@@ -65,15 +66,22 @@ export default function AdminExport() {
         pdfsFolder.file(pdfName, blob);
       }
 
-      // CSV — adds a "Fichier" column referencing the PDF path
-      const header = ["ID Examen", "Médecin", "Type", "Date", "Fichier"];
-      const rows = enriched.map(({ report, pdfName }) => [
-        report.ID_Exam,
-        report.doctorName || "",
-        getCategoryLabel(report.category),
-        new Date(report.createdAt).toLocaleDateString("fr-FR"),
-        `pdfs/${pdfName}`,
-      ]);
+      // CSV — section columns + a "Fichier" column referencing the PDF path
+      const header = ["ID Examen", "Médecin", "Type", "Date", "Indication", "Technique", "Resultat", "Conclusion", "Fichier"];
+      const rows = enriched.map(({ report, pdfName }) => {
+        const parsed = parseReport(report.content || "");
+        return [
+          report.ID_Exam,
+          report.doctorName || "",
+          getCategoryLabel(report.category),
+          new Date(report.createdAt).toLocaleDateString("fr-FR"),
+          parsed.indication,
+          parsed.technique,
+          parsed.resultat,
+          parsed.conclusion,
+          `pdfs/${pdfName}`,
+        ];
+      });
       const csv = [header, ...rows]
         .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";"))
         .join("\n");
