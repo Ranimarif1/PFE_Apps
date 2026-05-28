@@ -229,24 +229,6 @@ def register(request: HttpRequest) -> JsonResponse:
     if users_col.find_one({"email": email}):
         return JsonResponse({"detail": "Cet email est déjà enregistré."}, status=400)
 
-    # ── Require the email to have been verified recently ──
-    codes_col = get_collection("email_verification_codes")
-    code_doc = codes_col.find_one({"email": email})
-    if not code_doc or not code_doc.get("verified"):
-        return JsonResponse(
-            {"detail": "Email non vérifié. Veuillez confirmer votre email avec le code reçu."},
-            status=400,
-        )
-    try:
-        verified_at = dt.datetime.fromisoformat(code_doc.get("verified_at") or "")
-    except Exception:
-        verified_at = None
-    if not verified_at or (dt.datetime.utcnow() - verified_at) > dt.timedelta(minutes=VERIFIED_GRACE_PERIOD_MIN):
-        return JsonResponse(
-            {"detail": "Vérification expirée. Veuillez redemander un code."},
-            status=400,
-        )
-
     now = dt.datetime.utcnow().isoformat()
     status = "pending"
     user_doc = {
@@ -262,9 +244,6 @@ def register(request: HttpRequest) -> JsonResponse:
     }
     inserted = users_col.insert_one(user_doc)
     created = users_col.find_one({"_id": inserted.inserted_id})
-
-    # Clean up the verification code once the account is created
-    codes_col.delete_one({"email": email})
 
     # ── Notify all admins & adminIT accounts of the new registration ──
     try:
