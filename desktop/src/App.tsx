@@ -82,7 +82,6 @@ import AdminProfil from "./pages/medecin/Profil";
 import AdminITDashboard from "./pages/adminit/Dashboard";
 import AdminITReclamations from "./pages/adminit/Reclamations";
 import AdminITAdmins from "./pages/adminit/Admins";
-import AdminITModele from "./pages/adminit/Modele";
 import AdminITProfil from "./pages/adminit/Profil";
 import AdminITTraining from "./pages/adminit/Training";
 
@@ -133,7 +132,6 @@ function AppWithLoading() {
       <Route path="/adminit/dashboard" element={<RouteGuard allowedRoles={["adminIT"]}><AdminITDashboard /></RouteGuard>} />
       <Route path="/adminit/reclamations" element={<RouteGuard allowedRoles={["adminIT"]}><AdminITReclamations /></RouteGuard>} />
       <Route path="/adminit/admins" element={<RouteGuard allowedRoles={["adminIT"]}><AdminITAdmins /></RouteGuard>} />
-      <Route path="/adminit/modele" element={<RouteGuard allowedRoles={["adminIT"]}><AdminITModele /></RouteGuard>} />
       <Route path="/adminit/training" element={<RouteGuard allowedRoles={["adminIT"]}><AdminITTraining /></RouteGuard>} />
       <Route path="/adminit/profil" element={<RouteGuard allowedRoles={["adminIT"]}><AdminITProfil /></RouteGuard>} />
 
