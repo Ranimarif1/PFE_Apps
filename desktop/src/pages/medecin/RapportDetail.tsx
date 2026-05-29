@@ -3,7 +3,7 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { getReport, createReport, updateReport, deleteReport } from "@/services/reportsService";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle, Edit3, Save, FileText, Check, X, Loader2, ArrowLeft, Pencil, Wand2, CloudUpload, AlertTriangle, Trash2 } from "lucide-react";
+import { CheckCircle, Edit3, Save, FileText, Check, X, Loader2, ArrowLeft, Pencil, Wand2, CloudUpload, AlertTriangle, Trash2, ClipboardCopy } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -87,6 +87,17 @@ export default function RapportDetail() {
   const [analyseLoading,     setAnalyseLoading]     = useState(false);
   const [analyseError,       setAnalyseError]       = useState<string | null>(null);
   const [ollamaUnavailable,  setOllamaUnavailable]  = useState(false);
+
+  /* ── Copy for Oracle ── */
+  const [copied, setCopied] = useState(false);
+  const handleCopyForOracle = useCallback(() => {
+    // Tab-separated: Oracle will jump field-to-field on paste
+    const text = [indication, technique, resultat, conclusion].join("\t");
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [indication, technique, resultat, conclusion]);
 
   /* ── Auto-save ── */
   const autoSaveTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -631,6 +642,18 @@ export default function RapportDetail() {
             {error && (
               <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 text-destructive text-sm">{error}</div>
             )}
+
+            {/* ── Copy for Oracle ── */}
+            <button
+              type="button"
+              onClick={handleCopyForOracle}
+              className="w-full flex items-center justify-center gap-2 border border-border rounded-xl py-2.5 text-sm font-medium transition-all hover:border-primary/40 hover:text-primary hover:bg-primary/5"
+            >
+              {copied
+                ? <><Check size={15} className="text-emerald-500" /><span className="text-emerald-600">Copié — collez dans Oracle</span></>
+                : <><ClipboardCopy size={15} /><span>Copier pour Oracle</span></>
+              }
+            </button>
 
             {/* ── Actions ── */}
             {status === "saved" ? (
