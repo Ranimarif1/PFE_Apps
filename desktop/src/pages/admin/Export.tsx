@@ -154,11 +154,7 @@ export default function AdminExport() {
             </div>
           </div>
           <div className="w-full overflow-x-auto">
-            <table className="w-full text-sm table-fixed">
-              <colgroup>
-                <col style={{ width: "28%" }} /><col style={{ width: "34%" }} />
-                <col style={{ width: "24%" }} /><col style={{ width: "14%" }} />
-              </colgroup>
+            <table className="w-full text-sm min-w-[480px]">
               <thead>
                 <tr className="bg-muted/50 border-b border-border">
                   {["ID Examen", "Médecin", "Date", "Action"].map(h => (

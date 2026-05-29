@@ -127,7 +127,7 @@ export default function Historique() {
             ))}
           </div>
 
-          <div className="ml-auto flex items-center gap-2 flex-wrap">
+          <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
             {/* Sort toggle */}
             <button
               onClick={() => setSortOrder(o => o === "desc" ? "asc" : "desc")}
@@ -213,7 +213,7 @@ export default function Historique() {
                 value={searchId}
                 onChange={e => setSearchId(e.target.value)}
                 placeholder="Rechercher par ID Exam…"
-                className="pl-8 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 w-52"
+                className="pl-8 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 w-full sm:w-52"
               />
             </div>
           </div>

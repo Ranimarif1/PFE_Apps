@@ -162,7 +162,7 @@ export default function Dashboard() {
       <div className="flex flex-col min-h-full max-w-full overflow-hidden -mt-4">
 
       {/* ══ KPI strip ══════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 divide-y sm:divide-x sm:divide-y-0 divide-border border border-border rounded-xl bg-card overflow-hidden">
+      <div className="grid grid-cols-2 md:grid-cols-4 divide-y divide-x divide-border border border-border rounded-xl bg-card overflow-hidden">
         <Kpi value={total}     label="Total rapports"          accent={DASHBOARD_ACCENTS.info}      icon={FileText}    delta={`${total} rapports créés`} />
         <Kpi value={validated} label="Validés"                 accent={DASHBOARD_ACCENTS.positive}  icon={CheckCircle} delta={total > 0 ? `${Math.round((validated/total)*100)}% du total` : undefined} />
         <Kpi value={drafts}    label="Brouillons"              accent={DASHBOARD_ACCENTS.highlight} icon={Clock}       delta={drafts > 0 ? "À compléter" : "Aucun brouillon"} />
@@ -174,7 +174,7 @@ export default function Dashboard() {
         <div className="space-y-3">
 
           {/* Row 1: chart + calendar */}
-          <div className="grid grid-cols-1 xl:grid-cols-5 gap-3 items-stretch">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 items-stretch">
               {/* Activity chart */}
               <div className="lg:col-span-3 bg-card border border-border rounded-xl flex flex-col">
                 <div className="flex items-center justify-between px-4 py-2.5 border-b border-border shrink-0">
@@ -222,7 +222,7 @@ export default function Dashboard() {
                   <span className="text-sm font-medium text-foreground">Répartition des rapports</span>
                 </div>
                 <div className="p-2 flex items-center gap-2 flex-1 min-h-0">
-                  <div className="w-[40%] h-full flex items-center justify-center">
+                  <div className="w-[40%] min-w-[80px] h-28 flex items-center justify-center">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
