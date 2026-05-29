@@ -51,7 +51,7 @@ export default function Profil() {
   const { user, updateUser } = useAuth();
   const [form, setForm] = useState({
     nom: user?.nom || "", prénom: user?.prénom || "", email: user?.email || "",
-    password: "", confirm: "",
+    password: "", confirm: "", seniorCode: user?.seniorCode || "",
   });
   const [photo, setPhoto] = useState(user?.photo || "");
   const [saved, setSaved] = useState(false);
@@ -78,6 +78,10 @@ export default function Profil() {
       setError("Le mot de passe doit contenir au moins 6 caractères.");
       return;
     }
+    if (user?.senior && !form.seniorCode.trim()) {
+      setError("Le code senior ne peut pas être vide.");
+      return;
+    }
     setLoading(true);
     try {
       const payload: Record<string, string> = {
@@ -87,6 +91,7 @@ export default function Profil() {
       };
       if (photo.startsWith("data:")) payload.photo = photo;
       if (form.password) payload.password = form.password;
+      if (user?.senior) payload.seniorCode = form.seniorCode.trim();
       const updated = await updateProfileApi(payload);
       updateUser(updated);
       setSaved(true);
@@ -141,6 +146,17 @@ export default function Profil() {
               <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                 className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
             </div>
+            {user?.senior && (
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Code senior</label>
+                <input value={form.seniorCode} onChange={e => setForm(f => ({ ...f, seniorCode: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  placeholder="Ex : 12345" />
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Ce code vous identifie auprès des médecins travaillant sous votre supervision.
+                </p>
+              </div>
+            )}
             <div>
               <label className="text-sm font-medium text-foreground mb-1.5 block">Nouveau mot de passe</label>
               <input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))}

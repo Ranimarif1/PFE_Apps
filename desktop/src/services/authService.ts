@@ -130,6 +130,7 @@ export async function updateProfileApi(payload: {
   email?: string;
   password?: string;
   photo?: string;
+  seniorCode?: string;
 }): Promise<User> {
   const raw = await api.patch<BackendUser>("/api/auth/profile", payload);
   return mapUser(raw);
