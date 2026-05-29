@@ -351,22 +351,76 @@ def get_or_update_report(request: HttpRequest, report_id: str):
 # Analyse par phrase via Ollama mistral — prompt radiologie neurovasculaire
 # ──────────────────────────────────────────────────────────────────────────────
 
+# Patterns déterministes de fusion vocale — appliqués mot par mot AVANT Ollama.
+# Chaque tuple : (regex_pattern, replacement)
+# Les patterns matchent un segment/mot entier, pas une phrase.
+_SEGMENT_RULES: list[tuple] = [
+    # "nidépaississement" / "nide..." → "ni d'épaississement"
+    (re.compile(r'^ni([dD])([eé])', re.UNICODE), r"ni \1'\2"),
+    # "pasl" → "pas l'"
+    (re.compile(r'^pasl$', re.IGNORECASE | re.UNICODE), "pas l'"),
+    # "pharango..." → "pharyngo..." (remplace seulement le préfixe fautif)
+    (re.compile(r'^pharango', re.IGNORECASE | re.UNICODE), "pharyngo"),
+]
+
+
+def _fix_segment(seg: str) -> str:
+    """Apply fusion rules to a single word segment. Returns corrected segment."""
+    for pattern, replacement in _SEGMENT_RULES:
+        fixed = pattern.sub(replacement, seg)
+        if fixed != seg:
+            return fixed
+    return seg
+
+
+def _preprocess_sentence(sentence: str) -> tuple[str, list[dict]]:
+    """
+    Fix deterministic speech-to-text errors word by word.
+    Hyphenated compounds are split and each segment is checked individually.
+    Returns (fixed_sentence, corrections_list).
+    """
+    words = sentence.split()
+    out_words = []
+    corrections = []
+    for i, word in enumerate(words):
+        if '-' in word:
+            segments = word.split('-')
+            fixed_segments = [_fix_segment(s) for s in segments]
+            fixed_word = '-'.join(fixed_segments)
+            if fixed_word != word:
+                corrections.append({"mot_original": word, "suggestion": fixed_word, "position": i})
+            out_words.append(fixed_word)
+        else:
+            fixed = _fix_segment(word)
+            if fixed != word:
+                corrections.append({"mot_original": word, "suggestion": fixed, "position": i})
+            out_words.append(fixed)
+    return ' '.join(out_words), corrections
+
 _ANALYSE_URL   = "http://localhost:11434/api/chat"
 _ANALYSE_MODEL = "mistral:latest"
 _ANALYSE_PROMPT = (
-    "Tu es un expert en radiologie neurovasculaire francophone.\n"
-    "Analyse la phrase et détecte UNIQUEMENT :\n"
-    "- fautes d'orthographe médicale (ex: \"athéromateux\" mal orthographié)\n"
-    "- termes anatomiques déformés par la transcription vocale (ex: \"vis\" → \"Willis\", \"deff\" → \"diffusion\")\n"
-    "- mots incohérents issus d'une transcription vocale automatique\n"
-    "- séquences IRM mal écrites (FLAIR, T1, T2, DWI, 3D, écho de gradient...)\n\n"
-    "RÈGLES ABSOLUES — violations = réponse invalide :\n"
-    "1. Ne JAMAIS remplacer un mot français par un mot anglais ou latin.\n"
-    "   Exemples INTERDITS : artères→arteries, spectres→spectra, diffus→distributed, axes→axis, artériels→arterial, calcique→calcified\n"
-    "2. Toutes les suggestions doivent être en FRANÇAIS médical uniquement.\n"
-    "3. Ne corriger que les vraies fautes de frappe ou erreurs vocales, pas les termes corrects.\n"
-    "4. encéphale ≠ cerveau, artères ≠ vaisseaux (ne pas remplacer par synonyme moins précis).\n"
-    "5. Si le mot est correct en français médical, NE PAS le signaler.\n\n"
+    "Tu es un correcteur de transcription vocale médicale en français.\n"
+    "La phrase vient d'un logiciel de reconnaissance vocale — elle peut contenir des erreurs.\n\n"
+    "TÂCHE : identifie les tokens incorrects et propose leur correction.\n"
+    "Un token = UN seul mot OU groupe hyphenné (mot-mot-mot) tel qu'il apparaît dans la phrase.\n\n"
+    "IMPORTANT — Composés avec tirets :\n"
+    "Les mots liés par des tirets doivent être analysés composant par composant.\n"
+    "Ex: \"pharango-laryngo-nidépaississement\" contient trois composants séparés par tirets :\n"
+    "  - \"pharango\" (faute) → \"pharyngo\"\n"
+    "  - \"laryngo\" (correct)\n"
+    "  - \"nidépaississement\" (mots fusionnés) → \"ni d'épaississement\"\n"
+    "Dans ce cas, le token entier doit être corrigé : mot_original = \"pharango-laryngo-nidépaississement\", "
+    "suggestion = \"pharyngo-laryngé, ni d'épaississement\".\n\n"
+    "Types d'erreurs à corriger :\n"
+    "- Mots fusionnés sans espace (ex: \"pasl\" → \"pas l'\", \"nidépaississement\" → \"ni d'épaississement\")\n"
+    "- Faute orthographique médicale (ex: \"pharango\" → \"pharyngo\")\n"
+    "- Terme anatomique déformé phonétiquement (ex: \"vis\" → \"Willis\", \"deff\" → \"diffusion\")\n\n"
+    "RÈGLES STRICTES :\n"
+    "1. mot_original = le token EXACT tel qu'il apparaît dans la phrase.\n"
+    "2. suggestion = le remplacement correct en FRANÇAIS médical.\n"
+    "3. Ne JAMAIS corriger un mot correct, ne JAMAIS utiliser l'anglais ou le latin.\n"
+    "4. position = index du mot dans la phrase (0 = premier mot).\n\n"
     "Retourne UNIQUEMENT ce JSON, sans markdown, sans explication :\n"
     "{\"corrections\": [{\"mot_original\": \"...\", \"suggestion\": \"...\", \"position\": 0}]}\n"
     "Si aucune erreur : {\"corrections\": []}"
@@ -392,7 +446,7 @@ def _call_ollama_analyse(sentence: str) -> List[Dict[str, Any]]:
         data=payload,
         headers={"Content-Type": "application/json"},
     )
-    with _urllib.urlopen(req, timeout=60) as resp:
+    with _urllib.urlopen(req, timeout=180) as resp:
         raw = json.loads(resp.read()).get("message", {}).get("content", "").strip()
 
     if not raw:
@@ -423,13 +477,23 @@ def _call_ollama_analyse(sentence: str) -> List[Dict[str, Any]]:
         suggestion = (c.get("suggestion")  or "").strip()
         if not original or not suggestion or original == suggestion:
             continue
+        # Rejeter si mot_original n'apparaît pas verbatim dans la phrase (réécriture de phrase)
+        if original.lower() not in sentence.lower():
+            continue
+        # Rejeter si mot_original contient plus de 4 espaces (phrase entière, pas un mot)
+        if original.count(' ') > 4:
+            continue
+        # Rejeter si la suggestion ajoute des virgules ou deux-points (reformatage)
+        orig_commas = original.count(',') + original.count(':')
+        sugg_commas = suggestion.count(',') + suggestion.count(':')
+        if sugg_commas > orig_commas:
+            continue
         orig_alpha = re.sub(r'[^\w]', '', original,   flags=re.UNICODE)
         corr_alpha = re.sub(r'[^\w]', '', suggestion,  flags=re.UNICODE)
         # Rejeter les anagrammes purs (IRM → MRI)
         if sorted(orig_alpha.lower()) == sorted(corr_alpha.lower()):
             continue
         # Rejeter si le mot original a des accents français mais la suggestion n'en a pas
-        # → traduction anglaise déguisée en correction
         if _FR_ACCENTS.search(original) and not _FR_ACCENTS.search(suggestion):
             continue
         # Rejeter explicitement les suffixes anglais courants
@@ -464,21 +528,47 @@ def analyse_report(request: HttpRequest) -> JsonResponse:
     if not text:
         return JsonResponse({"detail": "Le champ 'text' est requis."}, status=400)
 
-    # Normaliser : remplacer sauts de ligne et espaces multiples par un seul espace
-    text = re.sub(r'\s+', ' ', text).strip()
+    # Normaliser : remplacer sauts de ligne multiples par un seul espace
+    text = re.sub(r'[ \t]+', ' ', text).strip()
 
-    raw_parts = re.split(r'(?<=[.!?])\s+', text)
-    sentences = [s.strip() for s in raw_parts if s.strip()]
+    # Découper sur ponctuation forte ET sur les majuscules isolées en début de proposition
+    # pour éviter d'envoyer des paragraphes entiers à Ollama
+    raw_parts = re.split(r'(?<=[.!?])\s+|(?<=\s)(?=(?:Pas|pas|A\s|Etude|Ptdm|De\s)[A-Za-zÀ-ÿ])', text)
+    # Regrouper les morceaux trop courts (<15 chars) avec le suivant pour éviter les micro-phrases
+    merged: list[str] = []
+    buf = ""
+    for part in raw_parts:
+        part = part.strip()
+        if not part:
+            continue
+        buf = (buf + " " + part).strip() if buf else part
+        if len(buf) >= 60:
+            merged.append(buf)
+            buf = ""
+    if buf:
+        merged.append(buf)
+    sentences = merged
 
     result_sentences = []
     failures = 0
     for idx, sentence in enumerate(sentences):
-        corrections: List[Dict[str, Any]] = []
+        # 1. Deterministic pre-pass: fix fused words and hyphenated compound errors
+        _, pre_corrections = _preprocess_sentence(sentence)
+        pre_all = {c["mot_original"]: c for c in pre_corrections}
+
+        # 2. Ollama pass for remaining errors
+        ollama_corrections: List[Dict[str, Any]] = []
         try:
-            corrections = _call_ollama_analyse(sentence)
+            ollama_corrections = _call_ollama_analyse(sentence)
         except Exception as e:
             failures += 1
             print(f"[warn] Ollama analyse phrase {idx}: {e}", file=sys.stderr)
+
+        # Merge: pre-processing takes priority, then Ollama fills the rest
+        merged_map = {c["mot_original"]: c for c in ollama_corrections}
+        merged_map.update(pre_all)
+        corrections = list(merged_map.values())
+
         result_sentences.append({
             "sentence_index": idx,
             "sentence":       sentence,

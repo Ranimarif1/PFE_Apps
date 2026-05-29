@@ -194,7 +194,7 @@ export function Navbar({ title, showSearch, onSearch, onToggleSidebar, isMobile 
               size={15}
             />
             <input
-              className="pl-9 pr-4 py-2 text-sm rounded-xl border w-36 sm:w-60 transition-all duration-200"
+              className="pl-9 pr-4 py-2 text-sm rounded-xl border w-32 sm:w-56 transition-all duration-200"
               style={{ background: btnBg, borderColor: "hsl(var(--border))" }}
               placeholder="Recherche par ID Exam..."
               onChange={e => onSearch?.(e.target.value)}
@@ -242,7 +242,7 @@ export function Navbar({ title, showSearch, onSearch, onToggleSidebar, isMobile 
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: -6 }}
                 transition={{ duration: 0.16, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className="absolute right-0 top-11 rounded-2xl border z-50 overflow-hidden notif-dropdown w-[310px] max-w-[90vw]"
+                className="absolute right-0 top-11 rounded-2xl border z-50 overflow-hidden notif-dropdown w-[min(310px,90vw)]"
                 style={{
                   background: dropdownBg,
                   borderColor: "hsl(var(--border))",

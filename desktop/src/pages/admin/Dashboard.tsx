@@ -183,7 +183,7 @@ export default function AdminDashboard() {
       <div className="flex flex-col min-h-full max-w-full overflow-hidden -mt-4">
 
         {/* ══ KPI strip ══════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 divide-y sm:divide-x sm:divide-y-0 divide-border border border-border rounded-xl bg-card overflow-hidden">
+        <div className="grid grid-cols-2 md:grid-cols-4 divide-y divide-x divide-border border border-border rounded-xl bg-card overflow-hidden">
           <Kpi value={doctors.length} label="Total médecins"       accent={DASHBOARD_ACCENTS.info}      icon={Users}         delta={`↑ ${doctors.length} inscrits`} />
           <Kpi value={pending}        label="En attente"           accent={DASHBOARD_ACCENTS.highlight} icon={Clock}         delta={pending > 0 ? `${pending} nécessitent une action` : "Aucun en attente"} />
           <Kpi value={statsTotal}     label="Total rapports"       accent={DASHBOARD_ACCENTS.info}      icon={FileText} />
@@ -195,7 +195,7 @@ export default function AdminDashboard() {
           <div className="space-y-3">
 
             {/* Row 1: chart + calendrier */}
-            <div className="grid grid-cols-1 xl:grid-cols-5 gap-3 items-stretch">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 items-stretch">
               <div className="lg:col-span-3 bg-card border border-border rounded-xl flex flex-col">
                 <div className="flex items-center justify-between px-4 py-2.5 border-b border-border shrink-0">
                   <span className="text-sm font-medium text-foreground">Activité — 30 derniers jours</span>
@@ -219,7 +219,7 @@ export default function AdminDashboard() {
 
               <div className="lg:col-span-2 bg-card border border-border rounded-xl">
                 <div className="px-4 py-2.5 border-b border-border">
-                  <span className="text-sm font-medium text-foreground">Calendrier des rapports</span>
+                  <span className="text-sm font-medium text-foreground">Calendrier</span>
                 </div>
                 <div className="px-4 py-2">
                   <ReportCalendar reports={reports} />
@@ -234,7 +234,7 @@ export default function AdminDashboard() {
                   <span className="text-sm font-medium text-foreground">Répartition des médecins</span>
                 </div>
                 <div className="p-2 flex items-center gap-2 flex-1 min-h-0">
-                  <div className="w-[40%] h-28 flex items-center justify-center">
+                  <div className="w-[40%] min-w-[80px] h-28 flex items-center justify-center">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie data={userPieData} cx="50%" cy="50%" innerRadius="55%" outerRadius="95%" dataKey="value" paddingAngle={3}>
@@ -270,7 +270,7 @@ export default function AdminDashboard() {
                   {statsError && <span className="text-[10px] text-destructive">Erreur de chargement</span>}
                 </div>
                 <div className="p-2 flex items-center gap-2 flex-1 min-h-0">
-                  <div className="w-[40%] h-28 flex items-center justify-center">
+                  <div className="w-[40%] min-w-[80px] h-28 flex items-center justify-center">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
