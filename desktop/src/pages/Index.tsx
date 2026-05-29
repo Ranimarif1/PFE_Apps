@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import { motion } from "framer-motion";
 import {
   Sun, Moon, Mic, ShieldCheck, Activity, Building2,
@@ -100,14 +101,14 @@ const studies = [
     org: "SFR",
     title: "Société Française de Radiologie",
     desc: "Référentiels francophones, formation continue et bonnes pratiques en imagerie diagnostique.",
-    href: "https://www.sfrnet.org/",
+    href: "https://www.radiologie.fr/la-sfr",
   },
   {
     icon: Stethoscope,
     org: "OMS",
     title: "Organisation Mondiale de la Santé — Imagerie diagnostique",
     desc: "Publications sur l'accès équitable à l'imagerie médicale et standards internationaux.",
-    href: "https://www.who.int/health-topics/diagnostic-imaging",
+    href: "https://www.who.int/health-topics/diagnostics",
   },
 ];
 
@@ -726,9 +727,14 @@ function AvisSection({ avisList, avisError }: { avisList: Avis[]; avisError: str
   }));
 
   const avgRating = displayed.length > 0
-    ? (displayed.reduce((s, a) => s + a.rating, 0) / displayed.length).toFixed(1)
+    ? parseFloat((displayed.reduce((s, a) => s + a.rating, 0) / displayed.length).toFixed(1)).toString()
     : null;
   const totalCount = displayed.length;
+  const recommendPct = displayed.length > 0
+    ? Math.round((displayed.filter(a => a.rating >= 4).length / displayed.length) * 100)
+    : 0;
+
+  const [selected, setSelected] = useState<DisplayAvis | null>(null);
 
   return (
     <section id="avis" className="py-20 lg:py-24 border-t border-border"
@@ -762,7 +768,7 @@ function AvisSection({ avisList, avisError }: { avisList: Avis[]; avisError: str
             {[
               { value: `${avgRating} / 5`, label: "Note moyenne" },
               { value: `${totalCount} avis`, label: "Témoignages" },
-              { value: "95%", label: "recommandent ReportEase" },
+              { value: `${recommendPct}%`, label: "recommandent ReportEase" },
             ].map(chip => (
               <div
                 key={chip.label}
@@ -796,7 +802,11 @@ function AvisSection({ avisList, avisError }: { avisList: Avis[]; avisError: str
                   initial={{ opacity: 0, y: 28 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: idx * 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
-                  className="group relative bg-card rounded-2xl flex flex-col overflow-hidden"
+                  onClick={() => setSelected(avis)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(avis); } }}
+                  className="group relative bg-card rounded-2xl flex flex-col overflow-hidden cursor-pointer"
                   style={{
                     border: "1px solid hsl(var(--border))",
                     boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)",
@@ -839,6 +849,11 @@ function AvisSection({ avisList, avisError }: { avisList: Avis[]; avisError: str
                       <p className="relative text-[0.9rem] leading-relaxed text-foreground/80 italic font-serif line-clamp-4 pt-1">
                         {avis.content}
                       </p>
+                      {avis.content.length > 180 && (
+                        <span className="relative inline-block mt-2 text-xs font-semibold text-primary group-hover:underline">
+                          Lire la suite →
+                        </span>
+                      )}
                     </div>
 
                     {/* Footer */}
@@ -867,6 +882,42 @@ function AvisSection({ avisList, avisError }: { avisList: Avis[]; avisError: str
           </div>
         )}
       </div>
+
+      {/* ── Full-avis popup ── */}
+      <Dialog open={selected !== null} onOpenChange={open => { if (!open) setSelected(null); }}>
+        <DialogContent className="max-w-lg w-[92vw] max-h-[85vh] overflow-y-auto p-6 sm:p-8 bg-card border-border rounded-3xl">
+          {selected && (
+            <div className="flex flex-col gap-5">
+              <div className="flex gap-1">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star
+                    key={i}
+                    size={18}
+                    className={i < selected.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/20"}
+                  />
+                ))}
+              </div>
+              <p className="text-[0.95rem] leading-relaxed text-foreground/90 italic font-serif whitespace-pre-line">
+                {selected.content}
+              </p>
+              <div className="flex items-center gap-3 pt-4 border-t border-border">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-bold bg-primary/10 text-primary">
+                  {getInitials(selected.doctorName)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold truncate">Dr. {selected.doctorName}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">{selected.specialty}</p>
+                </div>
+                <p className="text-[10px] text-muted-foreground/60 shrink-0 ml-auto">
+                  {new Date(selected.createdAt).toLocaleDateString("fr-FR", {
+                    day: "numeric", month: "short", year: "numeric",
+                  })}
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
@@ -876,12 +927,29 @@ function ContactForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const subject = encodeURIComponent(`[ReportEase] Message de ${name || "Visiteur"}`);
-    const body = encodeURIComponent(`Nom : ${name}\nEmail : ${email}\n\n${message}`);
-    window.location.href = `mailto:contact.reportease@gmail.com?subject=${subject}&body=${body}`;
+    const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+    setSending(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/contact/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, message }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.detail || "Échec de l'envoi.");
+      toast.success("Message envoyé", { description: "Nous vous répondrons dès que possible." });
+      setName(""); setEmail(""); setMessage("");
+    } catch (err) {
+      toast.error("Échec de l'envoi du message", {
+        description: err instanceof Error ? err.message : "Veuillez réessayer.",
+      });
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -927,9 +995,10 @@ function ContactForm() {
       </div>
       <button
         type="submit"
-        className="w-full gradient-hero text-white font-semibold py-3 rounded-xl inline-flex items-center justify-center gap-2"
+        disabled={sending}
+        className="w-full gradient-hero text-white font-semibold py-3 rounded-xl inline-flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        Envoyer
+        {sending ? "Envoi…" : "Envoyer"}
         <ArrowRight size={16} />
       </button>
     </form>

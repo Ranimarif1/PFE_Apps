@@ -217,6 +217,23 @@ def register(request: HttpRequest) -> JsonResponse:
     if role not in {"doctor", "admin", "adminIT"}:
         return JsonResponse({"detail": "Rôle invalide."}, status=400)
 
+    # ── Senior status & code ──
+    # admin → always senior; doctor → optional; adminIT → never senior.
+    senior_code = (data.get("seniorCode") or "").strip()
+    if role == "admin":
+        senior = True
+    elif role == "doctor":
+        senior = bool(data.get("senior"))
+    else:  # adminIT
+        senior = False
+        senior_code = ""
+
+    if senior:
+        if not senior_code:
+            return JsonResponse({"detail": "Le numéro / code du senior est requis."}, status=400)
+        if get_collection("users").find_one({"seniorCode": senior_code}):
+            return JsonResponse({"detail": "Ce code senior est déjà utilisé."}, status=400)
+
     email_err = validate_email_format(email)
     if email_err:
         return JsonResponse({"detail": email_err}, status=400)
@@ -240,6 +257,8 @@ def register(request: HttpRequest) -> JsonResponse:
         "prenom": prenom,
         "genre": genre,
         "photo": "",
+        "senior": senior,
+        "seniorCode": senior_code if senior else "",
         "createdAt": now,
     }
     inserted = users_col.insert_one(user_doc)
@@ -313,6 +332,8 @@ def login_view(request: HttpRequest) -> JsonResponse:
                 "prenom": user.get("prenom", ""),
                 "genre": user.get("genre", ""),
                 "photo": user.get("photo", ""),
+                "senior": user.get("senior", user["role"] == "admin"),
+                "seniorCode": user.get("seniorCode", ""),
             },
         }
     )
@@ -336,6 +357,8 @@ def me(request: HttpRequest) -> JsonResponse:
             "prenom": user.raw.get("prenom", ""),
             "genre": user.raw.get("genre", ""),
             "photo": user.raw.get("photo", ""),
+            "senior": user.raw.get("senior", user.role == "admin"),
+            "seniorCode": user.raw.get("seniorCode", ""),
         }
     )
 
@@ -454,6 +477,43 @@ def delete_user(request: HttpRequest, user_id: str) -> JsonResponse:
     return JsonResponse({"detail": "Utilisateur supprimé."})
 
 
+def list_seniors(request: HttpRequest) -> JsonResponse:
+    """GET /api/auth/seniors — validated seniors a non-senior can work under.
+
+    Includes senior médecins and all admins (admins default to senior).
+    """
+    if request.method != "GET":
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+
+    current = get_current_user(request)
+    if not current:
+        return JsonResponse({"detail": "Authentification requise."}, status=401)
+
+    users_col = get_collection("users")
+    docs = list(users_col.find(
+        {
+            "status": "validated",
+            "$or": [
+                {"role": "doctor", "senior": True},
+                {"role": "admin"},
+            ],
+        },
+        {"nom": 1, "prenom": 1, "seniorCode": 1, "role": 1},
+    ).sort([("nom", 1), ("prenom", 1)]))
+
+    results = [
+        {
+            "id": str(d["_id"]),
+            "nom": d.get("nom", ""),
+            "prenom": d.get("prenom", ""),
+            "seniorCode": d.get("seniorCode", ""),
+            "role": d.get("role", ""),
+        }
+        for d in docs
+    ]
+    return JsonResponse({"results": results})
+
+
 def list_users(request: HttpRequest) -> JsonResponse:
     if request.method != "GET":
         return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
@@ -520,6 +580,8 @@ def update_profile(request: HttpRequest) -> JsonResponse:
         "prenom": updated.get("prenom", ""),
         "genre": updated.get("genre", ""),
         "photo": updated.get("photo", ""),
+        "senior": updated.get("senior", updated["role"] == "admin"),
+        "seniorCode": updated.get("seniorCode", ""),
     })
 
 

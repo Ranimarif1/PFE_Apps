@@ -42,6 +42,7 @@ def list_or_upload(request: HttpRequest) -> JsonResponse:
         audio_file = request.FILES.get("audio")
         exam_id    = request.POST.get("examId", "").strip()
         duration   = request.POST.get("duration", "0")
+        senior_id  = request.POST.get("seniorId", "").strip()
 
         if not audio_file or not exam_id:
             return JsonResponse({"detail": "Le fichier audio et l'identifiant d'examen sont requis."}, status=400)
@@ -62,6 +63,7 @@ def list_or_upload(request: HttpRequest) -> JsonResponse:
             "mimeType":  audio_file.content_type or "audio/webm",
             "size":      audio_file.size,
             "duration":  int(float(duration)),
+            "seniorId":  senior_id or None,
             "createdAt": now,
         }
         inserted = col.insert_one(doc)

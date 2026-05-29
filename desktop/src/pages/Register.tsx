@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
   Sun, Moon, Eye, EyeOff, CheckCircle, Check, X,
-  Mail, Shield, User, Lock, AlertCircle, Loader2,
+  Mail, Shield, User, Lock, AlertCircle, Loader2, Award, Hash,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { registerApi, sendVerificationCodeApi, verifyEmailCodeApi } from "@/services/authService";
@@ -32,6 +32,8 @@ export default function Register() {
     confirm: "",
     rôle: "médecin" as Role,
     genre: "" as "homme" | "femme" | "",
+    senior: false,
+    seniorCode: "",
   });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -111,6 +113,11 @@ export default function Register() {
     const pwErr = validatePassword(form.password);
     if (pwErr) { setError(pwErr); return; }
     if (form.password !== form.confirm) { setError("Les mots de passe ne correspondent pas."); return; }
+    const isSenior = form.rôle === "admin" || (form.rôle === "médecin" && form.senior);
+    if (isSenior && !form.seniorCode.trim()) {
+      setError("Veuillez saisir votre numéro / code senior.");
+      return;
+    }
     setLoading(true);
     try {
       const roleMap: Record<Role, string> = { médecin: "doctor", admin: "admin", adminIT: "adminIT" };
@@ -121,6 +128,8 @@ export default function Register() {
         nom: form.nom,
         prenom: form.prénom,
         genre: form.genre,
+        senior: isSenior,
+        seniorCode: isSenior ? form.seniorCode.trim() : undefined,
       });
       setSuccess(true);
     } catch (err: unknown) {
@@ -167,6 +176,7 @@ export default function Register() {
   const score = passwordScore(passwordChecks);
   const strengthLabel = score === 0 ? "" : score <= 2 ? "Faible" : score <= 3 ? "Moyen" : score <= 4 ? "Fort" : "Très fort";
   const strengthColor = score <= 2 ? "bg-destructive" : score <= 3 ? "bg-warning" : "bg-success";
+  const isSenior = form.rôle === "admin" || (form.rôle === "médecin" && form.senior);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-8">
@@ -398,6 +408,59 @@ export default function Register() {
                 ))}
               </div>
             </motion.div>
+
+            {/* Senior status — médecin chooses, admin is senior by default, adminIT excluded */}
+            {form.rôle !== "adminIT" && (
+              <motion.div variants={itemVariants}>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Statut senior</label>
+                {form.rôle === "admin" ? (
+                  <div className="flex items-center gap-2 px-3.5 py-3 rounded-xl border border-primary/30 bg-primary/5 text-sm text-foreground">
+                    <Award size={15} className="text-primary shrink-0" />
+                    <span>En tant qu'administrateur, vous êtes senior par défaut.</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      { value: true,  label: "Oui, je suis senior" },
+                      { value: false, label: "Non" },
+                    ] as const).map(({ value, label }) => (
+                      <button
+                        key={String(value)}
+                        type="button"
+                        onClick={() => setForm(f => ({ ...f, senior: value, seniorCode: value ? f.seniorCode : "" }))}
+                        className={`px-3 py-2.5 rounded-xl border text-sm font-medium transition-all text-center ${
+                          form.senior === value
+                            ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/20"
+                            : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Senior code — required whenever the account is senior */}
+            {isSenior && (
+              <motion.div variants={itemVariants}>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Numéro / code senior</label>
+                <div className="relative">
+                  <Hash size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  <input
+                    value={form.seniorCode}
+                    onChange={e => handleChange("seniorCode", e.target.value)}
+                    required
+                    className="w-full pl-10 pr-4 py-3 text-sm"
+                    placeholder="Ex : 12345"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Ce code vous identifiera auprès des médecins travaillant sous votre supervision.
+                </p>
+              </motion.div>
+            )}
 
             {/* Password */}
             <motion.div variants={itemVariants}>

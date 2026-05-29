@@ -8,6 +8,7 @@ export interface AudioRecord {
   mimeType: string;
   size: number;
   duration: number; // seconds
+  seniorId?: string | null;
   createdAt: string;
   reportId?: string;
 }
@@ -20,13 +21,15 @@ function authHeaders(): Record<string, string> {
 export async function uploadAudio(
   examId: string,
   blob: Blob,
-  duration: number
+  duration: number,
+  seniorId?: string | null
 ): Promise<AudioRecord> {
   const form = new FormData();
   const ext  = blob.type.includes("webm") ? ".webm" : blob.type.includes("mp4") ? ".mp4" : ".wav";
   form.append("audio",    blob, `recording${ext}`);
   form.append("examId",   examId);
   form.append("duration", String(Math.round(duration)));
+  if (seniorId) form.append("seniorId", seniorId);
 
   const res = await fetch(`${BASE_URL}/api/audios/`, {
     method:  "POST",

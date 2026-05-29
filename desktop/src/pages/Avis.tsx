@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { Star, MessageSquarePlus, CheckCircle } from "lucide-react";
 import { submitAvis, getMyAvis } from "@/services/avisService";
@@ -34,8 +35,10 @@ export default function Avis() {
       setSuccess(true);
       setContent("");
       setRating(5);
-    } catch {
-      /* keep form open on error */
+    } catch (err) {
+      toast.error("Échec de l'envoi de l'avis", {
+        description: err instanceof Error ? err.message : "Veuillez réessayer.",
+      });
     } finally {
       setSubmitting(false);
     }

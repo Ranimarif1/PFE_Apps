@@ -10,6 +10,7 @@ urlpatterns = [
     path("verify-email-code", views.verify_email_code, name="verify_email_code"),
     path("login", views.login_view, name="login"),
     path("me", views.me, name="me"),
+    path("seniors", views.list_seniors, name="list_seniors"),
     path("users", views.list_users, name="list_users"),
     path("users/<str:user_id>/status", views.update_user_status, name="update_user_status"),
     path("users/<str:user_id>/role", views.change_user_role, name="change_user_role"),
