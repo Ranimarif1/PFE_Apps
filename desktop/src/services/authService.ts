@@ -38,6 +38,8 @@ function mapUser(raw: BackendUser): User {
     statut: statusMap[raw.status] ?? "en_attente",
     genre: (raw.genre === "homme" || raw.genre === "femme") ? raw.genre : "",
     photo: resolvePhotoUrl(raw.photo || ""),
+    senior: raw.senior ?? raw.role === "admin",
+    seniorCode: raw.seniorCode || "",
   };
 }
 
@@ -50,6 +52,8 @@ interface BackendUser {
   prenom: string;
   genre: string;
   photo: string;
+  senior?: boolean;
+  seniorCode?: string;
 }
 
 interface LoginResponse {
@@ -80,8 +84,23 @@ export async function registerApi(payload: {
   nom: string;
   prenom: string;
   genre?: string;
+  senior?: boolean;
+  seniorCode?: string;
 }): Promise<void> {
   await api.post("/api/auth/register", payload);
+}
+
+export interface Senior {
+  id: string;
+  nom: string;
+  prenom: string;
+  seniorCode: string;
+  role: string;
+}
+
+export async function getSeniorsApi(): Promise<Senior[]> {
+  const data = await api.get<{ results: Senior[] }>("/api/auth/seniors");
+  return data.results;
 }
 
 export async function sendVerificationCodeApi(email: string): Promise<void> {

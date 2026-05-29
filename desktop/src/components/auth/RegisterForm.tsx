@@ -23,6 +23,8 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
     confirm: "",
     rôle: "médecin" as Role,
     genre: "" as "homme" | "femme" | "",
+    senior: false,
+    seniorCode: "",
   });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -103,6 +105,11 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
     const pwErr = validatePassword(form.password);
     if (pwErr) { setError(pwErr); return; }
     if (form.password !== form.confirm) { setError("Les mots de passe ne correspondent pas."); return; }
+    const isSenior = form.rôle === "admin" || (form.rôle === "médecin" && form.senior);
+    if (isSenior && !form.seniorCode.trim()) {
+      setError("Veuillez saisir votre code senior.");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -114,6 +121,8 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
         nom: form.nom,
         prenom: form.prénom,
         genre: form.genre,
+        senior: isSenior,
+        seniorCode: isSenior ? form.seniorCode.trim() : undefined,
       });
       setSuccess(true);
     } catch (err: unknown) {
@@ -152,6 +161,7 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
   const score = passwordScore(passwordChecks);
   const strengthLabel = score === 0 ? "" : score <= 2 ? "Faible" : score <= 3 ? "Moyen" : score <= 4 ? "Fort" : "Très fort";
   const strengthColor = score <= 2 ? "bg-destructive" : score <= 3 ? "bg-warning" : "bg-success";
+  const isSenior = form.rôle === "admin" || (form.rôle === "médecin" && form.senior);
 
   return (
     <div>
@@ -302,6 +312,49 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
             ))}
           </div>
         </div>
+
+        {/* Senior status — médecin chooses, admin senior by default, adminIT excluded */}
+        {form.rôle !== "adminIT" && (
+          <div>
+            <label className="text-sm font-medium text-foreground mb-1.5 block">Statut senior</label>
+            {form.rôle === "admin" ? (
+              <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-primary/30 bg-primary/5 text-sm text-foreground">
+                <Shield size={14} className="text-primary shrink-0" />
+                <span>En tant qu'administrateur, vous êtes senior par défaut.</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { value: true,  label: "Oui, je suis senior" },
+                  { value: false, label: "Non" },
+                ] as const).map(({ value, label }) => (
+                  <button key={String(value)} type="button"
+                    onClick={() => setForm(f => ({ ...f, senior: value, seniorCode: value ? f.seniorCode : "" }))}
+                    className={`px-3 py-2.5 rounded-xl border text-sm font-medium transition-all text-center ${
+                      form.senior === value
+                        ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/30"
+                        : "border-border bg-background text-muted-foreground hover:border-primary/40"
+                    }`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Senior code — required whenever the account is senior */}
+        {isSenior && (
+          <div>
+            <label className="text-sm font-medium text-foreground mb-1.5 block">Numéro / code senior</label>
+            <input value={form.seniorCode} onChange={e => handleChange("seniorCode", e.target.value)} required
+              className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              placeholder="Ex : 12345" />
+            <p className="text-xs text-muted-foreground mt-1.5">
+              Ce code vous identifiera auprès des médecins travaillant sous votre supervision.
+            </p>
+          </div>
+        )}
 
         <div>
           <label className="text-sm font-medium text-foreground mb-1.5 block">Mot de passe</label>

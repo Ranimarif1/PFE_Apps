@@ -69,6 +69,8 @@ export default function RapportDetail() {
   const [status,      setStatus]      = useState<string>("draft");
   const [createdAt,   setCreatedAt]   = useState<string | null>(null);
   const [category,    setCategory]    = useState<ReportCategory | "">(fromState?.category ?? "");
+  const [seniorName,  setSeniorName]  = useState<string>("");
+  const [seniorCode,  setSeniorCode]  = useState<string>("");
 
   /* ── UI states ── */
   const [editing,              setEditing]              = useState(false);
@@ -186,6 +188,8 @@ export default function RapportDetail() {
           setExamId(r.ID_Exam);
           setExamIdInput(r.ID_Exam);
           if (r.category) setCategory(r.category);
+          setSeniorName(r.seniorName || "");
+          setSeniorCode(r.seniorCode || "");
         })
         .catch(() => setError("Rapport introuvable."))
         .finally(() => setLoading(false));
@@ -431,6 +435,12 @@ export default function RapportDetail() {
                   </div>
                 </div>
                 <div><p className="text-muted-foreground text-xs mb-0.5">Médecin</p><p className="font-medium text-foreground">Dr. {user?.prénom} {user?.nom}</p></div>
+                {(seniorName || seniorCode) && (
+                  <div>
+                    <p className="text-muted-foreground text-xs mb-0.5">Senior référent</p>
+                    <p className="font-medium text-foreground">{seniorCode ? `${seniorCode} · ` : ""}{seniorName || "—"}</p>
+                  </div>
+                )}
                 <div><p className="text-muted-foreground text-xs mb-0.5">Date</p><p className="font-medium text-foreground">{createdAt ? new Date(createdAt).toLocaleDateString("fr-FR") : new Date().toLocaleDateString("fr-FR")}</p></div>
                 <div><p className="text-muted-foreground text-xs mb-0.5">Heure</p><p className="font-medium text-foreground">{createdAt ? new Date(createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</p></div>
               </div>

@@ -50,6 +50,33 @@ def _user_can_access_report(user: CurrentUser, report: Dict[str, Any]) -> bool:
     return str(report.get("doctorId")) == user.id
 
 
+def _resolve_senior(senior_id: Optional[str]) -> Dict[str, Optional[str]]:
+    """Look up a senior user by id and return a snapshot to stamp on a report.
+
+    A valid senior is a validated admin, or a validated doctor flagged senior.
+    Returns empty fields when the id is missing or doesn't reference a senior.
+    """
+    empty = {"seniorId": None, "seniorCode": None, "seniorName": None}
+    if not senior_id:
+        return empty
+    try:
+        oid = ObjectId(senior_id)
+    except Exception:
+        return empty
+    user = get_collection("users").find_one({"_id": oid})
+    if not user or user.get("status") != "validated":
+        return empty
+    is_senior = user.get("role") == "admin" or (user.get("role") == "doctor" and user.get("senior"))
+    if not is_senior:
+        return empty
+    name = f"{user.get('prenom', '')} {user.get('nom', '')}".strip()
+    return {
+        "seniorId": str(user["_id"]),
+        "seniorCode": user.get("seniorCode", "") or "",
+        "seniorName": name,
+    }
+
+
 def _extract_sections(content: str) -> Dict[str, str]:
     """Extract indication, technique, resultat, conclusion from report content.
     Handles both multi-line (Indication:\\n...) and single-line (Indication: ... Resultat: ...) formats.
@@ -252,6 +279,18 @@ def list_or_create_reports(request: HttpRequest) -> JsonResponse:
         audio_id = data.get("audioId") or None
         original_content = data.get("originalContent") or None
 
+        # Resolve the supervising senior: explicit payload wins, otherwise fall
+        # back to the senior captured on the linked audio (retry/fallback paths).
+        senior_id = (data.get("seniorId") or "").strip() or None
+        if not senior_id and audio_id:
+            try:
+                audio_doc = get_collection("audios").find_one({"_id": ObjectId(audio_id)})
+                if audio_doc:
+                    senior_id = audio_doc.get("seniorId") or None
+            except Exception:
+                pass
+        senior = _resolve_senior(senior_id)
+
         now = utcnow.isoformat()
         doc = {
             "doctorId": user.id,
@@ -261,6 +300,9 @@ def list_or_create_reports(request: HttpRequest) -> JsonResponse:
             "status": status,
             "category": category,
             "audioId": audio_id,
+            "seniorId": senior["seniorId"],
+            "seniorCode": senior["seniorCode"],
+            "seniorName": senior["seniorName"],
             "createdAt": now,
             "updatedAt": now,
         }

@@ -10,7 +10,9 @@ import {
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useRecording } from "@/contexts/RecordingContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { checkExamId } from "@/services/reportsService";
+import { getSeniorsApi, type Senior } from "@/services/authService";
 import { REPORT_CATEGORIES, type ReportCategory } from "@/constants/reportCategories";
 import { SonicMicButton } from "@/components/SonicMicButton";
 import { triggerPiP, closePiP } from "@/hooks/useRecordingPiP";
@@ -51,6 +53,10 @@ export default function NouveauRapport() {
   const navigate  = useNavigate();
   const location  = useLocation();
   const recording = useRecording();
+  const { user }  = useAuth();
+
+  // Non-senior médecins must work under a senior; admins/seniors don't.
+  const needsSenior = user?.rôle === "médecin" && !user?.senior;
 
   const restore = location.state as {
     _restore?: { etape: Etape; examId: string; category?: ReportCategory; méthode: Méthode };
@@ -64,6 +70,20 @@ export default function NouveauRapport() {
   // Step 1: async exam-id availability check
   const [idChecking,  setIdChecking]  = useState(false);
   const [idAvailable, setIdAvailable] = useState<boolean | null>(null);
+
+  // Step 1: supervising senior (non-senior médecins only)
+  const [seniorId,      setSeniorId]      = useState<string>("");
+  const [seniors,       setSeniors]       = useState<Senior[]>([]);
+  const [seniorsLoading, setSeniorsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!needsSenior) return;
+    setSeniorsLoading(true);
+    getSeniorsApi()
+      .then(setSeniors)
+      .catch(() => setSeniors([]))
+      .finally(() => setSeniorsLoading(false));
+  }, [needsSenior]);
 
   useEffect(() => {
     setIdAvailable(null);
@@ -121,7 +141,7 @@ export default function NouveauRapport() {
     if (!category) return;
     setSessionLoading(true);
     setSessionError(null);
-    recording.startSmartphoneSession(examId, category)
+    recording.startSmartphoneSession(examId, category, needsSenior ? seniorId : null)
       .catch(() => setSessionError("Impossible de créer la session. Vérifiez que le serveur est démarré."))
       .finally(() => setSessionLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -241,13 +261,50 @@ export default function NouveauRapport() {
                   </div>
                 </div>
 
+                {needsSenior && (
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      Senior référent <span className="text-destructive">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Code — paired with the name select; choosing one fills the other */}
+                      <select
+                        value={seniorId}
+                        onChange={e => setSeniorId(e.target.value)}
+                        disabled={seniorsLoading}
+                        className="w-full px-3 py-3 text-foreground bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all disabled:opacity-60"
+                      >
+                        <option value="" disabled>{seniorsLoading ? "Chargement…" : "Code…"}</option>
+                        {seniors.map(s => (
+                          <option key={s.id} value={s.id}>{s.seniorCode || "—"}</option>
+                        ))}
+                      </select>
+                      {/* Nom & prénom */}
+                      <select
+                        value={seniorId}
+                        onChange={e => setSeniorId(e.target.value)}
+                        disabled={seniorsLoading}
+                        className="w-full px-3 py-3 text-foreground bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all disabled:opacity-60"
+                      >
+                        <option value="" disabled>{seniorsLoading ? "Chargement…" : "Nom & prénom…"}</option>
+                        {seniors.map(s => (
+                          <option key={s.id} value={s.id}>{s.prenom} {s.nom}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {!seniorsLoading && seniors.length === 0 && (
+                      <p className="text-xs mt-1 text-destructive">Aucun senior disponible pour le moment.</p>
+                    )}
+                  </div>
+                )}
+
                 <button
                   onClick={() => {
-                    if (isValidExamId(examId) && idAvailable === true && category) {
+                    if (isValidExamId(examId) && idAvailable === true && category && (!needsSenior || seniorId)) {
                       setEtape(2);
                     }
                   }}
-                  disabled={!isValidExamId(examId) || idChecking || idAvailable !== true || !category}
+                  disabled={!isValidExamId(examId) || idChecking || idAvailable !== true || !category || (needsSenior && !seniorId)}
                   className="w-full gradient-hero text-white font-semibold py-3 rounded-xl hover:opacity-90 disabled:opacity-40 transition-all"
                 >
                   Continuer →
@@ -369,7 +426,7 @@ export default function NouveauRapport() {
                         </div>
                         <p className="text-muted-foreground text-sm">Prêt à enregistrer</p>
                         <button
-                          onClick={() => category && recording.startMicRecording(examId, category)}
+                          onClick={() => category && recording.startMicRecording(examId, category, needsSenior ? seniorId : null)}
                           disabled={!category}
                           className="flex items-center gap-2 mx-auto gradient-hero text-white font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition-all disabled:opacity-40">
                           <Play className="w-5 h-5" /> Démarrer l'enregistrement
@@ -377,7 +434,7 @@ export default function NouveauRapport() {
                         <SonicMicButton
                           onRecord={() => {
                             if (!recording.isRecording && !recording.isPaused && category) {
-                              recording.startMicRecording(examId, category);
+                              recording.startMicRecording(examId, category, needsSenior ? seniorId : null);
                             }
                           }}
                           onStop={recording.stopRecording}
@@ -563,7 +620,7 @@ export default function NouveauRapport() {
                           <p className="text-sm text-muted-foreground">MP3, WAV, M4A — Max 50 Mo</p>
                         </div>
                         <input type="file" accept=".mp3,.wav,.m4a" className="hidden"
-                          onChange={(e) => { const f = e.target.files?.[0]; if (f && category) recording.transcribeFile(examId, category, f); }} />
+                          onChange={(e) => { const f = e.target.files?.[0]; if (f && category) recording.transcribeFile(examId, category, f, needsSenior ? seniorId : null); }} />
                       </label>
                     ) : (
                       <div className="space-y-3">

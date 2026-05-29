@@ -15,6 +15,8 @@ export interface User {
   statut: "en_attente" | "validé" | "refusé";
   genre: "homme" | "femme" | "";
   photo: string;
+  senior: boolean;
+  seniorCode: string;
 }
 
 interface AuthContextType {

@@ -33,9 +33,9 @@ def list_avis(request: HttpRequest):
 
 
 @csrf_exempt
-@jwt_required(roles={"doctor"})
+@jwt_required(roles={"doctor", "admin"})
 def create_avis(request: HttpRequest):
-    """Authenticated doctors can submit an avis (one per doctor)."""
+    """Authenticated doctors and admins can submit an avis (one per user)."""
     if request.method != "POST":
         return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
 

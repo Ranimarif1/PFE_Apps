@@ -11,6 +11,9 @@ export interface Report {
   status: "draft" | "validated" | "saved";
   category?: ReportCategory;
   audioId?: string;
+  seniorId?: string | null;
+  seniorCode?: string | null;
+  seniorName?: string | null;
   createdAt: string;
   updatedAt: string;
   doctorName?: string;
@@ -33,6 +36,7 @@ export async function createReport(payload: {
   status?: "draft" | "validated" | "saved";
   audioId?: string;
   originalContent?: string;
+  seniorId?: string;
 }): Promise<Report> {
   return api.post<Report>("/api/reports/", payload);
 }
