@@ -50,11 +50,40 @@ def _user_can_access_report(user: CurrentUser, report: Dict[str, Any]) -> bool:
     return str(report.get("doctorId")) == user.id
 
 
+def _extract_sections(content: str) -> Dict[str, str]:
+    """Extract indication, technique, resultat, conclusion from report content.
+    Handles both multi-line (Indication:\\n...) and single-line (Indication: ... Resultat: ...) formats.
+    """
+    empty = {"indication": "", "technique": "", "resultat": "", "conclusion": ""}
+    if not content:
+        return empty
+
+    patterns = {
+        "indication": r'[({]?\s*(?:indication|renseignements?\s+cliniques?)\s*[)}]?\s*:?',
+        "technique":  r'[({]?\s*technique\s*[)}]?\s*:?',
+        "resultat":   r'[({]?\s*r[ée]sultat\s*[)}]?\s*:?',
+        "conclusion": r'[({]?\s*conclusion\s*[)}]?\s*:?',
+    }
+    matches = []
+    for label, pat in patterns.items():
+        m = re.search(pat, content, re.IGNORECASE)
+        if m:
+            matches.append((label, m.start(), m.end()))
+    matches.sort(key=lambda x: x[1])
+
+    result = dict(empty)
+    for i, (label, _start, end_pos) in enumerate(matches):
+        next_boundary = matches[i + 1][1] if i < len(matches) - 1 else len(content)
+        text = content[end_pos:next_boundary].replace("\n", " ").strip()
+        result[label] = re.sub(r"\s+", " ", text)
+    return result
+
+
 def _append_to_global_csv(report: Dict[str, Any], doctor: Dict[str, Any]) -> None:
     """
     Append a validated report to the global CSV archive.
     CSV path: media/exports/transcriptions_globales.csv
-    Columns: id_exam | doctor_name | date | time | transcription
+    Columns: id_exam | doctor_name | date | time | indication | technique | resultat | conclusion | transcription
     """
     import csv as csvlib  # avoid clash with csv app
 
@@ -74,12 +103,13 @@ def _append_to_global_csv(report: Dict[str, Any], doctor: Dict[str, Any]) -> Non
 
     date_str = dt_obj.date().isoformat()
     time_str = dt_obj.time().strftime("%H:%M:%S")
+    sections = _extract_sections(report.get("content") or "")
 
     file_exists = csv_path.exists()
     with csv_path.open("a", newline="", encoding="utf-8-sig") as f:
         writer = csvlib.writer(f, delimiter=";")
         if not file_exists:
-            writer.writerow(["id_exam", "doctor_name", "date", "time", "transcription"])
+            writer.writerow(["id_exam", "doctor_name", "date", "time", "indication", "technique", "resultat", "conclusion", "transcription"])
 
         writer.writerow(
             [
@@ -87,6 +117,10 @@ def _append_to_global_csv(report: Dict[str, Any], doctor: Dict[str, Any]) -> Non
                 doctor_name,
                 date_str,
                 time_str,
+                sections.get("indication", "").replace("\n", " ").strip(),
+                sections.get("technique", "").replace("\n", " ").strip(),
+                sections.get("resultat", "").replace("\n", " ").strip(),
+                sections.get("conclusion", "").replace("\n", " ").strip(),
                 (report.get("content") or "").replace("\n", " ").strip(),
             ]
         )

@@ -1,8 +1,19 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
-import { getReport, createReport, updateReport } from "@/services/reportsService";
-import { CheckCircle, Edit3, Save, FileText, Check, X, Loader2, ArrowLeft, Pencil, Wand2, CloudUpload, AlertTriangle } from "lucide-react";
+import { getReport, createReport, updateReport, deleteReport } from "@/services/reportsService";
+import { useQueryClient } from "@tanstack/react-query";
+import { CheckCircle, Edit3, Save, FileText, Check, X, Loader2, ArrowLeft, Pencil, Wand2, CloudUpload, AlertTriangle, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRecording } from "@/contexts/RecordingContext";
@@ -40,6 +51,7 @@ export default function RapportDetail() {
   const navigate     = useNavigate();
   const { user }          = useAuth();
   const { refreshQueue } = useRecording();
+  const queryClient      = useQueryClient();
 
   const fromState = location.state as { ID_Exam?: string; transcription?: string; audioId?: string; category?: ReportCategory; _restore?: object } | null;
   const isNew     = id === "new";
@@ -64,6 +76,11 @@ export default function RapportDetail() {
   const [loading,              setLoading]              = useState(false);
   const [savedAsValidated,     setSavedAsValidated]     = useState<"validate" | "save" | false>(false);
   const [error,                setError]                = useState("");
+
+  /* ── Delete ── */
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteError,   setDeleteError]   = useState("");
+  const [deleting,      setDeleting]      = useState(false);
 
   /* ── Sentence-level correction ── */
   const [analyseSentences,   setAnalyseSentences]   = useState<SentenceAnalysis[] | null>(null);
@@ -252,6 +269,22 @@ export default function RapportDetail() {
     }
   };
 
+  /* ── Delete ── */
+  const handleDelete = async () => {
+    if (!id) return;
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      await deleteReport(id);
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+      refreshQueue();
+      navigate("/historique");
+    } catch (err: unknown) {
+      setDeleteError(err instanceof Error ? err.message : "Erreur lors de la suppression.");
+      setDeleting(false);
+    }
+  };
+
   /* ── Loading ── */
   if (loading) {
     return (
@@ -265,6 +298,32 @@ export default function RapportDetail() {
 
   return (
     <AppLayout title="Rapport de transcription">
+      {/* ══ Delete confirmation modal ══════════════════════════════════════════ */}
+      <AlertDialog open={confirmDelete} onOpenChange={open => { if (!open) { setConfirmDelete(false); setDeleteError(""); } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer le rapport ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Rapport <span className="font-mono font-semibold text-foreground">{examId || "—"}</span> — cette action est{" "}
+              <span className="font-semibold text-destructive">définitive</span>. L'audio associé restera dans la file d'attente.
+              {deleteError && <span className="block mt-2 text-destructive text-sm">{deleteError}</span>}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {deleting
+                ? <><Loader2 size={13} className="animate-spin mr-1.5" /> Suppression…</>
+                : <><Trash2 size={13} className="mr-1.5" /> Supprimer</>}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="max-w-6xl mx-auto">
         {!savedAsValidated && (
           <button
@@ -290,11 +349,22 @@ export default function RapportDetail() {
 
             {/* ── Header card ── */}
             <div className="bg-card rounded-xl border border-border shadow-card p-4 sm:p-6">
-              <div className="flex items-center gap-2 mb-4">
-                {!isNew && status && (
-                  <span className={`${getStatusBadgeClass(status)} capitalize`}>
-                    {getStatusLabel(status, "report")}
-                  </span>
+              <div className="flex items-center justify-between gap-2 mb-4">
+                <div className="flex items-center gap-2">
+                  {!isNew && status && (
+                    <span className={`${getStatusBadgeClass(status)} capitalize`}>
+                      {getStatusLabel(status, "report")}
+                    </span>
+                  )}
+                </div>
+                {!isNew && (
+                  <button
+                    onClick={() => { setConfirmDelete(true); setDeleteError(""); }}
+                    className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-destructive transition-colors"
+                    title="Supprimer le rapport"
+                  >
+                    <Trash2 size={14} /> Supprimer
+                  </button>
                 )}
               </div>
 

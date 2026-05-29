@@ -1,12 +1,10 @@
-import { useState, type CSSProperties } from "react";
+import { type CSSProperties } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { getComplaints, type Complaint } from "@/services/complaintsService";
-import { getReports, type Report } from "@/services/reportsService";
 import { getTrainingData, type TrainingEntry } from "@/services/audioService";
 import { useQuery } from "@tanstack/react-query";
 import {
   MessageSquare, Clock, CheckCircle,
-  LayoutGrid, Server,
   Database, FileAudio, FileText,
 } from "lucide-react";
 import {
@@ -66,31 +64,6 @@ function Kpi({ value, label, delta, accent, icon: Icon }: {
   );
 }
 
-/* ─── Tab button ───────────────────────────────────────────────────────────── */
-function Tab({ active, onClick, icon: Icon, label, count }: {
-  active: boolean; onClick: () => void; icon: React.ElementType; label: string; count?: number;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-1.5 px-4 py-3.5 text-xs font-medium border-b-2 transition-colors whitespace-nowrap",
-        active ? "border-primary text-foreground font-semibold" : "border-transparent text-muted-foreground hover:text-foreground"
-      )}
-    >
-      <Icon size={13} />
-      {label}
-      {count !== undefined && (
-        <span className={cn("px-1.5 py-0.5 rounded-full text-[10px] font-semibold border",
-          active ? "bg-[rgba(143,211,179,0.14)] text-[#4D7F67] border-[rgba(143,211,179,0.4)]"
-                 : "bg-muted text-muted-foreground border-border")}>
-          {count}
-        </span>
-      )}
-    </button>
-  );
-}
-
 /* ─── Horizontal bar ───────────────────────────────────────────────────────── */
 function HBar({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
   const pct = total > 0 ? (value / total) * 100 : 0;
@@ -112,10 +85,8 @@ function HBar({ label, value, total, color }: { label: string; value: number; to
 ══════════════════════════════════════════════════════════════════════════════ */
 export default function AdminITDashboard() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"apercu" | "systeme">("apercu");
 
   const { data: complaints = [] } = useQuery<Complaint[]>   ({ queryKey: ["complaints"], queryFn: getComplaints   });
-  const { data: reports    = [] } = useQuery<Report[]>      ({ queryKey: ["reports"],    queryFn: getReports      });
   const { data: training   = [] } = useQuery<TrainingEntry[]>({ queryKey: ["training"],  queryFn: getTrainingData });
 
   /* ── computed ── */
@@ -136,7 +107,6 @@ export default function AdminITDashboard() {
   const services = [
     { name: "Django API",  port: ":8000",  ok: true },
     { name: "Node Server", port: ":4000",  ok: true },
-    { name: "Modèle IA",   port: "v2.4.1", ok: true },
   ];
 
   return (
@@ -151,18 +121,9 @@ export default function AdminITDashboard() {
         <Kpi value={resolved}   label="Traitées"            accent={DASHBOARD_ACCENTS.positive}  icon={CheckCircle}   delta={total > 0 ? `${Math.round((resolved/total)*100)}% du total` : undefined} />
       </div>
 
-      {/* ══ Tabs bar ═══════════════════════════════════════════════════════ */}
-      <div className="mt-4 flex items-center gap-0 border border-border rounded-xl px-2 bg-card overflow-x-auto">
-        <Tab active={tab === "apercu"}  onClick={() => setTab("apercu")}  icon={LayoutGrid} label="Statistiques"  />
-        <Tab active={tab === "systeme"} onClick={() => setTab("systeme")} icon={Server}     label="Système" />
-      </div>
-
       {/* ══ Content ════════════════════════════════════════════════════════ */}
       <div className="pt-4">
-
-        {/* ── Aperçu ─────────────────────────────────────────────────────── */}
-        {tab === "apercu" && (
-          <div className="space-y-4">
+        <div className="space-y-4">
 
             {/* Row 1: chart + répartition */}
             <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
@@ -318,81 +279,6 @@ export default function AdminITDashboard() {
               </div>
             </div>
           </div>
-        )}
-
-        {/* ── Système ────────────────────────────────────────────────────── */}
-        {tab === "systeme" && (
-          <div className="space-y-4">
-            <div className="mb-2">
-              <p className="text-sm font-semibold text-foreground">Monitoring système</p>
-              <p className="text-xs text-muted-foreground mt-0.5">État des services et de l'infrastructure</p>
-            </div>
-
-            {/* Services cards */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {[
-                { name: "Django API",   port: ":8000",  ok: true,  detail: "API REST principale" },
-                { name: "Node Server",  port: ":4000",  ok: true,  detail: "WebSocket + Socket.io" },
-                { name: "Modèle IA",    port: "v2.4.1", ok: true,  detail: "Transcription médicale" },
-              ].map(s => (
-                <div key={s.name} className="bg-card border border-border rounded-xl px-5 py-4 flex items-center gap-4">
-                  <div className={cn("w-3 h-3 rounded-full shrink-0", s.ok ? "bg-[#8FD3B3] animate-pulse" : "bg-[#E38C8C]")} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground">{s.name}</p>
-                    <p className="text-xs text-muted-foreground">{s.detail}</p>
-                  </div>
-                  <span className={cn("text-[10px] px-2 py-1 rounded font-semibold",
-                    s.ok ? "bg-[rgba(143,211,179,0.14)] text-[#4D7F67]"
-                          : "bg-[rgba(227,140,140,0.14)] text-[#8E5555]")}>
-                    {s.ok ? "En ligne" : "Hors ligne"}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {/* Model info + transcriptions */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-              <div className="bg-card border border-border rounded-xl">
-                <div className="px-4 py-3 border-b border-border">
-                  <span className="text-sm font-medium text-foreground">Modèle IA — Informations</span>
-                </div>
-                <div className="divide-y divide-border">
-                  {[
-                    { label: "Version",      value: "v2.4.1"             },
-                    { label: "Langage",      value: "Français médical"   },
-                    { label: "Statut",       value: "Actif"              },
-                    { label: "Spécialité",   value: "Radiologie"         },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="flex items-center justify-between px-4 py-3">
-                      <span className="text-xs text-muted-foreground">{label}</span>
-                      <span className="text-xs font-semibold text-foreground">{value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-card border border-border rounded-xl">
-                <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-                  <Database size={13} className="text-primary" />
-                  <span className="text-sm font-medium text-foreground">Dataset d'entraînement</span>
-                </div>
-                <div className="divide-y divide-border">
-                  {[
-                    { label: "Paires Audio|Texte",   value: trainingTotal     },
-                    { label: "Validés / Enregistrés", value: trainingValidated },
-                    { label: "Durée totale audio",    value: trainingDuration  },
-                    { label: "Total rapports",        value: reports.length    },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="flex items-center justify-between px-4 py-3">
-                      <span className="text-xs text-muted-foreground">{label}</span>
-                      <span className="text-xs font-semibold text-foreground">{value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
       </div>
     </AppLayout>

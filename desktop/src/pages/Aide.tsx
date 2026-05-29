@@ -404,10 +404,6 @@ export default function Aide() {
                 <span><span className="text-foreground font-medium">Données d'entraînement</span> — exporter les paires audio + texte en ZIP, avec un dossier par catégorie (Scanner, IRM, …) prêt pour le ré-entraînement.</span>
               </li>
               <li className="flex items-start gap-2">
-                <Brain size={14} className="text-primary mt-0.5 shrink-0" />
-                <span><span className="text-foreground font-medium">Modèle IA</span> — état et configuration du modèle Whisper.</span>
-              </li>
-              <li className="flex items-start gap-2">
                 <AlertCircle size={14} className="text-primary mt-0.5 shrink-0" />
                 <span><span className="text-foreground font-medium">Réclamations</span> — traiter les signalements des médecins.</span>
               </li>

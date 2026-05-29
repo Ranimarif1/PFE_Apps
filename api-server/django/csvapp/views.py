@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv as csvlib
 import datetime as dt
 import io
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -24,6 +25,35 @@ def _parse_date(value: str) -> Optional[dt.date]:
         return None
 
 
+def _extract_sections(content: str) -> dict[str, str]:
+    """Extract indication, technique, resultat, conclusion from report content.
+    Handles both multi-line (Indication:\\n...) and single-line (Indication: ... Resultat: ...) formats.
+    """
+    empty = {"indication": "", "technique": "", "resultat": "", "conclusion": ""}
+    if not content:
+        return empty
+
+    patterns = {
+        "indication": r'[({]?\s*(?:indication|renseignements?\s+cliniques?)\s*[)}]?\s*:?',
+        "technique":  r'[({]?\s*technique\s*[)}]?\s*:?',
+        "resultat":   r'[({]?\s*r[ée]sultat\s*[)}]?\s*:?',
+        "conclusion": r'[({]?\s*conclusion\s*[)}]?\s*:?',
+    }
+    matches = []
+    for label, pat in patterns.items():
+        m = re.search(pat, content, re.IGNORECASE)
+        if m:
+            matches.append((label, m.start(), m.end()))
+    matches.sort(key=lambda x: x[1])
+
+    result = dict(empty)
+    for i, (label, _start, end_pos) in enumerate(matches):
+        next_boundary = matches[i + 1][1] if i < len(matches) - 1 else len(content)
+        text = content[end_pos:next_boundary].replace("\n", " ").strip()
+        result[label] = re.sub(r"\s+", " ", text)
+    return result
+
+
 def _build_filtered_csv(start: dt.date, end: dt.date) -> bytes:
     """Generate CSV on the fly from MongoDB for reports saved in [start, end]."""
     reports_col = get_collection("reports")
@@ -41,7 +71,7 @@ def _build_filtered_csv(start: dt.date, end: dt.date) -> bytes:
     buf = io.StringIO()
     buf.write("﻿")  # UTF-8 BOM for Excel compatibility
     writer = csvlib.writer(buf, delimiter=";")
-    writer.writerow(["id_exam", "doctor_name", "date", "time", "transcription"])
+    writer.writerow(["id_exam", "doctor_name", "date", "time", "indication", "technique", "resultat", "conclusion", "transcription"])
 
     for report in cursor:
         doctor_name = ""
@@ -64,12 +94,19 @@ def _build_filtered_csv(start: dt.date, end: dt.date) -> bytes:
         except Exception:
             dt_obj = dt.datetime.utcnow()
 
+        content = (report.get("content") or "").replace("\n", " ").strip()
+        sections = _extract_sections(report.get("content") or "")
+
         writer.writerow([
             report.get("ID_Exam", ""),
             doctor_name,
             dt_obj.date().isoformat(),
             dt_obj.time().strftime("%H:%M:%S"),
-            (report.get("content") or "").replace("\n", " ").strip(),
+            sections.get("indication", "").replace("\n", " ").strip(),
+            sections.get("technique", "").replace("\n", " ").strip(),
+            sections.get("resultat", "").replace("\n", " ").strip(),
+            sections.get("conclusion", "").replace("\n", " ").strip(),
+            content,
         ])
 
     return buf.getvalue().encode("utf-8")

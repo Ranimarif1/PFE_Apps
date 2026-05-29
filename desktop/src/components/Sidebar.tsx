@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
   LayoutDashboard, History, MessageSquare, User,
-  Users, Brain, LogOut, Sun, Moon,
+  Users, LogOut, Sun, Moon,
   ChevronLeft, ChevronRight,
   AlertCircle, Plus, FileAudio, Sparkles, Loader2, Database, X, Download,
   HelpCircle, Star,
@@ -196,7 +196,6 @@ const adminITSections: Section[] = [
     label: "GESTION",
     links: [
       { to: "/adminit/admins",    icon: Users,     label: "Comptes Admin"     },
-      { to: "/adminit/modele",    icon: Brain,     label: "Modèle IA"         },
       { to: "/adminit/training",  icon: Database,  label: "Données entraîn."  },
       { to: "/adminit/profil",    icon: User,      label: "Mon profil"        },
     ],
