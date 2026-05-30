@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getUsers, updateUserStatus, deleteUser, changeUserRole, updateSeniorCode, type BackendUserRecord } from "@/services/usersService";
+import { getUsers, updateUserStatus, deleteUser, changeUserRole, updateSeniorCode, revokeSenior, type BackendUserRecord } from "@/services/usersService";
 import { toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
 import {
-  Search, Check, X, Trash2, AlertTriangle, UserRoundCheck, Star, Pencil,
+  Search, Check, X, Trash2, AlertTriangle, UserRoundCheck, Star, Pencil, StarOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getStatusBadgeClass, getStatusLabel } from "@/styles/statusSystem";
@@ -22,6 +22,7 @@ export default function AdminMedecins() {
   const [confirmPromote, setConfirmPromote] = useState<BackendUserRecord | null>(null);
   const [confirmRefuse,  setConfirmRefuse]  = useState<BackendUserRecord | null>(null);
   const [refuseReason,   setRefuseReason]   = useState("");
+  const [confirmRevokeSenior, setConfirmRevokeSenior] = useState<BackendUserRecord | null>(null);
   const [editingCodeId,  setEditingCodeId]  = useState<string | null>(null);
   const [editingCodeVal, setEditingCodeVal] = useState("");
   const codeInputRef = useRef<HTMLInputElement>(null);
@@ -63,6 +64,22 @@ export default function AdminMedecins() {
   const promoteMutation = useMutation({
     mutationFn: (id: string) => changeUserRole(id, "admin"),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["users"] }); setConfirmPromote(null); },
+  });
+
+  const revokeSeniorMutation = useMutation({
+    mutationFn: (id: string) => revokeSenior(id),
+    onSuccess: (updated) => {
+      queryClient.setQueryData<BackendUserRecord[]>(["users"], (old) =>
+        old?.map(u => u._id === updated._id ? { ...u, senior: false, seniorCode: "" } : u) ?? old
+      );
+      setConfirmRevokeSenior(null);
+      toast.success("Statut senior révoqué", {
+        description: `Une notification a été envoyée à ${updated.email}.`,
+      });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Erreur lors de la révocation.");
+    },
   });
 
   const seniorCodeMutation = useMutation({
@@ -228,6 +245,12 @@ export default function AdminMedecins() {
                             <UserRoundCheck size={11} />
                           </button>
                         )}
+                        {doc.senior && (
+                          <button onClick={() => setConfirmRevokeSenior(doc)} title="Révoquer le statut senior"
+                            className="w-6 h-6 rounded-md border border-border bg-muted hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 flex items-center justify-center transition-colors">
+                            <StarOff size={11} />
+                          </button>
+                        )}
                         <button onClick={() => setConfirmDelete(doc)} title="Supprimer"
                           className="w-6 h-6 rounded-md border border-border bg-muted hover:bg-[rgba(227,140,140,0.14)] hover:border-[rgba(227,140,140,0.4)] hover:text-[#8E5555] flex items-center justify-center transition-colors">
                           <Trash2 size={11} />
@@ -241,6 +264,39 @@ export default function AdminMedecins() {
           </div>
         </div>
       </div>
+
+      {/* ══ Revoke senior modal ══════════════════════════════════════════════ */}
+      {confirmRevokeSenior && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-card rounded-2xl border border-border shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
+                <StarOff className="w-5 h-5 text-amber-600" />
+              </div>
+              <h2 className="text-lg font-semibold text-foreground">Révoquer le statut senior</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-2">Vous êtes sur le point de révoquer le statut senior de :</p>
+            <p className="text-sm font-semibold text-foreground mb-1">Dr. {confirmRevokeSenior.prenom} {confirmRevokeSenior.nom}</p>
+            <p className="text-xs text-muted-foreground mb-4">{confirmRevokeSenior.email}</p>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-5">
+              <p className="text-xs text-amber-700 font-medium">
+                Le médecin perdra son accès senior et son code <strong>{confirmRevokeSenior.seniorCode}</strong> sera supprimé.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmRevokeSenior(null)}
+                className="flex-1 py-2.5 rounded-xl border border-border text-foreground hover:bg-muted transition-all text-sm font-medium">
+                Annuler
+              </button>
+              <button onClick={() => revokeSeniorMutation.mutate(confirmRevokeSenior._id)}
+                disabled={revokeSeniorMutation.isPending}
+                className="flex-1 py-2.5 rounded-xl bg-amber-600 text-white font-semibold hover:bg-amber-700 disabled:opacity-60 transition-all text-sm">
+                {revokeSeniorMutation.isPending ? "Révocation..." : "Révoquer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══ Promote modal ═══════════════════════════════════════════════════ */}
       {confirmPromote && (

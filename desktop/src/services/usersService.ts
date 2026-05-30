@@ -49,3 +49,8 @@ export async function updateSeniorCode(userId: string, seniorCode: string): Prom
   const data = await api.patch<{ user: BackendUserRecord }>(`/api/auth/users/${userId}/senior-code`, { seniorCode });
   return data.user;
 }
+
+export async function revokeSenior(userId: string): Promise<BackendUserRecord> {
+  const data = await api.patch<{ user: BackendUserRecord }>(`/api/auth/users/${userId}/revoke-senior`, {});
+  return data.user;
+}

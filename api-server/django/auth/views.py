@@ -477,6 +477,39 @@ def delete_user(request: HttpRequest, user_id: str) -> JsonResponse:
     return JsonResponse({"detail": "Utilisateur supprimé."})
 
 
+@csrf_exempt
+def list_notifications(request: HttpRequest) -> JsonResponse:
+    """GET /api/auth/notifications — returns the logged-in user's notifications."""
+    if request.method != "GET":
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+    current = get_current_user(request)
+    if not current:
+        return JsonResponse({"detail": "Authentification requise."}, status=401)
+
+    docs = list(get_collection("notifications").find(
+        {"userId": current.id},
+        sort=[("createdAt", -1)],
+        limit=30,
+    ))
+    return JsonResponse({"results": [serialize_document(d) for d in docs]})
+
+
+@csrf_exempt
+def mark_notifications_read(request: HttpRequest) -> JsonResponse:
+    """PATCH /api/auth/notifications/mark-read — marks all notifications as read."""
+    if request.method != "PATCH":
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+    current = get_current_user(request)
+    if not current:
+        return JsonResponse({"detail": "Authentification requise."}, status=401)
+
+    get_collection("notifications").update_many(
+        {"userId": current.id, "read": False},
+        {"$set": {"read": True}},
+    )
+    return JsonResponse({"detail": "Notifications marquées comme lues."})
+
+
 def list_seniors(request: HttpRequest) -> JsonResponse:
     """GET /api/auth/seniors — validated seniors a non-senior can work under.
 
@@ -678,6 +711,45 @@ def update_senior_code(request: HttpRequest, user_id: str) -> JsonResponse:
 
     users_col.update_one({"_id": oid}, {"$set": {"seniorCode": code}})
     updated = users_col.find_one({"_id": oid})
+    return JsonResponse({"user": serialize_document(updated)})
+
+
+@csrf_exempt
+def revoke_senior(request: HttpRequest, user_id: str) -> JsonResponse:
+    """PATCH /api/auth/users/<user_id>/revoke-senior — admin revokes senior status."""
+    if request.method != "PATCH":
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+
+    current = get_current_user(request)
+    if not current:
+        return JsonResponse({"detail": "Authentification requise."}, status=401)
+    if current.role not in {"admin", "adminIT"}:
+        return JsonResponse({"detail": "Accès refusé."}, status=403)
+
+    users_col = get_collection("users")
+    try:
+        oid = ObjectId(user_id)
+    except Exception:
+        return JsonResponse({"detail": "Identifiant invalide."}, status=400)
+
+    user = users_col.find_one({"_id": oid})
+    if not user:
+        return JsonResponse({"detail": "Utilisateur introuvable."}, status=404)
+    if not user.get("senior"):
+        return JsonResponse({"detail": "Ce médecin n'est pas senior."}, status=400)
+
+    users_col.update_one({"_id": oid}, {"$set": {"senior": False, "seniorCode": ""}})
+    updated = users_col.find_one({"_id": oid})
+
+    get_collection("notifications").insert_one({
+        "userId": str(oid),
+        "type": "senior_revoked",
+        "text": "Votre statut de médecin senior a été révoqué par un administrateur.",
+        "link": "/profil",
+        "read": False,
+        "createdAt": dt.datetime.utcnow().isoformat(),
+    })
+
     return JsonResponse({"user": serialize_document(updated)})
 
 

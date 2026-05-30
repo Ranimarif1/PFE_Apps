@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { getComplaints, type Complaint } from "@/services/complaintsService";
 import { getUsers, type BackendUserRecord } from "@/services/usersService";
+import { getNotifications, markNotificationsRead, type AppNotification } from "@/services/notificationsService";
 
 const READ_NOTIFS_STORAGE_KEY = "notifications.readIds";
 
@@ -88,10 +89,16 @@ export function Navbar({ title, showSearch, onSearch, onToggleSidebar, isMobile 
     queryFn: getUsers,
     enabled: !!user && (isAdminR || isAdminIT),
   });
+  const { data: dbNotifications = [], refetch: refetchNotifications } = useQuery<AppNotification[]>({
+    queryKey: ["notifications"],
+    queryFn: getNotifications,
+    enabled: !!user && isMédecinR,
+    refetchInterval: 30_000,
+  });
 
   const allNotifications = useMemo<Notification[]>(() => {
     if (isMédecinR) {
-      return complaints
+      const resolved = complaints
         .filter(c => c.status === "resolved")
         .map(c => ({
           id: `complaint-${c._id}`,
@@ -99,6 +106,13 @@ export function Navbar({ title, showSearch, onSearch, onToggleSidebar, isMobile 
           createdAt: c.createdAt,
           link: "/reclamations",
         }));
+      const fromDb = dbNotifications.map(n => ({
+        id: `db-${n._id}`,
+        text: n.text,
+        createdAt: n.createdAt,
+        link: n.link,
+      }));
+      return [...resolved, ...fromDb];
     }
     if (isAdminR) {
       return users
@@ -135,12 +149,17 @@ export function Navbar({ title, showSearch, onSearch, onToggleSidebar, isMobile 
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 12);
 
-  const unread = allNotifications.filter(n => !readIds.has(n.id)).length;
+  const dbUnread = dbNotifications.filter(n => !n.read).length;
+  const computedUnread = allNotifications.filter(n => !n.id.startsWith("db-") && !readIds.has(n.id)).length;
+  const unread = computedUnread + dbUnread;
 
   const openNotifs = () => {
     setShowNotifs(v => {
       if (!v) {
         setReadIds(prev => new Set([...prev, ...allNotifications.map(n => n.id)]));
+        if (isMédecinR && dbNotifications.some(n => !n.read)) {
+          markNotificationsRead().then(() => refetchNotifications());
+        }
       }
       return !v;
     });
@@ -273,7 +292,9 @@ export function Navbar({ title, showSearch, onSearch, onToggleSidebar, isMobile 
                 {/* Items */}
                 <div className="max-h-72 overflow-y-auto scrollbar-thin">
                   {allNotifications.map((n, i) => {
-                    const isUnread = !readIds.has(n.id);
+                    const isDbNotif = n.id.startsWith("db-");
+                    const dbDoc = isDbNotif ? dbNotifications.find(d => `db-${d._id}` === n.id) : null;
+                    const isUnread = isDbNotif ? (dbDoc ? !dbDoc.read : false) : !readIds.has(n.id);
                     return (
                       <motion.button
                         key={n.id}
