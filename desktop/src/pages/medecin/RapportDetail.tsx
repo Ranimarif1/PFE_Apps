@@ -3,7 +3,7 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { getReport, createReport, updateReport, deleteReport } from "@/services/reportsService";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle, Edit3, Save, FileText, Check, X, Loader2, ArrowLeft, Pencil, Wand2, CloudUpload, AlertTriangle, Trash2, ClipboardCopy } from "lucide-react";
+import { CheckCircle, Edit3, Save, FileText, Check, X, Loader2, ArrowLeft, Pencil, Wand2, CloudUpload, AlertTriangle, Trash2, ClipboardCopy, RotateCcw } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -83,6 +83,10 @@ export default function RapportDetail() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError,   setDeleteError]   = useState("");
   const [deleting,      setDeleting]      = useState(false);
+
+  /* ── Unvalidate (back to draft) ── */
+  const [confirmUnvalidate, setConfirmUnvalidate] = useState(false);
+  const [unvalidating,      setUnvalidating]      = useState(false);
 
   /* ── Sentence-level correction ── */
   const [analyseSentences,   setAnalyseSentences]   = useState<SentenceAnalysis[] | null>(null);
@@ -386,6 +390,21 @@ export default function RapportDetail() {
     }
   };
 
+  /* ── Unvalidate ── */
+  const handleUnvalidate = async () => {
+    if (!id) return;
+    setUnvalidating(true);
+    try {
+      await updateReport(id, { status: "draft" });
+      setStatus("draft");
+      setConfirmUnvalidate(false);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur lors de la remise en brouillon.");
+    } finally {
+      setUnvalidating(false);
+    }
+  };
+
   /* ── Delete ── */
   const handleDelete = async () => {
     if (!id) return;
@@ -436,6 +455,31 @@ export default function RapportDetail() {
               {deleting
                 ? <><Loader2 size={13} className="animate-spin mr-1.5" /> Suppression…</>
                 : <><Trash2 size={13} className="mr-1.5" /> Supprimer</>}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ══ Unvalidate confirmation modal ════════════════════════════════════ */}
+      <AlertDialog open={confirmUnvalidate} onOpenChange={open => { if (!open) setConfirmUnvalidate(false); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remettre en brouillon ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Le rapport <span className="font-mono font-semibold text-foreground">{examId || "—"}</span> repassera au statut{" "}
+              <span className="font-semibold text-foreground">Brouillon</span> et pourra être modifié à nouveau par le médecin.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={unvalidating}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleUnvalidate}
+              disabled={unvalidating}
+              className="bg-amber-600 text-white hover:bg-amber-700"
+            >
+              {unvalidating
+                ? <><Loader2 size={13} className="animate-spin mr-1.5" /> Traitement…</>
+                : <><RotateCcw size={13} className="mr-1.5" /> Remettre en brouillon</>}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -786,11 +830,17 @@ export default function RapportDetail() {
                 <CheckCircle size={16} /> Rapport enregistré
               </div>
             ) : status === "validated" && !isNew ? (
-              <button onClick={() => handleAction("save")} disabled={saving !== null}
-                className="w-full flex items-center justify-center gap-2 gradient-hero text-white font-semibold py-3 rounded-xl hover:opacity-90 disabled:opacity-60 transition-all text-sm">
-                {saving === "save" ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                Enregistrer
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button onClick={() => setConfirmUnvalidate(true)} disabled={saving !== null || unvalidating}
+                  className="flex-1 flex items-center justify-center gap-2 border border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 font-semibold py-3 rounded-xl disabled:opacity-60 transition-all text-sm dark:border-amber-700 dark:text-amber-400 dark:bg-amber-900/20 dark:hover:bg-amber-900/30">
+                  <RotateCcw size={16} /> Remettre en brouillon
+                </button>
+                <button onClick={() => handleAction("save")} disabled={saving !== null || unvalidating}
+                  className="flex-1 flex items-center justify-center gap-2 gradient-hero text-white font-semibold py-3 rounded-xl hover:opacity-90 disabled:opacity-60 transition-all text-sm">
+                  {saving === "save" ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  Enregistrer
+                </button>
+              </div>
             ) : isNew ? (
               <div className="flex flex-col sm:flex-row gap-3">
                 <button onClick={() => handleAction("draft")} disabled={saving !== null}
