@@ -383,7 +383,7 @@ export default function RapportDetail() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-sm">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 text-sm">
                 <div>
                   <p className="text-muted-foreground text-xs mb-0.5">ID Exam</p>
                   {(isNew || status === "draft") && editingId ? (
@@ -552,11 +552,19 @@ export default function RapportDetail() {
                             <Wand2 size={13} className="text-violet-500" />
                           </div>
                           <span className="text-sm font-semibold text-foreground">Assistant IA</span>
-                          {analyseSentences !== null && analyseSentences.some(s => s.corrections.length > 0) && (
-                            <span className="text-[10px] bg-violet-500/10 text-violet-600 dark:text-violet-400 font-medium px-1.5 py-0.5 rounded-full">
-                              {analyseSentences.filter(s => s.corrections.length > 0).length} correction{analyseSentences.filter(s => s.corrections.length > 0).length > 1 ? "s" : ""}
-                            </span>
-                          )}
+                          {analyseSentences !== null && (() => {
+                            const seen = new Set<string>();
+                            const count = analyseSentences.flatMap(s => s.corrections).filter(c => {
+                              if (seen.has(c.mot_original)) return false;
+                              seen.add(c.mot_original);
+                              return true;
+                            }).length;
+                            return count > 0 ? (
+                              <span className="text-[10px] bg-violet-500/10 text-violet-600 dark:text-violet-400 font-medium px-1.5 py-0.5 rounded-full">
+                                {count} correction{count > 1 ? "s" : ""}
+                              </span>
+                            ) : null;
+                          })()}
                         </div>
                         <button
                           onClick={handleAnalyse}
@@ -571,7 +579,7 @@ export default function RapportDetail() {
                       </div>
 
                       {/* Sidebar body */}
-                      <div className="p-3 space-y-2 max-h-[70vh] overflow-y-auto">
+                      <div className="p-3 space-y-2 max-h-[45vh] lg:max-h-[70vh] overflow-y-auto scrollbar-thin">
 
                         {/* Loading skeleton */}
                         {analyseLoading && (
@@ -629,18 +637,19 @@ export default function RapportDetail() {
 
                         {/* Corrections list */}
                         {!analyseLoading && !analyseError && analyseSentences !== null && analyseSentences.some(s => s.corrections.length > 0) && (
-                          <div className="space-y-2">
-                            {analyseSentences
-                              .filter(s => s.corrections.length > 0)
-                              .map(s => (
-                                <SentenceCorrector
-                                  key={s.sentence_index}
-                                  data={s}
-                                  onAcceptWord={applyCorrection}
-                                  onAcceptAll={() => s.corrections.forEach(c => applyCorrection(c.mot_original, c.suggestion))}
-                                />
-                              ))}
-                          </div>
+                          <SentenceCorrector
+                            corrections={(() => {
+                              const seen = new Set<string>();
+                              return analyseSentences
+                                .flatMap(s => s.corrections)
+                                .filter(c => {
+                                  if (seen.has(c.mot_original)) return false;
+                                  seen.add(c.mot_original);
+                                  return true;
+                                });
+                            })()}
+                            onAccept={applyCorrection}
+                          />
                         )}
                       </div>
                     </div>

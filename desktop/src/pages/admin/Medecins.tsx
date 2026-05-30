@@ -102,11 +102,7 @@ export default function AdminMedecins() {
         {/* Table */}
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="w-full overflow-x-auto">
-            <table className="w-full text-sm table-fixed">
-              <colgroup>
-                <col style={{ width: "32%" }} /><col style={{ width: "26%" }} />
-                <col style={{ width: "14%" }} /><col style={{ width: "14%" }} /><col style={{ width: "14%" }} />
-              </colgroup>
+            <table className="w-full text-sm min-w-[540px]">
               <thead>
                 <tr className="bg-muted/50 border-b border-border">
                   {["Médecin", "Email", "Statut", "Inscription", "Actions"].map(h => (

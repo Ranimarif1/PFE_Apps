@@ -560,6 +560,19 @@ def update_profile(request: HttpRequest) -> JsonResponse:
             updates["photo"] = _save_avatar(current.id, photo)
         except ValueError as exc:
             return JsonResponse({"detail": str(exc)}, status=400)
+    # Senior code — only senior accounts (admin, or doctor flagged senior) may set it.
+    senior_code = data.get("seniorCode")
+    if senior_code is not None:
+        senior_code = senior_code.strip()
+        is_senior = current.raw.get("role") == "admin" or (current.raw.get("role") == "doctor" and current.raw.get("senior"))
+        if not is_senior:
+            return JsonResponse({"detail": "Seuls les seniors peuvent définir un code."}, status=403)
+        if not senior_code:
+            return JsonResponse({"detail": "Le code senior ne peut pas être vide."}, status=400)
+        clash = get_collection("users").find_one({"seniorCode": senior_code, "_id": {"$ne": ObjectId(current.id)}})
+        if clash:
+            return JsonResponse({"detail": "Ce code senior est déjà utilisé."}, status=400)
+        updates["seniorCode"] = senior_code
     if password:
         if len(password) < 6:
             return JsonResponse({"detail": "Mot de passe trop court."}, status=400)
