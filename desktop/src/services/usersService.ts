@@ -8,6 +8,8 @@ export interface BackendUserRecord {
   nom: string;
   prenom: string;
   createdAt: string;
+  senior?: boolean;
+  seniorCode?: string;
 }
 
 export async function getUsers(): Promise<BackendUserRecord[]> {
@@ -40,5 +42,10 @@ export async function deleteUser(userId: string): Promise<void> {
 
 export async function changeUserRole(userId: string, role: "doctor" | "admin"): Promise<BackendUserRecord> {
   const data = await api.put<{ user: BackendUserRecord }>(`/api/auth/users/${userId}/role`, { role });
+  return data.user;
+}
+
+export async function updateSeniorCode(userId: string, seniorCode: string): Promise<BackendUserRecord> {
+  const data = await api.patch<{ user: BackendUserRecord }>(`/api/auth/users/${userId}/senior-code`, { seniorCode });
   return data.user;
 }

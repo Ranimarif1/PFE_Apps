@@ -642,6 +642,46 @@ def change_user_role(request: HttpRequest, user_id: str) -> JsonResponse:
 
 
 @csrf_exempt
+def update_senior_code(request: HttpRequest, user_id: str) -> JsonResponse:
+    """PATCH /api/auth/users/<user_id>/senior-code — admin updates a doctor's senior code."""
+    if request.method != "PATCH":
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+
+    current = get_current_user(request)
+    if not current:
+        return JsonResponse({"detail": "Authentification requise."}, status=401)
+    if current.role not in {"admin", "adminIT"}:
+        return JsonResponse({"detail": "Accès refusé."}, status=403)
+
+    users_col = get_collection("users")
+    try:
+        oid = ObjectId(user_id)
+    except Exception:
+        return JsonResponse({"detail": "Identifiant invalide."}, status=400)
+
+    user = users_col.find_one({"_id": oid})
+    if not user:
+        return JsonResponse({"detail": "Utilisateur introuvable."}, status=404)
+    if not user.get("senior"):
+        return JsonResponse({"detail": "Ce médecin n'est pas senior."}, status=400)
+
+    data = _parse_body(request)
+    code = (data.get("seniorCode") or "").strip()
+    if not code:
+        return JsonResponse({"detail": "Le code senior ne peut pas être vide."}, status=400)
+    if not code.isdigit():
+        return JsonResponse({"detail": "Le code senior doit être numérique."}, status=400)
+
+    clash = users_col.find_one({"seniorCode": code, "_id": {"$ne": oid}})
+    if clash:
+        return JsonResponse({"detail": "Ce code senior est déjà utilisé."}, status=400)
+
+    users_col.update_one({"_id": oid}, {"$set": {"seniorCode": code}})
+    updated = users_col.find_one({"_id": oid})
+    return JsonResponse({"user": serialize_document(updated)})
+
+
+@csrf_exempt
 def forgot_password(request: HttpRequest) -> JsonResponse:
     if request.method != "POST":
         return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
