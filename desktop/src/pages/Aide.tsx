@@ -333,8 +333,9 @@ export default function Aide() {
             <div className="flex items-start gap-3">
               <span className="status-badge status-tone-success shrink-0 mt-0.5">Validé</span>
               <p className="text-sm text-muted-foreground">
-                Le contenu est correct mais n'a pas encore été archivé. Vous pouvez encore
-                rouvrir et corriger.
+                Le contenu a été validé mais n'est pas encore archivé. Le médecin auteur et
+                l'administrateur peuvent le remettre en <span className="text-foreground">Brouillon</span> pour y apporter des corrections,
+                puis le revalider.
               </p>
             </div>
             <div className="flex items-start gap-3">
