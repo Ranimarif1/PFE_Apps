@@ -65,6 +65,7 @@ import Avis from "./pages/Avis";
 
 // Médecin
 import MédecinDashboard from "./pages/medecin/Dashboard";
+import Note from "./pages/medecin/Note";
 import NouveauRapport from "./pages/medecin/NouveauRapport";
 import RapportDetail from "./pages/medecin/RapportDetail";
 import Historique from "./pages/medecin/Historique";
@@ -120,6 +121,7 @@ function AppWithLoading() {
       <Route path="/rapport/:id" element={<RouteGuard allowedRoles={["médecin", "admin"]}><RapportDetail /></RouteGuard>} />
       <Route path="/historique" element={<RouteGuard allowedRoles={["médecin", "admin"]}><Historique /></RouteGuard>} />
       <Route path="/reclamations" element={<RouteGuard allowedRoles={["médecin", "admin"]}><MédecinReclamations /></RouteGuard>} />
+      <Route path="/note" element={<RouteGuard allowedRoles={["médecin", "admin"]}><Note /></RouteGuard>} />
       <Route path="/profil" element={<RouteGuard allowedRoles={["médecin"]}><MédecinProfil /></RouteGuard>} />
 
       {/* Admin */}

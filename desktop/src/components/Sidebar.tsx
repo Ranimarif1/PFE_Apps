@@ -7,7 +7,7 @@ import {
   Users, LogOut, Sun, Moon,
   ChevronLeft, ChevronRight,
   AlertCircle, Plus, FileAudio, Sparkles, Loader2, Database, X, Download,
-  HelpCircle, Star,
+  HelpCircle, Star, NotebookPen,
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -141,6 +141,7 @@ const médécinSections: Section[] = [
     links: [
       { to: "/dashboard",       icon: LayoutDashboard, label: "Tableau de bord" },
       { to: "/rapport/nouveau", icon: Plus,            label: "Nouveau rapport" },
+      { to: "/note",            icon: NotebookPen,     label: "Bloc-notes vocal" },
       { to: "/historique",      icon: History,         label: "Historique"      },
       { to: "/reclamations",    icon: MessageSquare,   label: "Réclamations"    },
       { to: "/avis",            icon: Star,            label: "Laisser un avis" },
@@ -162,6 +163,7 @@ const adminSections: Section[] = [
     links: [
       { to: "/admin/dashboard",    icon: LayoutDashboard, label: "Tableau de bord" },
       { to: "/rapport/nouveau",    icon: Plus,            label: "Nouveau rapport"  },
+      { to: "/note",               icon: NotebookPen,     label: "Bloc-notes vocal" },
       { to: "/historique",         icon: History,         label: "Historique"       },
       { to: "/reclamations",       icon: MessageSquare,   label: "Réclamations"     },
       { to: "/avis",               icon: Star,            label: "Laisser un avis"  },
