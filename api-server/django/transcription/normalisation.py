@@ -256,31 +256,77 @@ def normalize_numbers(text: str) -> str:
 # ──────────────────────────────────────────────────────────────────────────────
 
 _MEDICAL_ABBREVS = [
-    # Modalités d'imagerie
-    "IRM", "TDM", "TEP", "PET", "SPECT", "RX",
-    # Séquences IRM
-    "FLAIR", "DWI", "ADC", "STIR", "GRE", "TSE", "SPIR", "VIBE", "BLADE",
-    # Pondérations IRM
-    "T1", "T2", "T3", "T4",
-    # Électrophysiologie
-    "ECG", "EEG", "EMG",
-    # Voies d'administration
-    "IV", "IM", "SC", "PO", "VVP", "VVC",
-    # Neurologie / cardiologie
-    "SNC", "SNP", "AVC", "AIT", "HTA", "HTAP", "TVC",
-    # Oncologie
-    "PET", "SUV",
+    "A1", "AA", "AAN", "AB", "ABO", "ACA", "ACC", "ACE", "ACFA", "ACI",
+    "ACLF", "ACM", "ACP", "ACR", "ADK", "ADO", "ADP", "AEG", "AFC", "AFS",
+    "AFSD", "AICA", "AIT", "ALAT", "AMG", "ANCA", "ANS", "AOD", "AOMI", "AP",
+    "APC", "ASAT", "ASD", "ATB", "ATCD", "ATFL", "ATS", "AUSP", "AVC", "AVCI",
+    "AVK", "AVP", "AZA", "B12", "BAU", "BAV", "BBG", "BC", "BD", "BGSA",
+    "BHE", "BILI-IRM", "BLSE", "BM", "BMI", "BPCO", "BSAD", "BT", "BU",
+    "C1-C2", "C3-C4", "C4", "C5-C6", "CAE", "CAI", "CC", "CCO", "CCVT",
+    "CFL", "CHC", "CHO", "CHU", "CN", "CP", "CPEC", "CPM", "CPRE",
+    "CR", "CREAT", "CSC", "CSO", "CSP", "CT", "CTO", "CVC", "D9-D10", "DAI",
+    "DAP", "DAPP", "DAPPD", "DAPPG", "DCC", "DD", "DDB", "DDR", "DHD", "DHNN",
+    "DID", "DL", "DPC", "DR", "DS", "DSM", "DT1", "DT2", "DT2AVC", "DUPC",
+    "DVE", "DVP", "EB", "ECBU", "ECG", "ECGBAV", "ECHO", "ECST", "EDC", "EPP",
+    "ESA", "ETF", "ETSA", "ETT", "EU-TIRADS", "EVA", "EVR", "FA", "FAV",
+    "FAZEKAS", "FC", "FCP", "FH", "FID", "FIG", "FIT", "FLAIR", "FP", "FS",
+    "G2P1A0", "G3P3", "G4P4A0", "GA", "GADO", "GB", "GCS", "GCS15", "GDS",
+    "GGT", "GMN", "GP", "GPC", "GR850", "GSG", "GTPC", "H1", "H24", "H3",
+    "HAI", "HBP", "HC", "HCD", "HCG", "HD", "HDL", "HDTA", "HED", "HIG",
+    "HIV", "HPP", "HR", "HSA", "HSD", "HSF", "HSMG", "HT", "HTA", "HTAP",
+    "HTIC", "HTP", "HU", "HVB", "IA", "IB", "ICD", "IDM", "IE", "IIA",
+    "ILI", "IM", "IPP", "IPSS", "IR", "IRA", "IRC", "IRCT", "IRM", "ISL",
+    "IU", "IUF", "IUM", "IV", "IVA", "IVG", "IVP", "IVV", "JJ", "KH",
+    "KHF", "KHP", "KT", "LCH", "LCR", "LCS", "LDH", "LEC", "LEU", "LI",
+    "LID", "LIG", "LLE", "LLI", "LN", "LPAC", "LS", "LSD", "LSG", "LT4",
+    "LTFA", "LV", "LVBP", "M10", "MAG", "MAG3", "MAL", "MAP", "MAV",
+    "MCP", "MCPIPP", "MI", "MID", "MIG", "MLP", "MNICMV", "MRC", "MS", "MSG",
+    "MU", "NAA", "NAD", "NASH", "NB", "NBTR", "NFS", "NGC", "NIC",
+    "NORB", "NRS", "NSTEMI", "NYHA", "OAP", "OGE", "OHL", "OMC",
+    "OMI", "OP", "OPN", "ORADS", "ORL", "PA", "PAC", "PACS", "PAL",
+    "PBF", "PBR", "PC", "PCI", "PCR", "PCT", "PDC", "PEC", "PEIC", "PELA",
+    "PET-SCAN", "PFIC2", "PFP", "PICA", "PLT", "PN", "PNA", "PNN", "PNP",
+    "PR", "PS", "PSA", "PTG", "PTH", "PVVIH", "QSI", "RAC", "RCBV", "RCP",
+    "RCT", "RD", "RDP", "RDV", "REZ", "RG", "RGO", "RPM", "RRS", "RV",
+    "RVG", "RVU", "S1", "SAM", "SAO2", "SAS", "SB", "SBAU", "SCA",
+    "SCM", "SEP", "SG", "SGJ", "SIB", "SIDA", "SJPU", "SLS", "SM", "SMG",
+    "SPC", "SPD", "SRM", "SSS", "STB", "STIR", "SVP", "T10-T11", "T1N3M0",
+    "T4N0M0", "TA", "TAG", "TAP", "TBC", "TC", "TCD", "TCDS", "TCG", "TDM",
+    "TIRADS", "TMS", "TP", "TPO", "TR", "TSA", "TSH", "TT", "TTT", "TVJ",
+    "TVP", "TVS", "UCNT", "UGD", "UH", "UI", "UPC", "UQI", "URO-TDM", "US",
+    "V3", "V4", "VBIEH", "VBIH", "VBP", "VCI", "VCIA", "VCS", "VL",
+    "VLD", "VLG", "VM", "VMI", "VMS", "VR", "VS", "VSH", "VSM",
 ]
+
+# Removed from general list — conflicts with common French words:
+#   NON / PAS  → negation particles ("non contributif", "pas de signe de")
+#   SA / CE    → possessive / demonstrative adjectives
+#   VA         → verb "aller" ("il va bien")
+#   LU         → past participle "lire" ("rapport lu")
 
 _ABBREV_RE = re.compile(
     r"\b(" + "|".join(re.escape(a) for a in _MEDICAL_ABBREVS) + r")\b",
     flags=re.IGNORECASE,
 )
 
+# CI = contre-indication (medical) but conflicts with "ci-joint", "ci-dessous" etc.
+# Only uppercase when NOT followed by a French adverbial suffix.
+_CI_RE = re.compile(
+    r'\bci\b(?!\s*-\s*(?:joint|apr[eè]s|dessous|dessus|contre|inclus|g[iî]t))',
+    re.IGNORECASE,
+)
+
+# NO = numéro (medical/admin) only when followed by a number or specific context.
+# Avoids "no d'anomalie détectée" false positive.
+_NO_RE = re.compile(r'\bno\b(?=\s*\.?\s*\d)', re.IGNORECASE)
+
 
 def normalize_abbrevs(text: str) -> str:
     """Met en majuscules les abréviations médicales reconnues."""
-    return _ABBREV_RE.sub(lambda m: m.group(0).upper(), text)
+    text = _ABBREV_RE.sub(lambda m: m.group(0).upper(), text)
+    text = _CI_RE.sub('CI', text)
+    text = _NO_RE.sub('NO', text)
+    return text
 
 
 # ──────────────────────────────────────────────────────────────────────────────
