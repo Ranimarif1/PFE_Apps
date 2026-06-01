@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime as dt
 import difflib
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -474,7 +475,8 @@ def _preprocess_sentence(sentence: str) -> tuple[str, list[dict]]:
     return ' '.join(out_words), corrections
 
 _ANALYSE_URL   = "http://localhost:11434/api/chat"
-_ANALYSE_MODEL = "mistral:latest"
+# Override via OLLAMA_MODEL env var (e.g. "qwen2:0.5b" for offline/small-footprint deployments)
+_ANALYSE_MODEL = os.getenv("OLLAMA_MODEL", "mistral:latest")
 _ANALYSE_PROMPT = (
     "Tu es un correcteur de transcription vocale médicale en français.\n"
     "La phrase vient d'un logiciel de reconnaissance vocale — elle peut contenir des erreurs.\n\n"
