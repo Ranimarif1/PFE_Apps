@@ -6,6 +6,7 @@ Traitement de la ponctuation pour les transcriptions médicales.
 """
 from __future__ import annotations
 
+import os
 import re
 import sys
 
@@ -127,7 +128,8 @@ def restore_punctuation_auto(text: str) -> str:
 # ──────────────────────────────────────────────────────────────────────────────
 
 _OLLAMA_URL   = "http://localhost:11434/api/chat"
-_OLLAMA_MODEL = "mistral:latest"
+# Override via OLLAMA_MODEL env var (e.g. "qwen2:0.5b" for offline/small-footprint deployments)
+_OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "mistral:latest")
 
 _SYSTEM_PROMPT = (
     "Tu es un correcteur orthographique médical spécialisé en radiologie française.\n\n"

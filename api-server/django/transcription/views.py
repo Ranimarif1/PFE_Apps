@@ -16,8 +16,11 @@ from .normalisation import normalize, normalize_abbrevs
 from .ponctuation import process, correct_with_ollama, diff_corrections
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-MODEL_ID      = "amnbk/whisper-medium-medical-fr-v2"
-BASE_MODEL_ID = "openai/whisper-medium"  # fallback for missing preprocessor_config.json
+# Override via env vars in production (offline deployment with local model files):
+#   WHISPER_MODEL_ID=/opt/models/whisper-medical
+#   WHISPER_BASE_MODEL_ID=/opt/models/whisper-medical
+MODEL_ID      = os.getenv("WHISPER_MODEL_ID", "amnbk/whisper-medium-medical-fr-v2")
+BASE_MODEL_ID = os.getenv("WHISPER_BASE_MODEL_ID", "openai/whisper-medium")  # fallback for missing preprocessor_config.json
 SAMPLE_RATE   = 16_000
 _MAX_CHUNK  = 28 * SAMPLE_RATE   # 28 s — Whisper 30 s window with safety margin
 _MIN_CHUNK  = SAMPLE_RATE // 2   # ignore segments < 0.5 s
