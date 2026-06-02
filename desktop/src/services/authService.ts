@@ -77,6 +77,11 @@ export async function loginApi(
   };
 }
 
+export async function checkSeniorCodeApi(code: string): Promise<{ available: boolean }> {
+  const data = await api.get<{ available: boolean }>(`/api/auth/check-senior-code?code=${encodeURIComponent(code)}`);
+  return data;
+}
+
 export async function registerApi(payload: {
   email: string;
   password: string;

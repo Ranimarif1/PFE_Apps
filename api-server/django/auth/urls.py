@@ -5,6 +5,7 @@ from . import views
 urlpatterns = [
     path("refresh", views.refresh_token_view, name="refresh_token"),
     path("logout", views.logout_view, name="logout"),
+    path("check-senior-code", views.check_senior_code, name="check_senior_code"),
     path("register", views.register, name="register"),
     path("send-verification-code", views.send_verification_code, name="send_verification_code"),
     path("verify-email-code", views.verify_email_code, name="verify_email_code"),
@@ -14,6 +15,7 @@ urlpatterns = [
     path("users", views.list_users, name="list_users"),
     path("users/<str:user_id>/status", views.update_user_status, name="update_user_status"),
     path("users/<str:user_id>/senior-code", views.update_senior_code, name="update_senior_code"),
+    path("users/<str:user_id>/grant-senior", views.grant_senior, name="grant_senior"),
     path("users/<str:user_id>/revoke-senior", views.revoke_senior, name="revoke_senior"),
     path("notifications", views.list_notifications, name="list_notifications"),
     path("notifications/mark-read", views.mark_notifications_read, name="mark_notifications_read"),

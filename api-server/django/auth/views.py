@@ -202,6 +202,18 @@ def verify_email_code(request: HttpRequest) -> JsonResponse:
 
 
 @csrf_exempt
+def check_senior_code(request: HttpRequest) -> JsonResponse:
+    """GET /api/auth/check-senior-code?code=<code> — public, checks if a senior code is available."""
+    if request.method != "GET":
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+    code = (request.GET.get("code") or "").strip()
+    if not code:
+        return JsonResponse({"available": False, "detail": "Code vide."}, status=400)
+    taken = get_collection("users").find_one({"seniorCode": code}) is not None
+    return JsonResponse({"available": not taken})
+
+
+@csrf_exempt
 def register(request: HttpRequest) -> JsonResponse:
     if request.method != "POST":
         return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
@@ -711,6 +723,58 @@ def update_senior_code(request: HttpRequest, user_id: str) -> JsonResponse:
 
     users_col.update_one({"_id": oid}, {"$set": {"seniorCode": code}})
     updated = users_col.find_one({"_id": oid})
+    return JsonResponse({"user": serialize_document(updated)})
+
+
+@csrf_exempt
+def grant_senior(request: HttpRequest, user_id: str) -> JsonResponse:
+    """PATCH /api/auth/users/<user_id>/grant-senior — admin grants senior status with a unique code."""
+    if request.method != "PATCH":
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+
+    current = get_current_user(request)
+    if not current:
+        return JsonResponse({"detail": "Authentification requise."}, status=401)
+    if current.role not in {"admin", "adminIT"}:
+        return JsonResponse({"detail": "Accès refusé."}, status=403)
+
+    users_col = get_collection("users")
+    try:
+        oid = ObjectId(user_id)
+    except Exception:
+        return JsonResponse({"detail": "Identifiant invalide."}, status=400)
+
+    user = users_col.find_one({"_id": oid})
+    if not user:
+        return JsonResponse({"detail": "Utilisateur introuvable."}, status=404)
+    if user.get("role") != "doctor":
+        return JsonResponse({"detail": "Seuls les médecins peuvent recevoir le statut senior."}, status=400)
+    if user.get("senior"):
+        return JsonResponse({"detail": "Ce médecin est déjà senior."}, status=400)
+
+    data = _parse_body(request)
+    code = (data.get("seniorCode") or "").strip()
+    if not code:
+        return JsonResponse({"detail": "Le code senior ne peut pas être vide."}, status=400)
+    if not code.isdigit():
+        return JsonResponse({"detail": "Le code senior doit être numérique."}, status=400)
+
+    clash = users_col.find_one({"seniorCode": code})
+    if clash:
+        return JsonResponse({"detail": "Ce code senior est déjà utilisé.", "available": False}, status=400)
+
+    users_col.update_one({"_id": oid}, {"$set": {"senior": True, "seniorCode": code}})
+    updated = users_col.find_one({"_id": oid})
+
+    get_collection("notifications").insert_one({
+        "userId": str(oid),
+        "type": "senior_granted",
+        "text": "Félicitations ! Votre statut de médecin senior vous a été accordé par un administrateur.",
+        "link": "/profil",
+        "read": False,
+        "createdAt": dt.datetime.utcnow().isoformat(),
+    })
+
     return JsonResponse({"user": serialize_document(updated)})
 
 

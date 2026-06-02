@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Eye, EyeOff, CheckCircle, Check, X } from "lucide-react";
+import { Eye, EyeOff, CheckCircle, Check, X, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { registerApi } from "@/services/authService";
+import { registerApi, checkSeniorCodeApi } from "@/services/authService";
 import { checkPassword, passwordScore, validateEmail, validatePassword } from "@/lib/validation";
 
 type Role = "médecin" | "admin" | "adminIT";
@@ -31,6 +31,30 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
+  type CodeStatus = "idle" | "checking" | "available" | "taken";
+  const [codeStatus, setCodeStatus] = useState<CodeStatus>("idle");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const isSeniorForCheck = form.rôle === "admin" || (form.rôle === "médecin" && form.senior);
+
+  useEffect(() => {
+    if (!isSeniorForCheck || !form.seniorCode.trim()) {
+      setCodeStatus("idle");
+      return;
+    }
+    setCodeStatus("checking");
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const { available } = await checkSeniorCodeApi(form.seniorCode.trim());
+        setCodeStatus(available ? "available" : "taken");
+      } catch {
+        setCodeStatus("idle");
+      }
+    }, 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [form.seniorCode, isSeniorForCheck]);
+
   const emailError = useMemo(() => (form.email ? validateEmail(form.email) : null), [form.email]);
   const passwordChecks = useMemo(() => checkPassword(form.password), [form.password]);
   const passwordValid = useMemo(() => validatePassword(form.password) === null, [form.password]);
@@ -50,6 +74,14 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
     const isSenior = form.rôle === "admin" || (form.rôle === "médecin" && form.senior);
     if (isSenior && !form.seniorCode.trim()) {
       setError("Veuillez saisir votre code senior.");
+      return;
+    }
+    if (isSenior && codeStatus === "taken") {
+      setError("Ce code senior est déjà utilisé. Veuillez en choisir un autre.");
+      return;
+    }
+    if (isSenior && codeStatus === "checking") {
+      setError("Vérification du code en cours, veuillez patienter.");
       return;
     }
 
@@ -103,7 +135,6 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
   const score = passwordScore(passwordChecks);
   const strengthLabel = score === 0 ? "" : score <= 2 ? "Faible" : score <= 3 ? "Moyen" : score <= 4 ? "Fort" : "Très fort";
   const strengthColor = score <= 2 ? "bg-destructive" : score <= 3 ? "bg-warning" : "bg-success";
-  const isSenior = form.rôle === "admin" || (form.rôle === "médecin" && form.senior);
 
   return (
     <div>
@@ -218,15 +249,41 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
         )}
 
         {/* Senior code — required whenever the account is senior */}
-        {isSenior && (
+        {isSeniorForCheck && (
           <div>
             <label className="text-sm font-medium text-foreground mb-1.5 block">Numéro / code senior</label>
-            <input value={form.seniorCode} onChange={e => handleChange("seniorCode", e.target.value)} required
-              className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              placeholder="Ex : 12345" />
-            <p className="text-xs text-muted-foreground mt-1.5">
-              Ce code vous identifiera auprès des médecins travaillant sous votre supervision.
-            </p>
+            <div className="relative">
+              <input
+                value={form.seniorCode}
+                onChange={e => handleChange("seniorCode", e.target.value.replace(/\D/g, ""))}
+                required
+                inputMode="numeric"
+                className={`w-full px-4 py-3 pr-10 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 transition-colors ${
+                  codeStatus === "taken"
+                    ? "border-destructive/60 focus:ring-destructive/25"
+                    : codeStatus === "available"
+                    ? "border-success/60 focus:ring-success/25"
+                    : "border-border focus:ring-primary/30"
+                }`}
+                placeholder="Ex : 12345"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                {codeStatus === "checking" && <Loader2 size={14} className="text-muted-foreground animate-spin" />}
+                {codeStatus === "available" && <Check size={14} className="text-success" />}
+                {codeStatus === "taken"     && <X size={14} className="text-destructive" />}
+              </span>
+            </div>
+            {codeStatus === "available" && (
+              <p className="text-xs text-success mt-1.5 flex items-center gap-1"><Check size={11} />Code disponible.</p>
+            )}
+            {codeStatus === "taken" && (
+              <p className="text-xs text-destructive mt-1.5 flex items-center gap-1"><X size={11} />Ce code est déjà utilisé.</p>
+            )}
+            {codeStatus === "idle" && (
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Ce code vous identifiera auprès des médecins travaillant sous votre supervision.
+              </p>
+            )}
           </div>
         )}
 

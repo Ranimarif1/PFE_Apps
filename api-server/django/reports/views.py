@@ -137,7 +137,7 @@ def _append_to_global_csv(report: Dict[str, Any], doctor: Dict[str, Any]) -> Non
     with csv_path.open("a", newline="", encoding="utf-8-sig") as f:
         writer = csvlib.writer(f, delimiter=";")
         if not file_exists:
-            writer.writerow(["id_exam", "doctor_name", "date", "time", "indication", "technique", "resultat", "conclusion", "transcription"])
+            writer.writerow(["id_exam", "doctor_name", "date", "time", "superviseur_senior", "code_senior", "indication", "technique", "resultat", "conclusion", "transcription"])
 
         writer.writerow(
             [
@@ -145,6 +145,8 @@ def _append_to_global_csv(report: Dict[str, Any], doctor: Dict[str, Any]) -> Non
                 doctor_name,
                 date_str,
                 time_str,
+                report.get("seniorName") or "—",
+                report.get("seniorCode") or "—",
                 sections.get("indication", "").replace("\n", " ").strip(),
                 sections.get("technique", "").replace("\n", " ").strip(),
                 sections.get("resultat", "").replace("\n", " ").strip(),

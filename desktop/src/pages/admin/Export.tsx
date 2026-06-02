@@ -66,8 +66,8 @@ export default function AdminExport() {
         pdfsFolder.file(pdfName, blob);
       }
 
-      // CSV — section columns + a "Fichier" column referencing the PDF path
-      const header = ["ID Examen", "Médecin", "Type", "Date", "Indication", "Technique", "Resultat", "Conclusion", "Fichier"];
+      // CSV — section columns + senior info + a "Fichier" column referencing the PDF path
+      const header = ["ID Examen", "Médecin", "Type", "Date", "Superviseur Senior", "Code Senior", "Indication", "Technique", "Resultat", "Conclusion", "Fichier"];
       const rows = enriched.map(({ report, pdfName }) => {
         const parsed = parseReport(report.content || "");
         return [
@@ -75,6 +75,8 @@ export default function AdminExport() {
           report.doctorName || "",
           getCategoryLabel(report.category),
           new Date(report.createdAt).toLocaleDateString("fr-FR"),
+          report.seniorName || "—",
+          report.seniorCode || "—",
           parsed.indication,
           parsed.technique,
           parsed.resultat,
@@ -211,11 +213,15 @@ function buildIndexHtml(
 
   const tbody = rows.map(({ report, pdfName }) => {
     const date = new Date(report.createdAt).toLocaleDateString("fr-FR");
+    const seniorCell = report.seniorName
+      ? `${escapeHtml(report.seniorName)} <span style="font-family:monospace;font-size:12px;color:#6b7280">${escapeHtml(report.seniorCode || "")}</span>`
+      : `<span style="color:#9ca3af">—</span>`;
     return `<tr>
       <td><a href="pdfs/${escapeHtml(pdfName)}" target="_blank" rel="noopener">${escapeHtml(report.ID_Exam)}</a></td>
       <td>${escapeHtml(report.doctorName || "—")}</td>
       <td>${escapeHtml(getCategoryLabel(report.category))}</td>
       <td>${escapeHtml(date)}</td>
+      <td>${seniorCell}</td>
     </tr>`;
   }).join("\n");
 
@@ -250,7 +256,7 @@ function buildIndexHtml(
   <div class="sub">${escapeHtml(periodLabel)} · ${rows.length} rapport${rows.length > 1 ? "s" : ""}</div>
   <div class="card">
     <table>
-      <thead><tr><th>ID Examen</th><th>Médecin</th><th>Type</th><th>Date</th></tr></thead>
+      <thead><tr><th>ID Examen</th><th>Médecin</th><th>Type</th><th>Date</th><th>Superviseur Senior</th></tr></thead>
       <tbody>
 ${tbody}
       </tbody>

@@ -54,3 +54,8 @@ export async function revokeSenior(userId: string): Promise<BackendUserRecord> {
   const data = await api.patch<{ user: BackendUserRecord }>(`/api/auth/users/${userId}/revoke-senior`, {});
   return data.user;
 }
+
+export async function grantSenior(userId: string, seniorCode: string): Promise<BackendUserRecord> {
+  const data = await api.patch<{ user: BackendUserRecord }>(`/api/auth/users/${userId}/grant-senior`, { seniorCode });
+  return data.user;
+}
