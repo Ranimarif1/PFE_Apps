@@ -21,6 +21,10 @@ CATEGORY_FOLDERS = {
     "autre":        "Autre",
 }
 
+# Voice-note dataset constraints (Bloc-notes vocal → base d'entraînement IA)
+NOTE_CATEGORIES = {"scanner", "irm", "radiographie", "echographie"}
+NOTE_SECTIONS   = {"indication", "resultat", "technique", "conclusion"}
+
 
 def _audios_dir() -> Path:
     d = settings.MEDIA_ROOT / "audios"
@@ -35,7 +39,9 @@ def list_or_upload(request: HttpRequest) -> JsonResponse:
     user: CurrentUser = request.user  # type: ignore[assignment]
 
     if request.method == "GET":
-        docs = list(col.find({"doctorId": user.id}).sort("createdAt", -1))
+        # Voice notes (source == "note") feed the training dataset only — keep
+        # them out of the doctor's regular exam/audio queue.
+        docs = list(col.find({"doctorId": user.id, "source": {"$ne": "note"}}).sort("createdAt", -1))
         return JsonResponse({"results": [serialize_document(d) for d in docs]}, safe=False)
 
     if request.method == "POST":
@@ -71,6 +77,99 @@ def list_or_upload(request: HttpRequest) -> JsonResponse:
         return JsonResponse(serialize_document(saved), status=201)
 
     return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+
+
+@csrf_exempt
+@jwt_required(roles={"doctor", "admin", "adminIT"})
+def save_note(request: HttpRequest) -> JsonResponse:
+    """POST /api/audios/note/ — save a Bloc-notes vocal recording as an
+    audio↔texte pair (type + section as metadata) into the training dataset.
+
+    Stores both an audio document and a linked report document so the pair
+    surfaces automatically in the adminIT « Données d'entraînement » view.
+    """
+    if request.method != "POST":
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+
+    user: CurrentUser = request.user  # type: ignore[assignment]
+
+    audio_file = request.FILES.get("audio")
+    text       = (request.POST.get("text") or "").strip()
+    category   = (request.POST.get("category") or "").strip().lower()
+    section    = (request.POST.get("section") or "").strip().lower()
+    duration   = request.POST.get("duration", "0")
+
+    if not audio_file:
+        return JsonResponse({"detail": "Le fichier audio est requis."}, status=400)
+    if not text:
+        return JsonResponse({"detail": "La transcription est requise."}, status=400)
+    if category not in NOTE_CATEGORIES:
+        return JsonResponse({"detail": "Type d'examen invalide."}, status=400)
+    if section not in NOTE_SECTIONS:
+        return JsonResponse({"detail": "Section invalide."}, status=400)
+
+    exam_id  = f"NOTE-{uuid.uuid4().hex[:10]}"
+    ext      = Path(audio_file.name).suffix or ".webm"
+    filename = f"{exam_id}_{uuid.uuid4().hex}{ext}"
+    filepath = _audios_dir() / filename
+
+    with open(filepath, "wb") as f:
+        for chunk in audio_file.chunks():
+            f.write(chunk)
+
+    try:
+        dur = int(float(duration))
+    except (TypeError, ValueError):
+        dur = 0
+
+    now         = dt.datetime.utcnow().isoformat()
+    audios_col  = get_collection("audios")
+    reports_col = get_collection("reports")
+
+    audio_doc = {
+        "doctorId":  user.id,
+        "examId":    exam_id,
+        "filename":  filename,
+        "mimeType":  audio_file.content_type or "audio/webm",
+        "size":      audio_file.size,
+        "duration":  dur,
+        "seniorId":  None,
+        "source":    "note",
+        "createdAt": now,
+    }
+    audio_ins = audios_col.insert_one(audio_doc)
+
+    report_doc = {
+        "doctorId":        user.id,
+        "ID_Exam":         exam_id,
+        "content":         text,
+        "originalContent": text,
+        "status":          "saved",
+        "category":        category,
+        "section":         section,
+        "audioId":         str(audio_ins.inserted_id),
+        "source":          "note",
+        "createdAt":       now,
+        "updatedAt":       now,
+    }
+    report_ins = reports_col.insert_one(report_doc)
+
+    # Link audio → report so the pair is picked up by the training dataset.
+    audios_col.update_one(
+        {"_id": audio_ins.inserted_id},
+        {"$set": {"reportId": str(report_ins.inserted_id)}},
+    )
+
+    return JsonResponse(
+        {
+            "audioId":  str(audio_ins.inserted_id),
+            "reportId": str(report_ins.inserted_id),
+            "examId":   exam_id,
+            "category": category,
+            "section":  section,
+        },
+        status=201,
+    )
 
 
 @csrf_exempt
@@ -121,6 +220,7 @@ def training_dataset(request: HttpRequest) -> JsonResponse:
             "createdAt":  audio.get("createdAt", ""),
             "status":     report.get("status", ""),
             "category":   report.get("category", ""),
+            "section":    report.get("section", ""),
             "text":       report.get("content", ""),
         })
 
@@ -211,7 +311,7 @@ def training_download(request: HttpRequest):
         # dataset.csv at root \u2014 global metadata
         csv_buf = io.StringIO()
         writer  = csvlib.writer(csv_buf, delimiter=";")
-        writer.writerow(["category", "exam_id", "doctor", "date", "duration_s", "status", "audio_file", "text_file", "transcription"])
+        writer.writerow(["category", "section", "exam_id", "doctor", "date", "duration_s", "status", "audio_file", "text_file", "transcription"])
         for p in pairs:
             audio  = p["audio"]
             report = p["report"]
@@ -221,6 +321,7 @@ def training_download(request: HttpRequest):
             cat_folder = CATEGORY_FOLDERS.get(cat_key, "Autre")
             writer.writerow([
                 cat_folder,
+                report.get("section", ""),
                 exam,
                 p["doctor_name"],
                 audio.get("createdAt", "")[:10],

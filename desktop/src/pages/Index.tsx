@@ -300,9 +300,9 @@ export default function Index() {
               className="text-base lg:text-[1.05rem] max-w-[520px] leading-relaxed mb-9"
               style={{ color: "rgba(255,255,255,0.72)" }}
             >
-              Chaque minute passée à dicter est une minute de moins au chevet du patient.
-              ReportEase transcrit, structure et signe vos comptes rendus radiologiques en temps réel —
-              sans cloud, sans interruption, sans compromis sur la précision.
+              La rédaction des comptes rendus, c'est du temps pris sur l'essentiel.
+              ReportEase ferme cette boucle : votre dictée devient un compte rendu structuré et signé,
+              en temps réel, sans quitter votre poste et sans envoyer vos données quelque part.
             </motion.p>
 
             {/* CTAs */}

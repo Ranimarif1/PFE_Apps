@@ -10,6 +10,13 @@ import { REPORT_CATEGORIES, getCategoryLabel } from "@/constants/reportCategorie
 const fmt = (s: number) =>
   `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 
+const SECTION_LABELS: Record<string, string> = {
+  indication: "Indication",
+  resultat:   "Résultat",
+  technique:  "Technique",
+  conclusion: "Conclusion",
+};
+
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a   = document.createElement("a");
@@ -172,7 +179,7 @@ export default function AdminITTraining() {
               <table className="w-full text-sm">
                 <thead className="bg-muted/50">
                   <tr>
-                    {["ID Exam", "Type", "Médecin", "Date", "Durée", "Statut", "Transcription", "Téléchargement"].map(h => (
+                    {["ID Exam", "Type", "Section", "Médecin", "Date", "Durée", "Statut", "Transcription", "Téléchargement"].map(h => (
                       <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -187,6 +194,11 @@ export default function AdminITTraining() {
                         <td className="px-5 py-3">
                           {entry.category
                             ? <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 whitespace-nowrap">{getCategoryLabel(entry.category)}</span>
+                            : <span className="text-xs text-muted-foreground">—</span>}
+                        </td>
+                        <td className="px-5 py-3">
+                          {entry.section
+                            ? <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border whitespace-nowrap">{SECTION_LABELS[entry.section] ?? entry.section}</span>
                             : <span className="text-xs text-muted-foreground">—</span>}
                         </td>
                         <td className="px-5 py-3 text-muted-foreground">{entry.doctorName || "—"}</td>
@@ -229,7 +241,7 @@ export default function AdminITTraining() {
                       {/* Expanded transcription */}
                       {expanded === entry.audioId && (
                         <tr key={`${entry.audioId}-expanded`} className="bg-muted/10">
-                          <td colSpan={8} className="px-5 py-3">
+                          <td colSpan={9} className="px-5 py-3">
                             <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap font-mono bg-muted/40 rounded-lg p-3">
                               {entry.text}
                             </p>
@@ -240,7 +252,7 @@ export default function AdminITTraining() {
                   ))}
                   {filtered.length === 0 && !isLoading && (
                     <tr>
-                      <td colSpan={8} className="px-5 py-12 text-center text-muted-foreground">
+                      <td colSpan={9} className="px-5 py-12 text-center text-muted-foreground">
                         Aucune paire Audio|Texte disponible.
                       </td>
                     </tr>

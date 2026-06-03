@@ -48,7 +48,12 @@ def _parse_body(request: HttpRequest) -> Dict[str, Any]:
 def _user_can_access_report(user: CurrentUser, report: Dict[str, Any]) -> bool:
     if user.role in {"admin", "adminIT"}:
         return True
-    return str(report.get("doctorId")) == user.id
+    if str(report.get("doctorId")) == user.id:
+        return True
+    # A senior doctor may manage reports created under their supervision.
+    if user.role == "doctor" and bool(user.raw.get("senior")) and str(report.get("seniorId") or "") == user.id:
+        return True
+    return False
 
 
 def _resolve_senior(senior_id: Optional[str]) -> Dict[str, Optional[str]]:
@@ -162,6 +167,7 @@ def report_stats(request: HttpRequest) -> JsonResponse:
         return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
     reports_col = get_collection("reports")
     pipeline = [
+        {"$match": {"source": {"$ne": "note"}}},
         {"$group": {"_id": "$status", "count": {"$sum": 1}}},
     ]
     result = {doc["_id"]: doc["count"] for doc in reports_col.aggregate(pipeline)}
@@ -195,23 +201,48 @@ def list_or_create_reports(request: HttpRequest) -> JsonResponse:
     user: CurrentUser = request.user  # type: ignore[assignment]
 
     if request.method == "GET":
+        # Voice notes (source == "note") live only in the training dataset — they
+        # must never surface in the regular report lists.
+        not_note = {"source": {"$ne": "note"}}
+        # A senior doctor also supervises reports stamped with their seniorId.
+        is_senior_doctor = user.role == "doctor" and bool(user.raw.get("senior"))
+        query: Dict[str, Any]
         if user.role == "doctor":
-            # Doctors see all their own reports
-            query: Dict[str, Any] = {"doctorId": user.id}
+            if is_senior_doctor:
+                # Own reports + every report created under their senior supervision.
+                query = {
+                    "$and": [
+                        not_note,
+                        {"$or": [
+                            {"doctorId": user.id},
+                            {"seniorId": user.id},
+                        ]},
+                    ]
+                }
+            else:
+                # Regular doctors see only their own reports.
+                query = {"doctorId": user.id, **not_note}
         else:
-            # Admins see: all their own reports + only "saved" reports from others
+            # Admins see: their own reports + every report they supervise (any
+            # status, since admins are seniors by default) + "saved" reports
+            # from others.
             query = {
-                "$or": [
-                    {"doctorId": user.id},
-                    {"doctorId": {"$ne": user.id}, "status": "saved"},
+                "$and": [
+                    not_note,
+                    {"$or": [
+                        {"doctorId": user.id},
+                        {"seniorId": user.id},
+                        {"doctorId": {"$ne": user.id}, "status": "saved"},
+                    ]},
                 ]
             }
 
         docs: List[Dict[str, Any]] = list(reports_col.find(query).sort("createdAt", -1))
         serialized = [serialize_document(d) for d in docs]
 
-        # For admin: also fetch "my reports" flag and doctor name
-        if user.role == "admin":
+        # For admin and senior doctors: attach the author's name + an "own" flag
+        # so the UI can show who wrote each supervised report.
+        if user.role == "admin" or is_senior_doctor:
             users_col = get_collection("users")
             doctor_cache: Dict[str, str] = {}
             for r in serialized:

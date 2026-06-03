@@ -41,6 +41,46 @@ export async function uploadAudio(
   return data as AudioRecord;
 }
 
+export type NoteCategory = "scanner" | "irm" | "radiographie" | "echographie";
+export type NoteSection  = "indication" | "resultat" | "technique" | "conclusion";
+
+export interface SavedNote {
+  audioId:  string;
+  reportId: string;
+  examId:   string;
+  category: NoteCategory;
+  section:  NoteSection;
+}
+
+/**
+ * Save a Bloc-notes vocal recording (audio + transcription) into the AI
+ * training dataset, tagged with exam type and section. adminIT-visible.
+ */
+export async function saveVoiceNote(
+  blob: Blob,
+  text: string,
+  category: NoteCategory,
+  section: NoteSection,
+  duration: number,
+): Promise<SavedNote> {
+  const form = new FormData();
+  const ext  = blob.type.includes("webm") ? ".webm" : blob.type.includes("mp4") ? ".mp4" : ".wav";
+  form.append("audio",    blob, `note${ext}`);
+  form.append("text",     text);
+  form.append("category", category);
+  form.append("section",  section);
+  form.append("duration", String(Math.round(duration)));
+
+  const res = await fetch(`${BASE_URL}/api/audios/note/`, {
+    method:  "POST",
+    headers: authHeaders(),
+    body:    form,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.detail || `Erreur ${res.status}`);
+  return data as SavedNote;
+}
+
 export async function getAudios(): Promise<AudioRecord[]> {
   const res = await fetch(`${BASE_URL}/api/audios/`, {
     headers: { ...authHeaders() },
@@ -71,6 +111,7 @@ export interface TrainingEntry {
   createdAt:  string;
   status:     string;
   category:   string;
+  section:    string;
   text:       string;
 }
 

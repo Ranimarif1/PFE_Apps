@@ -846,7 +846,6 @@ def reset_password(request: HttpRequest) -> JsonResponse:
     return JsonResponse({"detail": "Mot de passe réinitialisé avec succès."})
 
 
-
 @csrf_exempt
 def refresh_token_view(request: HttpRequest) -> JsonResponse:
     """Renouvelle l'access token à partir d'un refresh token valide."""

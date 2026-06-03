@@ -13,6 +13,10 @@ export default function Historique() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.rôle === "admin";
+  // A senior doctor supervises reports created under their senior code and can
+  // see/manage them alongside their own.
+  const isSenior = user?.rôle === "médecin" && !!user?.senior;
+  const canViewAll = isAdmin || isSenior;
 
   const [filterStatut, setFilterStatut] = useState("tous");
   const [filterCategory, setFilterCategory] = useState("");
@@ -21,14 +25,14 @@ export default function Historique() {
   const [filterDay, setFilterDay] = useState("");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [searchId, setSearchId] = useState("");
-  const [viewMode, setViewMode] = useState<"all" | "mine">(isAdmin ? "all" : "mine");
+  const [viewMode, setViewMode] = useState<"all" | "mine">(canViewAll ? "all" : "mine");
 
   const { data: reports = [] } = useQuery<Report[]>({
     queryKey: ["reports"],
     queryFn: getReports,
   });
 
-  const visibleReports = isAdmin && viewMode === "mine"
+  const visibleReports = canViewAll && viewMode === "mine"
     ? reports.filter(r => r.isOwn)
     : reports;
 
@@ -88,20 +92,20 @@ export default function Historique() {
     return result;
   }, [visibleReports, filterStatut, filterCategory, filterYear, filterMonth, filterDay, searchId, sortOrder]);
 
-  const showDoctorCol = isAdmin && viewMode === "all";
+  const showDoctorCol = canViewAll && viewMode === "all";
 
   return (
     <AppLayout title="Historique des rapports">
       <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
         <div className="px-6 py-4 border-b border-border flex flex-wrap gap-3 items-center">
 
-          {/* Admin: toggle all / mine */}
-          {isAdmin && (
+          {/* Admin / senior: toggle all (incl. supervised) / mine */}
+          {canViewAll && (
             <div className="flex gap-1 bg-muted p-1 rounded-lg mr-2">
               <button onClick={() => setViewMode("all")}
                 className={cn("px-3 py-1 rounded-md text-sm font-medium transition-all",
                   viewMode === "all" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
-                Tous les rapports
+                {isAdmin ? "Tous les rapports" : "Rapports supervisés"}
               </button>
               <button onClick={() => setViewMode("mine")}
                 className={cn("px-3 py-1 rounded-md text-sm font-medium transition-all",

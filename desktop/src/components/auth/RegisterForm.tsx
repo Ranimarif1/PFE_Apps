@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Eye, EyeOff, CheckCircle, Check, X } from "lucide-react";
+import { Eye, EyeOff, CheckCircle, Check, X, Shield } from "lucide-react";
 import { motion } from "framer-motion";
 import { registerApi } from "@/services/authService";
 import { checkPassword, passwordScore, validateEmail, validatePassword } from "@/lib/validation";
