@@ -681,7 +681,25 @@ def change_user_role(request: HttpRequest, user_id: str) -> JsonResponse:
         if user.get("role") != "admin" or new_role != "doctor":
             return JsonResponse({"detail": "L'Admin IT ne peut que rétrograder un admin en médecin."}, status=400)
 
-    users_col.update_one({"_id": oid}, {"$set": {"role": new_role}})
+    # Promoting to admin requires a senior code (admins are senior by default)
+    senior_code = (data.get("seniorCode") or "").strip()
+    update_fields: Dict[str, Any] = {"role": new_role}
+    if new_role == "admin":
+        if not senior_code:
+            return JsonResponse({"detail": "Un code senior est requis pour promouvoir un médecin en admin."}, status=400)
+        if not senior_code.isdigit():
+            return JsonResponse({"detail": "Le code senior doit être numérique."}, status=400)
+        clash = users_col.find_one({"seniorCode": senior_code, "_id": {"$ne": oid}})
+        if clash:
+            return JsonResponse({"detail": "Ce code senior est déjà utilisé."}, status=400)
+        update_fields["senior"] = True
+        update_fields["seniorCode"] = senior_code
+    else:
+        # Demoting to doctor → remove senior status
+        update_fields["senior"] = False
+        update_fields["seniorCode"] = ""
+
+    users_col.update_one({"_id": oid}, {"$set": update_fields})
     updated = users_col.find_one({"_id": oid})
     return JsonResponse({"user": serialize_document(updated)})
 
