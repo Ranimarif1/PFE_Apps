@@ -71,7 +71,7 @@ def _build_filtered_csv(start: dt.date, end: dt.date) -> bytes:
     buf = io.StringIO()
     buf.write("﻿")  # UTF-8 BOM for Excel compatibility
     writer = csvlib.writer(buf, delimiter=";")
-    writer.writerow(["id_exam", "doctor_name", "date", "time", "indication", "technique", "resultat", "conclusion", "transcription"])
+    writer.writerow(["id_exam", "doctor_name", "date", "time", "superviseur_senior", "code_senior", "indication", "technique", "resultat", "conclusion", "transcription"])
 
     for report in cursor:
         doctor_name = ""
@@ -102,6 +102,8 @@ def _build_filtered_csv(start: dt.date, end: dt.date) -> bytes:
             doctor_name,
             dt_obj.date().isoformat(),
             dt_obj.time().strftime("%H:%M:%S"),
+            report.get("seniorName") or "—",
+            report.get("seniorCode") or "—",
             sections.get("indication", "").replace("\n", " ").strip(),
             sections.get("technique", "").replace("\n", " ").strip(),
             sections.get("resultat", "").replace("\n", " ").strip(),

@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getUsers, updateUserStatus, deleteUser, changeUserRole, updateSeniorCode, revokeSenior, type BackendUserRecord } from "@/services/usersService";
+import { getUsers, updateUserStatus, deleteUser, changeUserRole, updateSeniorCode, revokeSenior, grantSenior, type BackendUserRecord } from "@/services/usersService";
 import { toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
 import {
-  Search, Check, X, Trash2, AlertTriangle, UserRoundCheck, Star, Pencil, StarOff,
+  Search, Check, X, Trash2, AlertTriangle, UserRoundCheck, Star, Pencil, StarOff, ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getStatusBadgeClass, getStatusLabel } from "@/styles/statusSystem";
@@ -23,6 +23,8 @@ export default function AdminMedecins() {
   const [confirmRefuse,  setConfirmRefuse]  = useState<BackendUserRecord | null>(null);
   const [refuseReason,   setRefuseReason]   = useState("");
   const [confirmRevokeSenior, setConfirmRevokeSenior] = useState<BackendUserRecord | null>(null);
+  const [grantSeniorTarget,   setGrantSeniorTarget]   = useState<BackendUserRecord | null>(null);
+  const [grantSeniorCode,     setGrantSeniorCode]     = useState("");
   const [editingCodeId,  setEditingCodeId]  = useState<string | null>(null);
   const [editingCodeVal, setEditingCodeVal] = useState("");
   const codeInputRef = useRef<HTMLInputElement>(null);
@@ -79,6 +81,23 @@ export default function AdminMedecins() {
     },
     onError: (err: Error) => {
       toast.error(err.message || "Erreur lors de la révocation.");
+    },
+  });
+
+  const grantSeniorMutation = useMutation({
+    mutationFn: ({ id, code }: { id: string; code: string }) => grantSenior(id, code),
+    onSuccess: (updated) => {
+      queryClient.setQueryData<BackendUserRecord[]>(["users"], (old) =>
+        old?.map(u => u._id === updated._id ? { ...u, senior: true, seniorCode: updated.seniorCode } : u) ?? old
+      );
+      setGrantSeniorTarget(null);
+      setGrantSeniorCode("");
+      toast.success("Statut senior accordé", {
+        description: `Dr. ${updated.prenom} ${updated.nom} est maintenant médecin senior.`,
+      });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Erreur lors de l'attribution du statut senior.");
     },
   });
 
@@ -245,6 +264,13 @@ export default function AdminMedecins() {
                             <UserRoundCheck size={11} />
                           </button>
                         )}
+                        {doc.status === "validated" && !doc.senior && (
+                          <button onClick={() => { setGrantSeniorTarget(doc); setGrantSeniorCode(""); }}
+                            title="Accorder le statut senior"
+                            className="w-6 h-6 rounded-md border border-border bg-muted hover:bg-amber-50 hover:border-amber-300 hover:text-amber-600 flex items-center justify-center transition-colors">
+                            <Star size={11} />
+                          </button>
+                        )}
                         {doc.senior && (
                           <button onClick={() => setConfirmRevokeSenior(doc)} title="Révoquer le statut senior"
                             className="w-6 h-6 rounded-md border border-border bg-muted hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 flex items-center justify-center transition-colors">
@@ -264,6 +290,64 @@ export default function AdminMedecins() {
           </div>
         </div>
       </div>
+
+      {/* ══ Grant senior modal ═══════════════════════════════════════════════ */}
+      {grantSeniorTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-card rounded-2xl border border-border shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Accorder le statut senior</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">Un code unique est requis</p>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground mb-1">Médecin concerné :</p>
+            <p className="text-sm font-semibold text-foreground mb-0.5">Dr. {grantSeniorTarget.prenom} {grantSeniorTarget.nom}</p>
+            <p className="text-xs text-muted-foreground mb-4">{grantSeniorTarget.email}</p>
+            <div className="mb-5">
+              <label className="text-xs font-medium text-foreground mb-1.5 block">
+                Code senior <span className="text-muted-foreground font-normal">(numérique — doit être disponible)</span>
+              </label>
+              <div className="relative">
+                <Star size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-400 fill-amber-400 pointer-events-none" />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={grantSeniorCode}
+                  onChange={e => setGrantSeniorCode(e.target.value.replace(/\D/g, ""))}
+                  onKeyDown={e => {
+                    if (e.key === "Enter" && grantSeniorCode.trim()) {
+                      grantSeniorMutation.mutate({ id: grantSeniorTarget._id, code: grantSeniorCode.trim() });
+                    }
+                    if (e.key === "Escape") { setGrantSeniorTarget(null); setGrantSeniorCode(""); }
+                  }}
+                  placeholder="Ex : 1042"
+                  className="w-full pl-8 pr-3 py-2.5 text-sm rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground font-mono focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300"
+                  autoFocus
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1.5">
+                Le système vérifiera que ce code n'est pas déjà attribué à un autre médecin.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => { setGrantSeniorTarget(null); setGrantSeniorCode(""); }}
+                className="flex-1 py-2.5 rounded-xl border border-border text-foreground hover:bg-muted transition-all text-sm font-medium">
+                Annuler
+              </button>
+              <button
+                onClick={() => grantSeniorMutation.mutate({ id: grantSeniorTarget._id, code: grantSeniorCode.trim() })}
+                disabled={!grantSeniorCode.trim() || grantSeniorMutation.isPending}
+                className="flex-1 py-2.5 rounded-xl bg-amber-500 text-white font-semibold hover:bg-amber-600 disabled:opacity-50 transition-all text-sm">
+                {grantSeniorMutation.isPending ? "Vérification..." : "Accorder le statut"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══ Revoke senior modal ══════════════════════════════════════════════ */}
       {confirmRevokeSenior && (
