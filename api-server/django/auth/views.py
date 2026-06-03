@@ -683,6 +683,40 @@ def change_user_role(request: HttpRequest, user_id: str) -> JsonResponse:
 
     users_col.update_one({"_id": oid}, {"$set": {"role": new_role}})
     updated = users_col.find_one({"_id": oid})
+
+    prenom = user.get("prenom", "")
+    nom = user.get("nom", "")
+    user_email = user.get("email", "")
+    if user_email:
+        try:
+            if new_role == "admin":
+                subject = "Promotion — Vous êtes maintenant Administrateur — ReportEase"
+                message = (
+                    f"Bonjour {prenom} {nom},\n\n"
+                    f"Félicitations ! Votre compte a été promu au rôle d'Administrateur par un responsable.\n\n"
+                    f"Vous avez désormais accès au tableau de bord d'administration.\n\n"
+                    f"— L'équipe ReportEase\n"
+                    f"CHU Fattouma-Bourguiba de Monastir"
+                )
+            else:
+                subject = "Changement de rôle — Vous êtes maintenant Médecin — ReportEase"
+                message = (
+                    f"Bonjour {prenom} {nom},\n\n"
+                    f"Votre rôle a été modifié. Vous êtes maintenant enregistré en tant que Médecin (Radiologue).\n\n"
+                    f"Pour toute question, veuillez contacter l'administration.\n\n"
+                    f"— L'équipe ReportEase\n"
+                    f"CHU Fattouma-Bourguiba de Monastir"
+                )
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user_email],
+                fail_silently=True,
+            )
+        except Exception:
+            pass
+
     return JsonResponse({"user": serialize_document(updated)})
 
 
@@ -721,8 +755,33 @@ def update_senior_code(request: HttpRequest, user_id: str) -> JsonResponse:
     if clash:
         return JsonResponse({"detail": "Ce code senior est déjà utilisé."}, status=400)
 
+    old_code = user.get("seniorCode", "")
     users_col.update_one({"_id": oid}, {"$set": {"seniorCode": code}})
     updated = users_col.find_one({"_id": oid})
+
+    prenom = user.get("prenom", "")
+    nom = user.get("nom", "")
+    user_email = user.get("email", "")
+    if user_email:
+        try:
+            send_mail(
+                subject="Modification de votre code senior — ReportEase",
+                message=(
+                    f"Bonjour Dr {prenom} {nom},\n\n"
+                    f"Votre code senior a été modifié par un administrateur.\n\n"
+                    f"Ancien code : {old_code}\n"
+                    f"Nouveau code : {code}\n\n"
+                    f"Ce code vous identifie auprès des médecins travaillant sous votre supervision.\n\n"
+                    f"— L'équipe ReportEase\n"
+                    f"CHU Fattouma-Bourguiba de Monastir"
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user_email],
+                fail_silently=True,
+            )
+        except Exception:
+            pass
+
     return JsonResponse({"user": serialize_document(updated)})
 
 
@@ -775,6 +834,28 @@ def grant_senior(request: HttpRequest, user_id: str) -> JsonResponse:
         "createdAt": dt.datetime.utcnow().isoformat(),
     })
 
+    prenom = user.get("prenom", "")
+    nom = user.get("nom", "")
+    user_email = user.get("email", "")
+    if user_email:
+        try:
+            send_mail(
+                subject="Statut senior accordé — ReportEase",
+                message=(
+                    f"Bonjour Dr {prenom} {nom},\n\n"
+                    f"Félicitations ! Votre statut de médecin senior vous a été accordé par un administrateur.\n\n"
+                    f"Votre code senior est : {code}\n\n"
+                    f"Ce code vous identifie auprès des médecins travaillant sous votre supervision.\n\n"
+                    f"— L'équipe ReportEase\n"
+                    f"CHU Fattouma-Bourguiba de Monastir"
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user_email],
+                fail_silently=True,
+            )
+        except Exception:
+            pass
+
     return JsonResponse({"user": serialize_document(updated)})
 
 
@@ -813,6 +894,27 @@ def revoke_senior(request: HttpRequest, user_id: str) -> JsonResponse:
         "read": False,
         "createdAt": dt.datetime.utcnow().isoformat(),
     })
+
+    prenom = user.get("prenom", "")
+    nom = user.get("nom", "")
+    user_email = user.get("email", "")
+    if user_email:
+        try:
+            send_mail(
+                subject="Statut senior révoqué — ReportEase",
+                message=(
+                    f"Bonjour Dr {prenom} {nom},\n\n"
+                    f"Votre statut de médecin senior a été révoqué par un administrateur.\n\n"
+                    f"Votre code senior a été supprimé. Pour toute question, veuillez contacter l'administration.\n\n"
+                    f"— L'équipe ReportEase\n"
+                    f"CHU Fattouma-Bourguiba de Monastir"
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user_email],
+                fail_silently=True,
+            )
+        except Exception:
+            pass
 
     return JsonResponse({"user": serialize_document(updated)})
 

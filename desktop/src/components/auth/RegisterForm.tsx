@@ -1,8 +1,8 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Eye, EyeOff, CheckCircle, Check, X, Shield, Loader2 } from "lucide-react";
+import { Eye, EyeOff, CheckCircle, Check, X, Loader2, Mail, Shield, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
-import { registerApi, checkSeniorCodeApi } from "@/services/authService";
+import { registerApi, checkSeniorCodeApi, sendVerificationCodeApi, verifyEmailCodeApi } from "@/services/authService";
 import { checkPassword, passwordScore, validateEmail, validatePassword } from "@/lib/validation";
 
 type Role = "médecin" | "admin" | "adminIT";
@@ -30,6 +30,15 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+
+  const [codeSending, setCodeSending] = useState(false);
+  const [codeVerifying, setCodeVerifying] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [code, setCode] = useState("");
+  const [codeError, setCodeError] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const codeInputRef = useRef<HTMLInputElement>(null);
 
   type CodeStatus = "idle" | "checking" | "available" | "taken";
   const [codeStatus, setCodeStatus] = useState<CodeStatus>("idle");
@@ -60,14 +69,63 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
   const passwordValid = useMemo(() => validatePassword(form.password) === null, [form.password]);
   const passwordsMatch = form.confirm === "" || form.password === form.confirm;
 
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setTimeout(() => setResendCooldown(n => Math.max(0, n - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [resendCooldown]);
+
+  useEffect(() => {
+    if (codeSent || emailVerified) {
+      setCodeSent(false);
+      setEmailVerified(false);
+      setCode("");
+      setCodeError("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.email]);
+
   const handleChange = (field: keyof typeof form, value: string) =>
     setForm(f => ({ ...f, [field]: value }));
+
+  const handleSendCode = async () => {
+    setError("");
+    setCodeError("");
+    const err = validateEmail(form.email);
+    if (err) { setCodeError(err); return; }
+    setCodeSending(true);
+    try {
+      await sendVerificationCodeApi(form.email.trim().toLowerCase());
+      setCodeSent(true);
+      setResendCooldown(30);
+      setTimeout(() => codeInputRef.current?.focus(), 50);
+    } catch (err: unknown) {
+      setCodeError(err instanceof Error ? err.message : "Erreur lors de l'envoi du code.");
+    } finally {
+      setCodeSending(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    setCodeError("");
+    if (code.length !== 5) { setCodeError("Le code doit comporter 5 chiffres."); return; }
+    setCodeVerifying(true);
+    try {
+      await verifyEmailCodeApi(form.email.trim().toLowerCase(), code);
+      setEmailVerified(true);
+    } catch (err: unknown) {
+      setCodeError(err instanceof Error ? err.message : "Code invalide.");
+    } finally {
+      setCodeVerifying(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     if (emailError) { setError(emailError); return; }
+    if (!emailVerified) { setError("Veuillez vérifier votre email avant de créer le compte."); return; }
     const pwErr = validatePassword(form.password);
     if (pwErr) { setError(pwErr); return; }
     if (form.password !== form.confirm) { setError("Les mots de passe ne correspondent pas."); return; }
@@ -177,23 +235,105 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
 
         <div>
           <label className="text-sm font-medium text-foreground mb-1.5 block">Email</label>
-          <div className="relative">
-            <input
-              type="email"
-              value={form.email}
-              onChange={e => handleChange("email", e.target.value)}
-              required
-              aria-invalid={!!emailError}
-              className={`w-full px-4 py-3 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 pr-10 transition-colors ${
-                emailError
-                  ? "border-destructive/60 focus:ring-destructive/25"
-                  : "border-border focus:ring-primary/30"
-              }`}
-              placeholder="jean.dupont@hopital.fr"
-            />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <input
+                type="email"
+                value={form.email}
+                onChange={e => handleChange("email", e.target.value)}
+                required
+                disabled={emailVerified}
+                aria-invalid={!!emailError}
+                className="w-full pl-10 pr-10 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-70"
+                placeholder="jean.dupont@hopital.fr"
+              />
+              {emailVerified && (
+                <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 text-success" size={16} />
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleSendCode}
+              disabled={!!emailError || !form.email || codeSending || emailVerified || resendCooldown > 0}
+              className="shrink-0 px-4 rounded-xl border border-primary text-primary text-sm font-medium hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+            >
+              {codeSending
+                ? <Loader2 size={14} className="animate-spin" />
+                : emailVerified
+                  ? "Vérifié"
+                  : resendCooldown > 0
+                    ? `${resendCooldown}s`
+                    : codeSent ? "Renvoyer" : "Envoyer code"}
+            </button>
           </div>
-          {emailError && (
-            <p className="text-xs text-destructive mt-1.5">{emailError}</p>
+
+          {emailError && !emailVerified && (
+            <p className="text-xs text-destructive mt-1.5 flex items-center gap-1">
+              <AlertCircle size={11} className="shrink-0" />
+              {emailError}
+            </p>
+          )}
+
+          {codeSent && !emailVerified && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22 }}
+              className="mt-3 p-3 rounded-xl border border-primary/30 bg-primary/5"
+            >
+              <div className="flex items-start gap-2 mb-2">
+                <Mail size={14} className="text-primary mt-0.5 shrink-0" />
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Un code à 5 chiffres a été envoyé à{" "}
+                  <span className="font-semibold text-foreground">{form.email}</span>. Il expire dans 10 minutes.
+                </p>
+              </div>
+              <div className="flex gap-2 mt-2">
+                <input
+                  ref={codeInputRef}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={5}
+                  value={code}
+                  onChange={e => {
+                    setCodeError("");
+                    setCode(e.target.value.replace(/\D/g, "").slice(0, 5));
+                  }}
+                  placeholder="• • • • •"
+                  className="flex-1 py-2.5 rounded-xl border border-border bg-background text-center text-lg font-mono tracking-[0.6em] focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+                <button
+                  type="button"
+                  onClick={handleVerifyCode}
+                  disabled={code.length !== 5 || codeVerifying}
+                  className="shrink-0 px-4 rounded-xl gradient-hero text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                >
+                  {codeVerifying && <Loader2 size={13} className="animate-spin" />}
+                  {codeVerifying ? "..." : "Vérifier"}
+                </button>
+              </div>
+              {codeError && (
+                <p className="text-xs text-destructive mt-1.5 flex items-center gap-1">
+                  <AlertCircle size={11} className="shrink-0" />
+                  {codeError}
+                </p>
+              )}
+            </motion.div>
+          )}
+
+          {!codeSent && codeError && (
+            <p className="text-xs text-destructive mt-1.5 flex items-center gap-1">
+              <AlertCircle size={11} className="shrink-0" />
+              {codeError}
+            </p>
+          )}
+
+          {emailVerified && (
+            <p className="text-xs text-success mt-1.5 flex items-center gap-1">
+              <Shield size={12} /> Email vérifié
+            </p>
           )}
         </div>
 
@@ -362,7 +502,7 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !emailVerified || !passwordValid || !passwordsMatch}
           className="w-full gradient-hero text-white font-semibold py-3 rounded-xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {loading ? "Inscription en cours..." : "S'inscrire"}
