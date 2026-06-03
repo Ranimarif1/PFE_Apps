@@ -485,7 +485,32 @@ def delete_user(request: HttpRequest, user_id: str) -> JsonResponse:
     if current.role == "adminIT" and user.get("role") != "admin":
         return JsonResponse({"detail": "L'Admin IT ne peut supprimer que des comptes admin."}, status=403)
 
+    prenom = user.get("prenom", "")
+    nom = user.get("nom", "")
+    user_email = user.get("email", "")
+    role = user.get("role", "")
+
     users_col.delete_one({"_id": oid})
+
+    if user_email:
+        try:
+            role_label = "Médecin" if role == "doctor" else "Administrateur"
+            send_mail(
+                subject="Suppression de votre compte — ReportEase",
+                message=(
+                    f"Bonjour {prenom} {nom},\n\n"
+                    f"Votre compte {role_label} sur la plateforme ReportEase a été supprimé par un administrateur.\n\n"
+                    f"Si vous pensez qu'il s'agit d'une erreur, veuillez contacter l'administration de votre établissement.\n\n"
+                    f"— L'équipe ReportEase\n"
+                    f"CHU Fattouma-Bourguiba de Monastir"
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user_email],
+                fail_silently=True,
+            )
+        except Exception:
+            pass
+
     return JsonResponse({"detail": "Utilisateur supprimé."})
 
 
