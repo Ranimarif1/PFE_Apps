@@ -40,8 +40,10 @@ export async function deleteUser(userId: string): Promise<void> {
   await api.delete(`/api/auth/users/${userId}`);
 }
 
-export async function changeUserRole(userId: string, role: "doctor" | "admin"): Promise<BackendUserRecord> {
-  const data = await api.put<{ user: BackendUserRecord }>(`/api/auth/users/${userId}/role`, { role });
+export async function changeUserRole(userId: string, role: "doctor" | "admin", seniorCode?: string): Promise<BackendUserRecord> {
+  const body: Record<string, string> = { role };
+  if (seniorCode) body.seniorCode = seniorCode;
+  const data = await api.put<{ user: BackendUserRecord }>(`/api/auth/users/${userId}/role`, body);
   return data.user;
 }
 

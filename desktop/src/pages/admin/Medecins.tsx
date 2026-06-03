@@ -25,6 +25,7 @@ export default function AdminMedecins() {
   const [confirmRevokeSenior, setConfirmRevokeSenior] = useState<BackendUserRecord | null>(null);
   const [grantSeniorTarget,   setGrantSeniorTarget]   = useState<BackendUserRecord | null>(null);
   const [grantSeniorCode,     setGrantSeniorCode]     = useState("");
+  const [promoteCode,         setPromoteCode]         = useState("");
   const [editingCodeId,  setEditingCodeId]  = useState<string | null>(null);
   const [editingCodeVal, setEditingCodeVal] = useState("");
   const codeInputRef = useRef<HTMLInputElement>(null);
@@ -64,8 +65,15 @@ export default function AdminMedecins() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["users"] }); setConfirmDelete(null); },
   });
   const promoteMutation = useMutation({
-    mutationFn: (id: string) => changeUserRole(id, "admin"),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["users"] }); setConfirmPromote(null); },
+    mutationFn: ({ id, code }: { id: string; code: string }) => changeUserRole(id, "admin", code),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setConfirmPromote(null);
+      setPromoteCode("");
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Erreur lors de la promotion.");
+    },
   });
 
   const revokeSeniorMutation = useMutation({
@@ -395,18 +403,42 @@ export default function AdminMedecins() {
             <p className="text-sm text-muted-foreground mb-2">Vous êtes sur le point de changer le rôle de :</p>
             <p className="text-sm font-semibold text-foreground mb-1">Dr. {confirmPromote.prenom} {confirmPromote.nom}</p>
             <p className="text-xs text-muted-foreground mb-4">{confirmPromote.email}</p>
-            <div className="bg-warning/10 border border-warning/30 rounded-xl px-4 py-3 mb-5">
+            <div className="bg-warning/10 border border-warning/30 rounded-xl px-4 py-3 mb-4">
               <p className="text-xs text-warning font-medium">
                 Cette action est irréversible. Le compte passera du rôle <strong>Médecin</strong> au rôle <strong>Admin</strong> et obtiendra tous les accès administrateur.
               </p>
             </div>
+            {confirmPromote.senior ? (
+              <div className="mb-5 flex items-center gap-2 px-3.5 py-3 rounded-xl border border-success/30 bg-success/5 text-sm text-foreground">
+                <ShieldCheck size={15} className="text-success shrink-0" />
+                <span>Ce médecin est déjà senior (code : <strong>{confirmPromote.seniorCode}</strong>). Son code sera conservé.</span>
+              </div>
+            ) : (
+              <div className="mb-5">
+                <label className="text-sm font-medium text-foreground mb-1.5 block">
+                  Code senior <span className="text-destructive">*</span>
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={promoteCode}
+                  onChange={e => setPromoteCode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="Ex : 12345"
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Les admins sont seniors par défaut. Ce code les identifie auprès des médecins sous leur supervision.
+                </p>
+              </div>
+            )}
             <div className="flex gap-3">
-              <button onClick={() => setConfirmPromote(null)}
+              <button onClick={() => { setConfirmPromote(null); setPromoteCode(""); }}
                 className="flex-1 py-2.5 rounded-xl border border-border text-foreground hover:bg-muted transition-all text-sm font-medium">
                 Annuler
               </button>
-              <button onClick={() => promoteMutation.mutate(confirmPromote._id)}
-                disabled={promoteMutation.isPending}
+              <button
+                onClick={() => promoteMutation.mutate({ id: confirmPromote._id, code: confirmPromote.senior ? confirmPromote.seniorCode! : promoteCode })}
+                disabled={promoteMutation.isPending || (!confirmPromote.senior && !promoteCode.trim())}
                 className="flex-1 py-2.5 rounded-xl gradient-hero text-white font-semibold hover:opacity-90 disabled:opacity-60 transition-all text-sm">
                 {promoteMutation.isPending ? "Modification..." : "Confirmer le changement"}
               </button>
