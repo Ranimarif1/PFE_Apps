@@ -444,18 +444,6 @@ def get_or_update_report(request: HttpRequest, report_id: str):
         return JsonResponse(serialize_document(updated))
 
     if request.method == "DELETE":
-        # Unlink any associated audio so it reappears in the pending queue rather
-        # than pointing to a now-deleted report.
-        audio_id = report.get("audioId")
-        if audio_id:
-            try:
-                audios_col = get_collection("audios")
-                audios_col.update_one(
-                    {"_id": ObjectId(audio_id)},
-                    {"$unset": {"reportId": ""}},
-                )
-            except Exception:
-                pass
         reports_col.delete_one({"_id": oid})
         return JsonResponse({"detail": "Supprimé."}, status=200)
 

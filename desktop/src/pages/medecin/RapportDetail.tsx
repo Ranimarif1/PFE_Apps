@@ -756,7 +756,7 @@ export default function RapportDetail() {
                         )}
 
                         {/* Ollama unavailable */}
-                        {!analyseLoading && !analyseError && analyseSentences !== null && ollamaUnavailable && (
+                        {!analyseLoading && !analyseError && analyseSentences !== null && ollamaUnavailable && !analyseSentences.some(s => s.corrections.length > 0) && (
                           <div className="flex items-start gap-3 bg-amber-500/8 border border-amber-500/30 rounded-lg px-3 py-3">
                             <div className="w-7 h-7 rounded-full bg-amber-500/15 flex items-center justify-center shrink-0">
                               <AlertTriangle size={14} className="text-amber-600 dark:text-amber-400" />
