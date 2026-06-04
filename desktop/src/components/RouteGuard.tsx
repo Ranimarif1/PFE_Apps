@@ -13,7 +13,9 @@ export function RouteGuard({ children, allowedRoles }: RouteGuardProps) {
   if (loading) return null;
 
   if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    // After logout / session loss, land on the public home page — not the
+    // login form. Users open the login modal themselves from there.
+    return <Navigate to="/" state={{ from: location }} replace />;
   }
 
   if (!allowedRoles.includes(user.rôle)) {

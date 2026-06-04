@@ -59,7 +59,9 @@ def _user_can_access_report(user: CurrentUser, report: Dict[str, Any]) -> bool:
 def _resolve_senior(senior_id: Optional[str]) -> Dict[str, Optional[str]]:
     """Look up a senior user by id and return a snapshot to stamp on a report.
 
-    A valid senior is a validated admin, or a validated doctor flagged senior.
+    A valid senior is a validated senior admin, or a validated doctor flagged
+    senior. Admins who opted out of senior status (senior == False) don't count;
+    legacy admins without the flag still do.
     Returns empty fields when the id is missing or doesn't reference a senior.
     """
     empty = {"seniorId": None, "seniorCode": None, "seniorName": None}
@@ -72,7 +74,10 @@ def _resolve_senior(senior_id: Optional[str]) -> Dict[str, Optional[str]]:
     user = get_collection("users").find_one({"_id": oid})
     if not user or user.get("status") != "validated":
         return empty
-    is_senior = user.get("role") == "admin" or (user.get("role") == "doctor" and user.get("senior"))
+    is_senior = (
+        (user.get("role") == "admin" and user.get("senior") is not False)
+        or (user.get("role") == "doctor" and user.get("senior"))
+    )
     if not is_senior:
         return empty
     name = f"{user.get('prenom', '')} {user.get('nom', '')}".strip()

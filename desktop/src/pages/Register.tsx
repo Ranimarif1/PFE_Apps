@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
   Sun, Moon, Eye, EyeOff, CheckCircle, Check, X,
-  Mail, Shield, User, Lock, AlertCircle, Loader2, Award, Hash,
+  Mail, Shield, User, Lock, AlertCircle, Loader2, Hash,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { registerApi, sendVerificationCodeApi, verifyEmailCodeApi, checkSeniorCodeApi } from "@/services/authService";
@@ -53,7 +53,7 @@ export default function Register() {
   const [seniorCodeStatus, setSeniorCodeStatus] = useState<CodeStatus>("idle");
   const seniorDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const isSeniorForCheck = form.rôle === "admin" || (form.rôle === "médecin" && form.senior);
+  const isSeniorForCheck = form.rôle !== "adminIT" && form.senior;
 
   useEffect(() => {
     if (!isSeniorForCheck || !form.seniorCode.trim()) {
@@ -84,14 +84,13 @@ export default function Register() {
     return () => clearTimeout(t);
   }, [resendCooldown]);
 
+  // Changing the email invalidates any pending/failed/completed verification,
+  // including a stale error like "Cet email est déjà enregistré."
   useEffect(() => {
-    if (codeSent || emailVerified) {
-      setCodeSent(false);
-      setEmailVerified(false);
-      setCode("");
-      setCodeError("");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setCodeSent(false);
+    setEmailVerified(false);
+    setCode("");
+    setCodeError("");
   }, [form.email]);
 
   const handleChange = (field: keyof typeof form, value: string) =>
@@ -137,7 +136,7 @@ export default function Register() {
     const pwErr = validatePassword(form.password);
     if (pwErr) { setError(pwErr); return; }
     if (form.password !== form.confirm) { setError("Les mots de passe ne correspondent pas."); return; }
-    const isSenior = form.rôle === "admin" || (form.rôle === "médecin" && form.senior);
+    const isSenior = form.rôle !== "adminIT" && form.senior;
     if (isSenior && !form.seniorCode.trim()) {
       setError("Veuillez saisir votre numéro / code senior.");
       return;
@@ -208,7 +207,7 @@ export default function Register() {
   const score = passwordScore(passwordChecks);
   const strengthLabel = score === 0 ? "" : score <= 2 ? "Faible" : score <= 3 ? "Moyen" : score <= 4 ? "Fort" : "Très fort";
   const strengthColor = score <= 2 ? "bg-destructive" : score <= 3 ? "bg-warning" : "bg-success";
-  const isSenior = form.rôle === "admin" || (form.rôle === "médecin" && form.senior);
+  const isSenior = form.rôle !== "adminIT" && form.senior;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-8">
@@ -265,7 +264,7 @@ export default function Register() {
                     onChange={e => handleChange("prénom", e.target.value)}
                     required
                     className="w-full pl-10 pr-4 py-3 text-sm"
-                    placeholder="Jean"
+                    placeholder="Mohamed"
                   />
                 </div>
               </div>
@@ -278,7 +277,7 @@ export default function Register() {
                     onChange={e => handleChange("nom", e.target.value)}
                     required
                     className="w-full pl-10 pr-4 py-3 text-sm"
-                    placeholder="Dupont"
+                    placeholder="Ben Ali"
                   />
                 </div>
               </div>
@@ -324,7 +323,7 @@ export default function Register() {
                     disabled={emailVerified}
                     aria-invalid={!!emailError}
                     className="w-full pl-10 pr-10 py-3 text-sm disabled:opacity-70"
-                    placeholder="jean.dupont@hopital.fr"
+                    placeholder="mohamed@gmail.com"
                   />
                   {emailVerified && (
                     <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 text-success" size={16} />
@@ -441,43 +440,36 @@ export default function Register() {
               </div>
             </motion.div>
 
-            {/* Senior status — médecin chooses, admin is senior by default, adminIT excluded */}
+            {/* Senior status — médecin & admin choose, adminIT excluded */}
             {form.rôle !== "adminIT" && (
               <motion.div variants={itemVariants}>
                 <label className="text-sm font-medium text-foreground mb-1.5 block">Statut senior</label>
-                {form.rôle === "admin" ? (
-                  <div className="flex items-center gap-2 px-3.5 py-3 rounded-xl border border-primary/30 bg-primary/5 text-sm text-foreground">
-                    <Award size={15} className="text-primary shrink-0" />
-                    <span>En tant qu'administrateur, vous êtes senior par défaut.</span>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    {([
-                      { value: true,  label: "Oui, je suis senior" },
-                      { value: false, label: "Non" },
-                    ] as const).map(({ value, label }) => (
-                      <button
-                        key={String(value)}
-                        type="button"
-                        onClick={() => setForm(f => ({ ...f, senior: value, seniorCode: value ? f.seniorCode : "" }))}
-                        className={`px-3 py-2.5 rounded-xl border text-sm font-medium transition-all text-center ${
-                          form.senior === value
-                            ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/20"
-                            : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { value: true,  label: "Oui, je suis senior" },
+                    { value: false, label: "Non" },
+                  ] as const).map(({ value, label }) => (
+                    <button
+                      key={String(value)}
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, senior: value, seniorCode: value ? f.seniorCode : "" }))}
+                      className={`px-3 py-2.5 rounded-xl border text-sm font-medium transition-all text-center ${
+                        form.senior === value
+                          ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/20"
+                          : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </motion.div>
             )}
 
             {/* Senior code — required whenever the account is senior */}
             {isSeniorForCheck && (
               <motion.div variants={itemVariants}>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">Numéro / code senior</label>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Code senior</label>
                 <div className="relative">
                   <Hash size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                   <input

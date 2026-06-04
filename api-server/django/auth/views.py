@@ -230,11 +230,9 @@ def register(request: HttpRequest) -> JsonResponse:
         return JsonResponse({"detail": "Rôle invalide."}, status=400)
 
     # ── Senior status & code ──
-    # admin → always senior; doctor → optional; adminIT → never senior.
+    # admin & doctor → optional (chosen at registration); adminIT → never senior.
     senior_code = (data.get("seniorCode") or "").strip()
-    if role == "admin":
-        senior = True
-    elif role == "doctor":
+    if role in {"doctor", "admin"}:
         senior = bool(data.get("senior"))
     else:  # adminIT
         senior = False
@@ -525,7 +523,9 @@ def mark_notifications_read(request: HttpRequest) -> JsonResponse:
 def list_seniors(request: HttpRequest) -> JsonResponse:
     """GET /api/auth/seniors — validated seniors a non-senior can work under.
 
-    Includes senior médecins and all admins (admins default to senior).
+    Includes senior médecins and senior admins. Admins who explicitly opted out
+    of senior status (senior == False) are excluded; legacy admins without the
+    flag still count as seniors.
     """
     if request.method != "GET":
         return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
@@ -540,7 +540,7 @@ def list_seniors(request: HttpRequest) -> JsonResponse:
             "status": "validated",
             "$or": [
                 {"role": "doctor", "senior": True},
-                {"role": "admin"},
+                {"role": "admin", "senior": {"$ne": False}},
             ],
         },
         {"nom": 1, "prenom": 1, "seniorCode": 1, "role": 1},
