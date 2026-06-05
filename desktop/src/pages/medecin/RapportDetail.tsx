@@ -261,14 +261,14 @@ export default function RapportDetail() {
 
   /* ── Auto-analyse: trigger suggestions 3s after last change (edit mode only) ── */
   useEffect(() => {
-    if (!editing || !contenu.trim()) return;
+    if (!editing || !contenu.trim() || ollamaUnavailable) return;
     if (autoAnalyseTimer.current) clearTimeout(autoAnalyseTimer.current);
     autoAnalyseTimer.current = setTimeout(() => {
       handleAnalyse();
     }, 3000);
     return () => { if (autoAnalyseTimer.current) clearTimeout(autoAnalyseTimer.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contenu, editing]);
+  }, [contenu, editing, ollamaUnavailable]);
 
   /* ── Auto-save as draft when arriving from transcription ── */
   useEffect(() => {
