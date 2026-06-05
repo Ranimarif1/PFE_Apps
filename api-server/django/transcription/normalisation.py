@@ -443,7 +443,7 @@ def normalize_section_aliases(text: str) -> str:
 # Exemple : "première phrase. deuxième phrase efface ça" → "première phrase."
 
 _EFFACE_CMD_RE = re.compile(
-    r'effac(?:er|ez|es|e)\s+[çc]a\b[,.]?\s*',
+    r'effac(?:er|ez|es|ée?|e)\s+[çcs]a\b[,.]?\s*',
     flags=re.IGNORECASE,
 )
 
