@@ -1,3 +1,22 @@
+const FR_LOWER = "a-zàâäéèêëîïôùûüçœæ";
+
+function capitalizeAfterPunctuation(text: string): string {
+  if (!text) return text;
+  // First character of the section
+  text = text.charAt(0).toUpperCase() + text.slice(1);
+  // After . ? !
+  text = text.replace(
+    new RegExp(`([.?!])( +)([${FR_LOWER}])`, "g"),
+    (_, punct, space, letter) => punct + space + letter.toUpperCase()
+  );
+  // After newline
+  text = text.replace(
+    new RegExp(`(\\n)([${FR_LOWER}])`, "g"),
+    (_, nl, letter) => nl + letter.toUpperCase()
+  );
+  return text;
+}
+
 export interface ParsedReport {
   indication: string;
   technique: string;
@@ -24,8 +43,8 @@ export function parseReport(text: string): ParsedReport {
     if (!match) return "";
     const afterKeyword = match.index + match[0].length;
     const raw = text.slice(afterKeyword, end === -1 ? text.length : end).trim();
-    // Transcription arrives word-by-word with \n between tokens — collapse to single spaces.
-    const normalized = raw.replace(/\n+/g, " ").replace(/[ \t]+/g, " ").trim();
+    // Preserve intentional \n from verbal commands (à la ligne, etc.) — only collapse spaces/tabs.
+    const normalized = raw.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
     // Strip Whisper noise at section start (mishearings of "deux points à la ligne").
     const cleaned = normalized
       .replace(/^(?:de\s+p[a-z]+|d[''][a-z]{0,4}\s+p[a-z]+|et\s+[a-z]{3,6})\s+/, "")
@@ -33,7 +52,7 @@ export function parseReport(text: string): ParsedReport {
       .trim();
     if (/^[-—\s]*$/.test(cleaned)) return "";
     const result = cleaned.length > 0 ? cleaned : normalized;
-    return result.charAt(0).toUpperCase() + result.slice(1);
+    return capitalizeAfterPunctuation(result);
   };
 
   const nextAfter = (afterIdx: number, ...candidates: number[]) => {

@@ -100,8 +100,8 @@ def _capitalize_sentences(text: str) -> str:
     def _upper_match(m):
         return m.group(0)[:-1] + m.group(0)[-1].upper()
 
-    text = re.sub(r"[.?!]\s+[a-zàâäéèêëîïôùûüç]", _upper_match, text)
-    text = re.sub(r"\n+[a-zàâäéèêëîïôùûüç]", _upper_match, text)
+    text = re.sub(r"[.?!]\s+[a-zàâäéèêëîïôùûüçœæ]", _upper_match, text)
+    text = re.sub(r"\n+[a-zàâäéèêëîïôùûüçœæ]", _upper_match, text)
     return text
 
 
