@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Sun, Moon, Mail, ArrowLeft, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { forgotPasswordApi } from "@/services/authService";
+import { requestPasswordResetApi } from "@/services/authService";
 import hospitalImg from "@/assets/téléchargement.jpeg";
 
 const containerVariants = {
@@ -28,7 +28,7 @@ export default function ForgotPassword() {
     setLoading(true);
     setError("");
     try {
-      await forgotPasswordApi(email);
+      await requestPasswordResetApi(email);
       setSent(true);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Une erreur est survenue.");
@@ -126,12 +126,12 @@ export default function ForgotPassword() {
               <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-5">
                 <CheckCircle className="w-8 h-8 text-success" />
               </div>
-              <h2 className="text-2xl font-bold text-foreground mb-2">Email envoyé</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-2">Demande envoyée</h2>
               <p className="text-muted-foreground text-sm leading-relaxed mb-2">
-                Si l'adresse <strong className="text-foreground">{email}</strong> est associée à un compte,
-                vous recevrez un lien de réinitialisation valable <strong className="text-foreground">1 heure</strong>.
+                Votre demande a été transmise à votre administrateur.
+                Il vous attribuera un <strong className="text-foreground">mot de passe temporaire</strong> et vous serez invité à le changer à la prochaine connexion.
               </p>
-              <p className="text-xs text-muted-foreground mb-8">Pensez à vérifier vos spams.</p>
+              <p className="text-xs text-muted-foreground mb-8">Si vous n'avez pas de réponse, contactez votre administrateur directement.</p>
               <Link
                 to="/login"
                 className="inline-flex items-center gap-2 text-sm text-primary font-medium hover:underline"
@@ -149,7 +149,7 @@ export default function ForgotPassword() {
                 Mot de passe oublié
               </motion.h2>
               <motion.p variants={itemVariants} className="text-muted-foreground text-sm mb-7">
-                Entrez votre adresse email et nous vous enverrons un lien de réinitialisation.
+                Entrez votre adresse email. Votre administrateur recevra la demande et vous attribuera un mot de passe temporaire.
               </motion.p>
 
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -192,7 +192,7 @@ export default function ForgotPassword() {
                       <span>Envoi en cours…</span>
                     </>
                   ) : (
-                    "Envoyer le lien"
+                    "Envoyer la demande"
                   )}
                 </motion.button>
               </form>

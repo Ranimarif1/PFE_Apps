@@ -15,7 +15,7 @@ from django.core.mail import send_mail
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from core.auth import create_access_token, create_refresh_token, decode_token, get_current_user, hash_password, verify_password
+from core.auth import create_access_token, create_refresh_token, decode_token, get_current_user, hash_password, verify_password, jwt_required
 from core.mongo import get_collection, serialize_document
 
 from .validators import validate_email_format, validate_password_strength
@@ -346,6 +346,7 @@ def login_view(request: HttpRequest) -> JsonResponse:
                 "photo": user.get("photo", ""),
                 "senior": user.get("senior", user["role"] == "admin"),
                 "seniorCode": user.get("seniorCode", ""),
+                "mustChangePassword": user.get("mustChangePassword", False),
             },
         }
     )
@@ -926,6 +927,144 @@ def reset_password(request: HttpRequest) -> JsonResponse:
     tokens_col.update_one({"token": token}, {"$set": {"used": True}})
 
     return JsonResponse({"detail": "Mot de passe réinitialisé avec succès."})
+
+
+# ── Password reset request (new flow — no email token) ───────────────────────
+
+@csrf_exempt
+def request_password_reset(request: HttpRequest) -> JsonResponse:
+    """Doctor/Admin submits a reset request — superior will set a temp password."""
+    if request.method != "POST":
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+
+    data = _parse_body(request)
+    email = (data.get("email") or "").strip().lower()
+    if not email:
+        return JsonResponse({"detail": "Email requis."}, status=400)
+
+    users_col = get_collection("users")
+    user = users_col.find_one({"email": email})
+    if not user:
+        return JsonResponse({"detail": "Aucun compte associé à cet email."}, status=404)
+
+    col = get_collection("password_reset_requests")
+    existing = col.find_one({"userId": str(user["_id"]), "status": "pending"})
+    if existing:
+        return JsonResponse(
+            {"detail": "Votre demande est déjà en cours de traitement. Veuillez patienter que votre administrateur la prenne en charge."},
+            status=409
+        )
+
+    col.insert_one({
+        "userId":   str(user["_id"]),
+        "email":    email,
+        "role":     user.get("role", "doctor"),
+        "nom":      user.get("nom", ""),
+        "prenom":   user.get("prenom", ""),
+        "status":   "pending",
+        "createdAt": dt.datetime.utcnow().isoformat(),
+    })
+    return JsonResponse({"detail": "Demande enregistrée."})
+
+
+@csrf_exempt
+@jwt_required(roles={"admin", "adminIT"})
+def list_password_reset_requests(request: HttpRequest) -> JsonResponse:
+    """Admin sees doctor requests. AdminIT sees admin requests."""
+    if request.method != "GET":
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+
+    caller = get_current_user(request)
+    if not caller:
+        return JsonResponse({"detail": "Non autorisé."}, status=401)
+
+    target_role = "doctor" if caller.role == "admin" else "admin"
+    col = get_collection("password_reset_requests")
+    docs = list(col.find({"status": "pending", "role": target_role}).sort("createdAt", 1))
+    return JsonResponse({"results": [serialize_document(d) for d in docs]})
+
+
+@csrf_exempt
+@jwt_required(roles={"admin", "adminIT"})
+def set_temp_password(request: HttpRequest, user_id: str) -> JsonResponse:
+    """Admin/AdminIT sets a temporary password for a user and flags mustChangePassword."""
+    if request.method != "POST":
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+
+    caller = get_current_user(request)
+    if not caller:
+        return JsonResponse({"detail": "Non autorisé."}, status=401)
+
+    data = _parse_body(request)
+    temp_password = data.get("password") or ""
+    if len(temp_password) < 6:
+        return JsonResponse({"detail": "Le mot de passe doit contenir au moins 6 caractères."}, status=400)
+
+    from bson import ObjectId
+    users_col = get_collection("users")
+    try:
+        target = users_col.find_one({"_id": ObjectId(user_id)})
+    except Exception:
+        return JsonResponse({"detail": "Utilisateur introuvable."}, status=404)
+
+    if not target:
+        return JsonResponse({"detail": "Utilisateur introuvable."}, status=404)
+
+    # Admin can only reset doctor passwords; AdminIT can only reset admin passwords
+    allowed_target = "doctor" if caller.role == "admin" else "admin"
+    if target.get("role") != allowed_target:
+        return JsonResponse({"detail": "Action non autorisée."}, status=403)
+
+    users_col.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"password": hash_password(temp_password), "mustChangePassword": True}}
+    )
+
+    # Mark request as resolved
+    col = get_collection("password_reset_requests")
+    col.update_many(
+        {"userId": user_id, "status": "pending"},
+        {"$set": {"status": "resolved", "resolvedAt": dt.datetime.utcnow().isoformat(),
+                  "resolvedBy": caller.id}}
+    )
+
+    # Notify the user
+    notifs_col = get_collection("notifications")
+    notifs_col.insert_one({
+        "userId":    user_id,
+        "type":      "temp_password_set",
+        "message":   "Un mot de passe temporaire vous a été attribué. Connectez-vous et changez-le.",
+        "link":      "/profil",
+        "read":      False,
+        "createdAt": dt.datetime.utcnow().isoformat(),
+    })
+
+    return JsonResponse({"detail": "Mot de passe temporaire défini avec succès."})
+
+
+@csrf_exempt
+@jwt_required(roles={"doctor", "admin", "adminIT"})
+def change_password(request: HttpRequest) -> JsonResponse:
+    """Authenticated user changes their own password (clears mustChangePassword flag)."""
+    if request.method != "POST":
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+
+    caller = get_current_user(request)
+    if not caller:
+        return JsonResponse({"detail": "Non autorisé."}, status=401)
+
+    data = _parse_body(request)
+    new_password = data.get("password") or ""
+    if len(new_password) < 8:
+        return JsonResponse({"detail": "Le mot de passe doit contenir au moins 8 caractères."}, status=400)
+
+    from bson import ObjectId
+    users_col = get_collection("users")
+    users_col.update_one(
+        {"_id": ObjectId(caller.id)},
+        {"$set": {"password": hash_password(new_password), "mustChangePassword": False}}
+    )
+    return JsonResponse({"detail": "Mot de passe modifié avec succès."})
 
 
 @csrf_exempt

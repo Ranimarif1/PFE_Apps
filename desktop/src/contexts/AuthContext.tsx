@@ -17,6 +17,7 @@ export interface User {
   photo: string;
   senior: boolean;
   seniorCode: string;
+  mustChangePassword: boolean;
 }
 
 interface AuthContextType {

@@ -40,6 +40,7 @@ function mapUser(raw: BackendUser): User {
     photo: resolvePhotoUrl(raw.photo || ""),
     senior: raw.senior ?? raw.role === "admin",
     seniorCode: raw.seniorCode || "",
+    mustChangePassword: raw.mustChangePassword ?? false,
   };
 }
 
@@ -54,6 +55,18 @@ interface BackendUser {
   photo: string;
   senior?: boolean;
   seniorCode?: string;
+  mustChangePassword?: boolean;
+}
+
+export interface PasswordResetRequest {
+  _id: string;
+  userId: string;
+  email: string;
+  role: string;
+  nom: string;
+  prenom: string;
+  status: string;
+  createdAt: string;
 }
 
 interface LoginResponse {
@@ -123,6 +136,23 @@ export async function getMeApi(): Promise<User> {
 
 export async function forgotPasswordApi(email: string): Promise<void> {
   await api.post("/api/auth/forgot-password", { email });
+}
+
+export async function requestPasswordResetApi(email: string): Promise<void> {
+  await api.post("/api/auth/request-password-reset", { email });
+}
+
+export async function getPasswordResetRequestsApi(): Promise<PasswordResetRequest[]> {
+  const data = await api.get<{ results: PasswordResetRequest[] }>("/api/auth/password-reset-requests");
+  return data.results;
+}
+
+export async function setTempPasswordApi(userId: string, password: string): Promise<void> {
+  await api.post(`/api/auth/set-temp-password/${userId}`, { password });
+}
+
+export async function changePasswordApi(password: string): Promise<void> {
+  await api.post("/api/auth/change-password", { password });
 }
 
 export async function resetPasswordApi(token: string, password: string): Promise<void> {

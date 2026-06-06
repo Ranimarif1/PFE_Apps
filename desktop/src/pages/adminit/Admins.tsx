@@ -2,7 +2,9 @@ import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getUsers, updateUserStatus, deleteUser, changeUserRole, type BackendUserRecord } from "@/services/usersService";
-import { Check, X, Trash2, AlertTriangle, UserRoundCheck } from "lucide-react";
+import { getPasswordResetRequestsApi, setTempPasswordApi, type PasswordResetRequest } from "@/services/authService";
+import { toast } from "sonner";
+import { Check, X, Trash2, AlertTriangle, UserRoundCheck, KeyRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getStatusBadgeClass, getStatusLabel, getActiveFilterTabClass, INACTIVE_TAB_CLASS } from "@/styles/statusSystem";
 
@@ -16,10 +18,30 @@ export default function AdminITAdmins() {
   const [activeTab, setActiveTab] = useState("tous");
   const [confirmDelete, setConfirmDelete] = useState<BackendUserRecord | null>(null);
   const [confirmDemote, setConfirmDemote] = useState<BackendUserRecord | null>(null);
+  const [tempPwdTarget, setTempPwdTarget] = useState<PasswordResetRequest | null>(null);
+  const [tempPwdValue,  setTempPwdValue]  = useState("");
 
   const { data: users = [] } = useQuery<BackendUserRecord[]>({
     queryKey: ["users"],
     queryFn: getUsers,
+  });
+
+  const { data: resetRequests = [] } = useQuery<PasswordResetRequest[]>({
+    queryKey: ["password-reset-requests"],
+    queryFn: getPasswordResetRequestsApi,
+    refetchInterval: 30000,
+  });
+
+  const setTempPwdMutation = useMutation({
+    mutationFn: ({ userId, password }: { userId: string; password: string }) =>
+      setTempPasswordApi(userId, password),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["password-reset-requests"] });
+      setTempPwdTarget(null);
+      setTempPwdValue("");
+      toast.success("Mot de passe temporaire défini.");
+    },
+    onError: (err: Error) => toast.error(err.message || "Erreur."),
   });
 
   const mutation = useMutation({
@@ -50,6 +72,34 @@ export default function AdminITAdmins() {
 
   return (
     <AppLayout title="Comptes Administrateurs">
+      {/* ── Reset password requests ── */}
+      {resetRequests.length > 0 && (
+        <div className="mb-5 bg-amber-500/8 border border-amber-500/25 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <KeyRound size={14} className="text-amber-600" />
+            <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+              Demandes de réinitialisation de mot de passe ({resetRequests.length})
+            </span>
+          </div>
+          <div className="space-y-2">
+            {resetRequests.map(req => (
+              <div key={req._id} className="flex items-center justify-between bg-card border border-border rounded-lg px-3 py-2">
+                <div>
+                  <p className="text-xs font-medium text-foreground">{req.prenom} {req.nom}</p>
+                  <p className="text-[11px] text-muted-foreground">{req.email}</p>
+                </div>
+                <button
+                  onClick={() => { setTempPwdTarget(req); setTempPwdValue(""); }}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-amber-500 text-white font-medium hover:bg-amber-600 transition-colors"
+                >
+                  Définir mot de passe
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
         <div className="px-6 pt-4 border-b border-border flex gap-6 flex-wrap">
           {[
@@ -198,6 +248,48 @@ export default function AdminITAdmins() {
                 disabled={deleteMutation.isPending}
                 className="flex-1 py-2.5 rounded-xl bg-destructive text-white font-semibold hover:bg-destructive/90 disabled:opacity-60 transition-all text-sm">
                 {deleteMutation.isPending ? "Suppression..." : "Supprimer définitivement"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ Set temp password modal ═══════════════════════════════ */}
+      {tempPwdTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-card rounded-2xl border border-border shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
+                <KeyRound className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Mot de passe temporaire</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">L'utilisateur devra le changer à la prochaine connexion</p>
+              </div>
+            </div>
+            <p className="text-sm font-semibold text-foreground mb-0.5">{tempPwdTarget.prenom} {tempPwdTarget.nom}</p>
+            <p className="text-xs text-muted-foreground mb-4">{tempPwdTarget.email}</p>
+            <div className="mb-5">
+              <label className="text-xs font-medium text-foreground mb-1.5 block">Nouveau mot de passe temporaire</label>
+              <input
+                type="text"
+                value={tempPwdValue}
+                onChange={e => setTempPwdValue(e.target.value)}
+                placeholder="Min. 6 caractères"
+                autoFocus
+                className="w-full px-3 py-2.5 text-sm rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => { setTempPwdTarget(null); setTempPwdValue(""); }}
+                className="flex-1 py-2.5 rounded-xl border border-border text-foreground hover:bg-muted transition-all text-sm font-medium">
+                Annuler
+              </button>
+              <button
+                onClick={() => setTempPwdMutation.mutate({ userId: tempPwdTarget.userId, password: tempPwdValue })}
+                disabled={!tempPwdValue.trim() || tempPwdValue.length < 6 || setTempPwdMutation.isPending}
+                className="flex-1 py-2.5 rounded-xl bg-amber-500 text-white font-semibold hover:bg-amber-600 disabled:opacity-50 transition-all text-sm">
+                {setTempPwdMutation.isPending ? "Enregistrement..." : "Définir le mot de passe"}
               </button>
             </div>
           </div>

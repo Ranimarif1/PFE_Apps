@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Mail, ArrowLeft, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
-import { forgotPasswordApi } from "@/services/authService";
+import { requestPasswordResetApi } from "@/services/authService";
 
 interface ForgotPasswordFormProps {
   onSwitchToLogin?: () => void;
@@ -17,7 +17,7 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
     setLoading(true);
     setError("");
     try {
-      await forgotPasswordApi(email);
+      await requestPasswordResetApi(email);
       setSent(true);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Une erreur est survenue.");
@@ -32,12 +32,12 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
         <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-5">
           <CheckCircle className="w-8 h-8 text-success" />
         </div>
-        <h2 className="text-2xl font-bold text-foreground mb-2">Email envoyé</h2>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Demande envoyée</h2>
         <p className="text-muted-foreground text-sm leading-relaxed mb-2">
-          Si l'adresse <strong className="text-foreground">{email}</strong> est associée à un compte,
-          vous recevrez un lien de réinitialisation valable <strong className="text-foreground">1 heure</strong>.
+          Votre demande a été transmise à votre administrateur.
+          Il vous attribuera un <strong className="text-foreground">mot de passe temporaire</strong> et vous serez invité à le changer à la prochaine connexion.
         </p>
-        <p className="text-xs text-muted-foreground mb-8">Pensez à vérifier vos spams.</p>
+        <p className="text-xs text-muted-foreground mb-8">Si vous n'avez pas de réponse, contactez votre administrateur directement.</p>
         {onSwitchToLogin && (
           <button
             type="button"
@@ -55,7 +55,7 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
     <div>
       <h2 className="text-2xl font-bold text-foreground mb-1">Mot de passe oublié</h2>
       <p className="text-muted-foreground text-sm mb-7">
-        Entrez votre adresse email et nous vous enverrons un lien de réinitialisation.
+        Entrez votre adresse email. Votre administrateur recevra la demande et vous attribuera un mot de passe temporaire.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -92,7 +92,7 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
               <span>Envoi en cours…</span>
             </>
           ) : (
-            "Envoyer le lien"
+            "Envoyer la demande"
           )}
         </button>
       </form>

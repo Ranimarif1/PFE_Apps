@@ -24,5 +24,9 @@ urlpatterns = [
     path("profile", views.update_profile, name="update_profile"),
     path("forgot-password", views.forgot_password, name="forgot_password"),
     path("reset-password", views.reset_password, name="reset_password"),
+    path("request-password-reset", views.request_password_reset, name="request_password_reset"),
+    path("password-reset-requests", views.list_password_reset_requests, name="list_password_reset_requests"),
+    path("set-temp-password/<str:user_id>", views.set_temp_password, name="set_temp_password"),
+    path("change-password", views.change_password, name="change_password"),
 ]
 

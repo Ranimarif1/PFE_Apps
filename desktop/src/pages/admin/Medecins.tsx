@@ -1,11 +1,12 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getUsers, updateUserStatus, deleteUser, changeUserRole, updateSeniorCode, revokeSenior, grantSenior, type BackendUserRecord } from "@/services/usersService";
+import { getUsers, updateUserStatus, deleteUser, changeUserRole, revokeSenior, grantSenior, type BackendUserRecord } from "@/services/usersService";
+import { getPasswordResetRequestsApi, setTempPasswordApi, type PasswordResetRequest } from "@/services/authService";
 import { toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
 import {
-  Search, Check, X, Trash2, AlertTriangle, UserRoundCheck, Star, Pencil, StarOff, ShieldCheck,
+  Search, Check, X, Trash2, AlertTriangle, UserRoundCheck, Star, StarOff, ShieldCheck, KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getStatusBadgeClass, getStatusLabel } from "@/styles/statusSystem";
@@ -25,12 +26,28 @@ export default function AdminMedecins() {
   const [confirmRevokeSenior, setConfirmRevokeSenior] = useState<BackendUserRecord | null>(null);
   const [grantSeniorTarget,   setGrantSeniorTarget]   = useState<BackendUserRecord | null>(null);
   const [grantSeniorCode,     setGrantSeniorCode]     = useState("");
-  const [promoteCode,         setPromoteCode]         = useState("");
-  const [editingCodeId,  setEditingCodeId]  = useState<string | null>(null);
-  const [editingCodeVal, setEditingCodeVal] = useState("");
-  const codeInputRef = useRef<HTMLInputElement>(null);
+  const [promoteCode,     setPromoteCode]     = useState("");
+  const [tempPwdTarget,  setTempPwdTarget]  = useState<PasswordResetRequest | null>(null);
+  const [tempPwdValue,   setTempPwdValue]   = useState("");
 
   const { data: users = [] } = useQuery<BackendUserRecord[]>({ queryKey: ["users"], queryFn: getUsers });
+  const { data: resetRequests = [] } = useQuery<PasswordResetRequest[]>({
+    queryKey: ["password-reset-requests"],
+    queryFn: getPasswordResetRequestsApi,
+    refetchInterval: 30000,
+  });
+
+  const setTempPwdMutation = useMutation({
+    mutationFn: ({ userId, password }: { userId: string; password: string }) =>
+      setTempPasswordApi(userId, password),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["password-reset-requests"] });
+      setTempPwdTarget(null);
+      setTempPwdValue("");
+      toast.success("Mot de passe temporaire défini.");
+    },
+    onError: (err: Error) => toast.error(err.message || "Erreur."),
+  });
 
   const doctors   = users.filter(u => u.role === "doctor");
   const pending   = doctors.filter(u => u.status === "pending").length;
@@ -109,35 +126,6 @@ export default function AdminMedecins() {
     },
   });
 
-  const seniorCodeMutation = useMutation({
-    mutationFn: ({ id, code }: { id: string; code: string }) => updateSeniorCode(id, code),
-    onSuccess: (updated) => {
-      queryClient.setQueryData<BackendUserRecord[]>(["users"], (old) =>
-        old?.map(u => u._id === updated._id ? { ...u, seniorCode: updated.seniorCode } : u) ?? old
-      );
-      setEditingCodeId(null);
-      toast.success("Code senior mis à jour.");
-    },
-    onError: (err: Error) => {
-      toast.error(err.message || "Erreur lors de la mise à jour.");
-    },
-  });
-
-  useEffect(() => {
-    if (editingCodeId) codeInputRef.current?.focus();
-  }, [editingCodeId]);
-
-  function startEditCode(doc: BackendUserRecord) {
-    setEditingCodeId(doc._id);
-    setEditingCodeVal(doc.seniorCode || "");
-  }
-
-  function saveCode(id: string) {
-    const trimmed = editingCodeVal.trim();
-    if (!trimmed) return;
-    seniorCodeMutation.mutate({ id, code: trimmed });
-  }
-
   const tabDoctors = userFilter === "all" ? doctors : doctors.filter(u => u.status === userFilter);
   const filteredDoctors = tabDoctors.filter(u => {
     const q = search.toLowerCase();
@@ -147,6 +135,35 @@ export default function AdminMedecins() {
   return (
     <AppLayout title="Gestion des médecins">
       <div className="flex flex-col min-h-full max-w-full overflow-hidden">
+
+        {/* ── Reset password requests ── */}
+        {resetRequests.length > 0 && (
+          <div className="mb-5 bg-amber-500/8 border border-amber-500/25 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <KeyRound size={14} className="text-amber-600" />
+              <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                Demandes de réinitialisation de mot de passe ({resetRequests.length})
+              </span>
+            </div>
+            <div className="space-y-2">
+              {resetRequests.map(req => (
+                <div key={req._id} className="flex items-center justify-between bg-card border border-border rounded-lg px-3 py-2">
+                  <div>
+                    <p className="text-xs font-medium text-foreground">Dr. {req.prenom} {req.nom}</p>
+                    <p className="text-[11px] text-muted-foreground">{req.email}</p>
+                  </div>
+                  <button
+                    onClick={() => { setTempPwdTarget(req); setTempPwdValue(""); }}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-amber-500 text-white font-medium hover:bg-amber-600 transition-colors"
+                  >
+                    Définir mot de passe
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Segment control */}
         <div className="mb-4 inline-flex max-w-full gap-1 bg-muted border border-border rounded-lg p-1 overflow-x-auto">
           {([
@@ -206,40 +223,16 @@ export default function AdminMedecins() {
                     <td className="px-4 py-3 text-xs text-muted-foreground truncate">{doc.email}</td>
                     <td className="px-4 py-3">
                       {doc.senior ? (
-                        editingCodeId === doc._id ? (
-                          <div className="inline-flex items-center gap-1.5">
-                            <Star size={10} className="fill-amber-400 text-amber-400 shrink-0" />
-                            <input
-                              ref={codeInputRef}
-                              value={editingCodeVal}
-                              onChange={e => setEditingCodeVal(e.target.value.replace(/\D/g, ""))}
-                              onKeyDown={e => {
-                                if (e.key === "Enter") saveCode(doc._id);
-                                if (e.key === "Escape") setEditingCodeId(null);
-                              }}
-                              onBlur={() => saveCode(doc._id)}
-                              className="w-24 text-[11px] font-mono font-bold text-amber-900 bg-amber-50 border border-amber-300 rounded-md px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-amber-400"
-                            />
-                          </div>
-                        ) : (
-                          <div className="group/senior inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 shadow-sm w-fit">
-                            <Star size={10} className="fill-amber-400 text-amber-400 shrink-0" />
-                            <span className="text-[11px] font-semibold text-amber-700">Senior</span>
-                            {doc.seniorCode && (
-                              <>
-                                <span className="text-amber-300 text-[11px]">·</span>
-                                <span className="text-[11px] font-mono font-bold text-amber-900">{doc.seniorCode}</span>
-                              </>
-                            )}
-                            <button
-                              onClick={() => startEditCode(doc)}
-                              title="Modifier le code"
-                              className="ml-0.5 opacity-0 group-hover/senior:opacity-100 transition-opacity text-amber-500 hover:text-amber-700"
-                            >
-                              <Pencil size={9} />
-                            </button>
-                          </div>
-                        )
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 shadow-sm w-fit">
+                          <Star size={10} className="fill-amber-400 text-amber-400 shrink-0" />
+                          <span className="text-[11px] font-semibold text-amber-700">Senior</span>
+                          {doc.seniorCode && (
+                            <>
+                              <span className="text-amber-300 text-[11px]">·</span>
+                              <span className="text-[11px] font-mono font-bold text-amber-900">{doc.seniorCode}</span>
+                            </>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-[11px] text-muted-foreground/40">—</span>
                       )}
@@ -516,6 +509,48 @@ export default function AdminMedecins() {
                 disabled={statusMutation.isPending}
                 className="flex-1 py-2.5 rounded-xl bg-destructive text-white font-semibold hover:bg-destructive/90 disabled:opacity-60 transition-all text-sm">
                 {statusMutation.isPending ? "Envoi..." : "Refuser et notifier"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ Set temp password modal ═══════════════════════════════ */}
+      {tempPwdTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-card rounded-2xl border border-border shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
+                <KeyRound className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Mot de passe temporaire</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">L'utilisateur devra le changer à la prochaine connexion</p>
+              </div>
+            </div>
+            <p className="text-sm font-semibold text-foreground mb-0.5">Dr. {tempPwdTarget.prenom} {tempPwdTarget.nom}</p>
+            <p className="text-xs text-muted-foreground mb-4">{tempPwdTarget.email}</p>
+            <div className="mb-5">
+              <label className="text-xs font-medium text-foreground mb-1.5 block">Nouveau mot de passe temporaire</label>
+              <input
+                type="text"
+                value={tempPwdValue}
+                onChange={e => setTempPwdValue(e.target.value)}
+                placeholder="Min. 6 caractères"
+                autoFocus
+                className="w-full px-3 py-2.5 text-sm rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => { setTempPwdTarget(null); setTempPwdValue(""); }}
+                className="flex-1 py-2.5 rounded-xl border border-border text-foreground hover:bg-muted transition-all text-sm font-medium">
+                Annuler
+              </button>
+              <button
+                onClick={() => setTempPwdMutation.mutate({ userId: tempPwdTarget.userId, password: tempPwdValue })}
+                disabled={!tempPwdValue.trim() || tempPwdValue.length < 6 || setTempPwdMutation.isPending}
+                className="flex-1 py-2.5 rounded-xl bg-amber-500 text-white font-semibold hover:bg-amber-600 disabled:opacity-50 transition-all text-sm">
+                {setTempPwdMutation.isPending ? "Enregistrement..." : "Définir le mot de passe"}
               </button>
             </div>
           </div>
