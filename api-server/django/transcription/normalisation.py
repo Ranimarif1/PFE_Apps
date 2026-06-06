@@ -352,6 +352,11 @@ def strip_section_headers(text: str) -> str:
 # - Whisper mishears "deux points à la ligne" as "de pananalyses" / "de panalyse"
 #   etc.  Those phrases are never legitimate medical text → strip them.
 
+# Combinaisons "ponctuation + à la ligne" — traitées AVANT le pattern générique
+# pour éviter que "à la ligne" soit consommé seul et que le signe soit perdu.
+_POINT_NL_RE   = re.compile(r'\s*\bpoints?\s+[àa1]\s+la\s+ligne\b', re.IGNORECASE)
+_VIRGULE_NL_RE = re.compile(r'\s*\bvirgule\s+[àa1]\s+la\s+ligne\b', re.IGNORECASE)
+
 _NEW_LINE_RE = re.compile(
     # "à la ligne" — accepte aussi "a" sans accent et "1" (Whisper mishear fréquent de "à").
     # Le \s* en tête consomme l'espace qui sépare la commande du mot précédent
@@ -380,9 +385,9 @@ _WHISPER_MISHEAR_RE = re.compile(
     flags=re.IGNORECASE,
 )
 
-# "Ladigne" / "la digne" / "ladigne" — Whisper mishear fréquent de "à la ligne"
+# Whisper misheards de "à la ligne" — noms propres ou mots phonétiquement proches
 _LADIGNE_RE = re.compile(
-    r'\s*\b(?:la\s*digne|ladigne|la\s*ligne(?!\s+(?:de|du|des|en|est|les|la|le)))\b\s*',
+    r'\s*\b(?:la\s*digne|ladigne|adeline|adeligne|adelyn|adelina|la\s*ligne(?!\s+(?:de|du|des|en|est|les|la|le)))\b\s*',
     flags=re.IGNORECASE,
 )
 
@@ -475,6 +480,9 @@ def normalize_spoken_punct(text: str) -> str:
     """Convertit les commandes de ponctuation dictées en sauts de ligne réels
     et supprime les variantes mal entendues par Whisper."""
     text = apply_delete_commands(text)
+    # Combinaisons AVANT le pattern générique pour ne pas perdre la ponctuation
+    text = _POINT_NL_RE.sub('.\n', text)
+    text = _VIRGULE_NL_RE.sub(',\n', text)
     text = _NEW_LINE_RE.sub(_replace_newline, text)
     text = _DOT_SPACE_NL_RE.sub('.\n', text)   # ". \n" → ".\n"
     # "deux points" restant (qui n'était pas suivi de "à la ligne") → ":"
@@ -497,6 +505,9 @@ def normalize_spoken_punct(text: str) -> str:
 # Words that Whisper systematically mis-transcribes without accents.
 # Each entry is (bare_form, correct_form) — whole-word substitution only.
 _ASR_ACCENT_FIXES: list[tuple[str, str]] = [
+    # Whisper phonetic misheards — common in radiology
+    ("à son particularité",         "sans particularité"),
+    ("à son anomalie",              "sans anomalie"),
     # Common French words with accents stripped by ASR
     ("fievre",                      "fièvre"),
     ("fevrier",                     "février"),

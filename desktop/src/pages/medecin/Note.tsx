@@ -303,6 +303,7 @@ export default function Note() {
                 ? "border-red-300 ring-2 ring-red-200/60"
                 : "border-border focus:ring-2 focus:ring-primary/20 focus:border-primary/40"
             )}
+            style={{ whiteSpace: "pre-wrap" }}
           />
 
           {/* Transcribing overlay */}
