@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, createElement } from "react";
+import { createRoot, type Root } from "react-dom/client";
 import { AppLayout } from "@/components/AppLayout";
 import { transcribeAudio } from "@/services/transcriptionService";
 import { saveVoiceNote, type NoteCategory, type NoteSection } from "@/services/audioService";
@@ -6,6 +7,9 @@ import { REPORT_CATEGORIES } from "@/constants/reportCategories";
 import { toast } from "sonner";
 import { Mic, Square, Pause, Play, Copy, Trash2, Loader2, ClipboardCheck, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SonicMicButton } from "@/components/SonicMicButton";
+import { loadMicConstraints } from "@/hooks/useMicConfig";
+import { PiPFloatingUI } from "@/components/PiPFloatingUI";
 
 type State = "idle" | "recording" | "paused" | "transcribing" | "saving";
 
@@ -15,6 +19,68 @@ const SECTIONS: { value: NoteSection; label: string }[] = [
   { value: "technique",  label: "Technique" },
   { value: "conclusion", label: "Conclusion" },
 ];
+
+const NOTE_PIP_CHANNEL = "reportease-note-pip-sync";
+
+function injectPiPStyles(doc: Document) {
+  const el = doc.createElement("style");
+  el.textContent = `
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { overflow: hidden; }
+    @keyframes pip-pulse {
+      0%, 100% { opacity: 1;    transform: scale(1);   }
+      50%       { opacity: 0.35; transform: scale(0.8); }
+    }
+  `;
+  doc.head.appendChild(el);
+}
+
+function buildFallbackHTML(channel: string): string {
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Bloc-notes – Enregistrement</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#0f172a;color:#f8fafc;
+  height:100vh;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:10px;user-select:none;overflow:hidden;padding:14px}
+#dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:background .3s}
+#lbl{font-size:11px;font-weight:600;letter-spacing:.02em}
+#tmr{font-family:ui-monospace,monospace;font-size:28px;font-weight:700;letter-spacing:.06em;color:#f1f5f9}
+#ctrl{display:flex;gap:8px;margin-top:2px}
+button{font-size:11px;font-weight:600;padding:5px 14px;border-radius:8px;border:none;cursor:pointer}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+</style></head>
+<body>
+<div style="display:flex;align-items:center;gap:8px"><span id="dot"></span><span id="lbl">Prêt à enregistrer</span></div>
+<div id="tmr">00:00</div>
+<div id="ctrl">
+  <button id="bp" onclick="ch.postMessage('pause')" style="display:none"></button>
+  <button id="bs" onclick="ch.postMessage('stop')" style="display:none;background:rgba(239,68,68,.15);color:#f87171">⏹ Arrêter</button>
+</div>
+<script>
+var ch=new BroadcastChannel("${channel}");
+var dot=document.getElementById("dot"),lbl=document.getElementById("lbl");
+var tmr=document.getElementById("tmr"),bp=document.getElementById("bp"),bs=document.getElementById("bs");
+dot.style.background="#64748b";
+ch.onmessage=function(e){
+  var d=e.data;if(typeof d!=="object")return;
+  if(!d.isRecording&&!d.isPaused){
+    dot.style.background="#64748b";dot.style.animation="none";
+    lbl.style.color="#94a3b8";lbl.textContent="Prêt à enregistrer";
+    bp.style.display="none";bs.style.display="none";return;
+  }
+  var c=d.isPaused?"#fbbf24":"#f87171";
+  dot.style.background=c;dot.style.animation=d.isPaused?"none":"pulse 1.2s ease-in-out infinite";
+  lbl.style.color=c;lbl.textContent=d.isPaused?"En pause":"Enregistrement en cours…";
+  var m=String(Math.floor(d.seconds/60)).padStart(2,"0"),s=String(d.seconds%60).padStart(2,"0");
+  tmr.textContent=m+":"+s;
+  bp.style.display="";bs.style.display="";
+  if(d.isPaused){bp.style.background="rgba(5,150,105,.25)";bp.style.color="#34d399";bp.textContent="▶ Reprendre";}
+  else{bp.style.background="rgba(245,158,11,.15)";bp.style.color="#fbbf24";bp.textContent="⏸ Pause";}
+};
+window.addEventListener("beforeunload",function(){ch.postMessage("closed");});
+</script></body></html>`;
+}
 
 export default function Note() {
   const [state,    setState]    = useState<State>("idle");
@@ -28,9 +94,25 @@ export default function Note() {
   const mediaRef     = useRef<MediaRecorder | null>(null);
   const chunksRef    = useRef<Blob[]>([]);
   const timerRef     = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Last completed recording — kept so it can be saved to the training dataset.
   const lastBlobRef  = useRef<Blob | null>(null);
   const lastDurRef   = useRef<number>(0);
+
+  // ── PiP refs ───────────────────────────────────────────────────────────────
+  const pipWinRef       = useRef<Window | null>(null);
+  const pipRootRef      = useRef<Root | null>(null);
+  const pipChannelRef   = useRef<BroadcastChannel | null>(null);
+  const everRecordedRef = useRef(false);
+
+  // Stable action refs — called from PiP window, always get the latest version
+  const stopActionRef  = useRef<() => void>(() => {});
+  const pauseActionRef = useRef<() => void>(() => {});
+
+  // Update action refs on every render so PiP always has fresh callbacks
+  stopActionRef.current = stopRecording;
+  pauseActionRef.current = () => {
+    if (state === "recording") pauseRecording();
+    else if (state === "paused") resumeRecording();
+  };
 
   const startTimer = () => {
     timerRef.current = setInterval(() => setDuration(d => d + 1), 1000);
@@ -39,9 +121,100 @@ export default function Note() {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
   };
 
+  function closePiPNote() {
+    try { pipRootRef.current?.unmount(); } catch { /* ignore */ }
+    pipRootRef.current = null;
+    try { pipWinRef.current?.close(); } catch { /* cross-origin */ }
+    pipWinRef.current = null;
+    pipChannelRef.current?.close();
+    pipChannelRef.current = null;
+    everRecordedRef.current = false;
+  }
+
+  async function openPiP() {
+    if (pipWinRef.current) return;
+
+    // Try Document Picture-in-Picture (Chrome 116+)
+    if (window.documentPictureInPicture) {
+      try {
+        const pip = await window.documentPictureInPicture.requestWindow({ width: 300, height: 140 });
+        pipWinRef.current = pip;
+        injectPiPStyles(pip.document);
+
+        const container = pip.document.createElement("div");
+        pip.document.body.appendChild(container);
+        pipRootRef.current = createRoot(container);
+        pipRootRef.current.render(
+          createElement(PiPFloatingUI, {
+            isRecording: false, isPaused: false, seconds: 0,
+            onStop:  () => stopActionRef.current(),
+            onPause: () => pauseActionRef.current(),
+          })
+        );
+
+        pip.addEventListener("pagehide", () => {
+          try { pipRootRef.current?.unmount(); } catch { /* */ }
+          pipRootRef.current = null;
+          pipWinRef.current  = null;
+          everRecordedRef.current = false;
+        });
+        return;
+      } catch { /* fall through to popup */ }
+    }
+
+    // Fallback popup
+    const popup = window.open(
+      "", "reportease-note-pip",
+      "width=300,height=140,top=20,right=20,toolbar=no,menubar=no,location=no,status=no,scrollbars=no,resizable=no",
+    );
+    if (!popup) return;
+    pipWinRef.current = popup;
+    popup.document.write(buildFallbackHTML(NOTE_PIP_CHANNEL));
+    popup.document.close();
+
+    pipChannelRef.current = new BroadcastChannel(NOTE_PIP_CHANNEL);
+    pipChannelRef.current.onmessage = ({ data }) => {
+      if      (data === "stop")   stopActionRef.current();
+      else if (data === "pause")  pauseActionRef.current();
+      else if (data === "closed") { pipWinRef.current = null; everRecordedRef.current = false; }
+    };
+  }
+
+  // Sync recording state → PiP window
+  useEffect(() => {
+    if (!pipWinRef.current) return;
+    if (state === "recording") everRecordedRef.current = true;
+    const isRec  = state === "recording";
+    const paused = state === "paused";
+    if (pipRootRef.current) {
+      pipRootRef.current.render(
+        createElement(PiPFloatingUI, {
+          isRecording: isRec, isPaused: paused, seconds: duration,
+          onStop:  () => stopActionRef.current(),
+          onPause: () => pauseActionRef.current(),
+        })
+      );
+    } else if (pipChannelRef.current) {
+      pipChannelRef.current.postMessage({ isRecording: isRec, isPaused: paused, seconds: duration });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, duration]);
+
+  // Auto-close PiP once recording finishes
+  useEffect(() => {
+    if (everRecordedRef.current && state === "idle" && pipWinRef.current) {
+      closePiPNote();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
+
+  // Cleanup on unmount
+  useEffect(() => () => { closePiPNote(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function startRecording() {
+    await openPiP(); // must be first — requestWindow() needs the user-gesture context
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: loadMicConstraints() });
       const recorder = new MediaRecorder(stream);
       chunksRef.current = [];
       recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
@@ -105,7 +278,6 @@ export default function Note() {
     try {
       await saveVoiceNote(lastBlobRef.current, text.trim(), category, section, lastDurRef.current);
       toast.success("Enregistré dans la base d'entraînement.");
-      // Reset for the next note.
       setText("");
       setDuration(0);
       setCategory("");
@@ -286,6 +458,16 @@ export default function Note() {
             </div>
           )}
         </div>
+
+        {/* USB HID mic */}
+        <SonicMicButton
+          onRecord={startRecording}
+          onStop={stopRecording}
+          onPause={() => {
+            if (state === "recording") pauseRecording();
+            else if (state === "paused") resumeRecording();
+          }}
+        />
 
         {/* Text area */}
         <div className="flex-1 relative">
