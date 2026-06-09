@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import re
 import sys
+import textwrap
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 1. COMMANDES VERBALES
@@ -28,17 +29,21 @@ VERBAL_COMMANDS = [
     (r"\bsaut de ligne\b",                              "\n"),
     (r"\bretour à la ligne\b",                          "\n"),
 
-    # ── Ponctuation de fin — AVANT "point" seul pour éviter collision ─────────
-    (r"\bpoints? d[' ]interrogation\b",                 "?"),
-    (r"\bpoints? d[' ]exclamation\b",                   "!"),
-    (r"\bpoints? virgule\b",                            ";"),
-    (r"\bpoints? de suspension\b",                      "..."),
-
-    # "deux points" → deux-points (:)
-    (r"\b(?:deux|de|des|2)\s+pointe?s?\b",              ":"),
-
-    # "point" ou "points" seul → point final
-    (r"\bpoints?\b",                                    "."),
+    # ── Priorité stricte — du plus spécifique au plus général ────────────────
+    # Les composés "point X" DOIVENT être consommés avant "point" seul.
+    # Ordre obligatoire :
+    #   1. deux points        → :
+    #   2. point d'exclamation → !
+    #   3. point d'interrogation → ?
+    #   4. point-virgule      → ;
+    #   5. points de suspension → ...
+    #   6. point (seul)       → .   ← toujours EN DERNIER
+    (r"\b(?:deux|de|des|2)\s+pointe?s?\b",              ":"),   # 1
+    (r"\bpoints? d[' ]exclamation\b",                   "!"),   # 2
+    (r"\bpoints? d[' ]interrogation\b",                 "?"),   # 3
+    (r"\bpoints? virgule\b",                            ";"),   # 4
+    (r"\bpoints? de suspension\b",                      "..."), # 5
+    (r"\bpoints?\b",                                    "."),   # 6 — EN DERNIER
 
     # ── Ponctuation interne ────────────────────────────────────────────────────
     (r"\bvirgule\b",                                    ","),
@@ -56,8 +61,13 @@ VERBAL_COMMANDS = [
 
 
 def strip_whisper_punctuation(text: str) -> str:
-    """Supprime la ponctuation automatique ajoutée par Whisper avant traitement."""
-    result = re.sub(r"(?<!\d)[.,!?;](?!\d)", " ", text)
+    """Supprime la ponctuation automatique ajoutée par Whisper avant traitement.
+    - Ne supprime PAS la ponctuation devant \\n (intentionnelle : "point à la ligne").
+    - Collapse les \\n NON précédés de ponctuation : sauts de ligne auto de Whisper
+      au milieu d'une phrase (ex: "sans anomalie\\nSignificative" → "sans anomalie significative")."""
+    result = re.sub(r"(?<!\d)[.,!?;](?!\d)(?!\n)", " ", text)
+    # Collapse les newlines Whisper (non précédés de .!?;:,\n)
+    result = re.sub(r"(?<![.!?;:,\n])\n(?!\n)", " ", result)
     result = re.sub(r"[^\S\n]{2,}", " ", result)
     return result.strip()
 
@@ -90,7 +100,20 @@ def apply_verbal_commands(text: str) -> str:
     result = result.strip()
 
     result = _capitalize_sentences(result)
+    result = _wrap_long_lines(result)
     return result
+
+
+def _wrap_long_lines(text: str, width: int = 90) -> str:
+    """Coupe les lignes dépassant `width` caractères au dernier espace."""
+    lines = text.split("\n")
+    wrapped = []
+    for line in lines:
+        if len(line) <= width:
+            wrapped.append(line)
+        else:
+            wrapped.append(textwrap.fill(line, width=width, break_long_words=False, break_on_hyphens=False))
+    return "\n".join(wrapped)
 
 
 def _capitalize_sentences(text: str) -> str:

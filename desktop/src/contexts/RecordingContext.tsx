@@ -7,6 +7,7 @@ import { transcribeAudio } from "@/services/transcriptionService";
 import { uploadAudio, fetchAudioBlob, getAudios, type AudioRecord } from "@/services/audioService";
 import { createReport } from "@/services/reportsService";
 import type { ReportCategory } from "@/constants/reportCategories";
+import { loadMicConstraints } from "@/hooks/useMicConfig";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:4000";
 
@@ -311,7 +312,7 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
   const startMicRecording = async (eid: string, cat: ReportCategory, seniorId: string | null = null) => {
     try {
       seniorIdRef.current = seniorId;
-      const stream   = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream   = await navigator.mediaDevices.getUserMedia({ audio: loadMicConstraints() });
       const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus" : "audio/webm";
       const recorder = new MediaRecorder(stream, { mimeType });

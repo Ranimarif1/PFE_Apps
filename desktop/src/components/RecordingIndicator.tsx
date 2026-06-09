@@ -66,10 +66,10 @@ export function RecordingIndicator({ collapsed }: Props) {
           className={cn(
             "mx-2 mb-2 rounded-xl border overflow-hidden",
             recording.isTranscribing || recording.audioReceived
-              ? "border-primary/30 bg-primary/5"
+              ? "border-slate-700 bg-[#0D1119]"
               : recording.isPaused
-                ? "border-[#F59E0B]/40 bg-[#F59E0B]/10"
-                : "border-[#DC2626]/40 bg-[#DC2626]/10"
+                ? "border-[#4A7BBE] bg-[#4A7BBE]"
+                : "border-[#DC2626] bg-[#DC2626]"
           )}
         >
           {/* Top bar — status + timer */}
@@ -78,12 +78,9 @@ export function RecordingIndicator({ collapsed }: Props) {
             collapsed && "justify-center px-2"
           )}>
             {recording.isTranscribing || recording.audioReceived ? (
-              <Loader2 size={12} className="animate-spin text-primary shrink-0" />
+              <Loader2 size={12} className="animate-spin text-white shrink-0" />
             ) : (
-              <span className={cn(
-                "w-2 h-2 rounded-full shrink-0",
-                recording.isPaused ? "bg-[#F59E0B]" : "bg-[#DC2626] animate-pulse"
-              )} />
+              <span className="w-2 h-2 rounded-full bg-white animate-pulse shrink-0" />
             )}
 
             <AnimatePresence>
@@ -95,24 +92,21 @@ export function RecordingIndicator({ collapsed }: Props) {
                   className="overflow-hidden flex-1 min-w-0"
                 >
                   {recording.isTranscribing || recording.audioReceived ? (
-                    <p className="text-[11px] font-medium text-primary whitespace-nowrap">
+                    <p className="text-[11px] font-medium text-white whitespace-nowrap">
                       Transcription…
                     </p>
                   ) : (
                     <div className="flex items-center justify-between gap-1">
-                      <p className={cn(
-                        "text-[11px] font-medium whitespace-nowrap truncate",
-                        recording.isPaused ? "text-[#F59E0B]" : "text-[#DC2626]"
-                      )}>
+                      <p className="text-[11px] font-medium text-white whitespace-nowrap truncate">
                         {recording.isPaused ? "En pause" : "Enregistrement"}
                       </p>
-                      <span className="font-mono text-[11px] text-slate-600 shrink-0">
+                      <span className="font-mono text-[11px] text-white/80 shrink-0">
                         {fmt(recording.seconds)}
                       </span>
                     </div>
                   )}
                   {recording.examId && (
-                    <p className="text-[9px] text-slate-400 font-mono truncate">
+                    <p className="text-[9px] text-white/50 font-mono truncate">
                       #{recording.examId}
                     </p>
                   )}
@@ -135,12 +129,7 @@ export function RecordingIndicator({ collapsed }: Props) {
                   <button
                     onClick={recording.togglePause}
                     title={recording.isPaused ? "Reprendre" : "Pause"}
-                    className={cn(
-                      "flex-1 flex items-center justify-center gap-1 text-[10px] font-medium py-1 rounded-md transition-colors",
-                      recording.isPaused
-                        ? "bg-[#059669]/15 text-[#065F46] hover:bg-[#059669]/25"
-                        : "bg-[#F59E0B]/15 text-[#92400E] hover:bg-[#F59E0B]/25"
-                    )}
+                    className="flex-1 flex items-center justify-center gap-1 text-[10px] font-medium py-1 rounded-md bg-white/20 text-white hover:bg-white/30 transition-colors"
                   >
                     {recording.isPaused
                       ? <><Play size={10} /> Reprendre</>
@@ -152,7 +141,7 @@ export function RecordingIndicator({ collapsed }: Props) {
                   <button
                     onClick={recording.stopRecording}
                     title="Arrêter et transcrire"
-                    className="flex-1 flex items-center justify-center gap-1 text-[10px] font-medium py-1 rounded-md bg-[#DC2626]/15 text-[#991B1B] hover:bg-[#DC2626]/25 transition-colors"
+                    className="flex-1 flex items-center justify-center gap-1 text-[10px] font-medium py-1 rounded-md bg-white/20 text-white hover:bg-white/30 transition-colors"
                   >
                     <Square size={10} /> Arrêter
                   </button>
@@ -161,7 +150,7 @@ export function RecordingIndicator({ collapsed }: Props) {
                   <button
                     onClick={recording.cancelRecording}
                     title="Annuler"
-                    className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
+                    className="w-6 h-6 flex items-center justify-center rounded-md text-white/50 hover:text-white hover:bg-white/20 transition-colors"
                   >
                     <X size={10} />
                   </button>
@@ -171,7 +160,7 @@ export function RecordingIndicator({ collapsed }: Props) {
                 <SonicMicButton
                   onStop={recording.stopRecording}
                   onPause={recording.togglePause}
-                  className="mx-2 mb-2"
+                  className="mx-2 mb-1"
                 />
               </motion.div>
             )}

@@ -29,7 +29,7 @@ declare global {
   interface Navigator { hid?: HID; }
 }
 
-const VENDOR_IDS = [0x0911, 0x0D8C, 0x04B8, 0x046D, 0x0BDA, 0x17EF];
+const VENDOR_IDS = [0x15d8, 0x0911, 0x0D8C, 0x04B8, 0x046D, 0x0BDA, 0x17EF];
 
 // ── Button mapping ────────────────────────────────────────────────────────────
 
@@ -37,23 +37,28 @@ export type ButtonAction = "record" | "pause" | "stop";
 
 export interface ButtonMapping {
   reportId: number;
-  bytes: number[]; // non-zero positions act as a match mask
+  bytes:    number[];
 }
 
 export type MappingStore = Partial<Record<ButtonAction, ButtonMapping>>;
 
-const STORAGE_KEY = "sonicmic_mapping_v1";
 export const CALIBRATION_ORDER: ButtonAction[] = ["record", "pause", "stop"];
 
-function _loadMapping(): MappingStore {
+// Physical device = one entry per unique vendorId+productId (ignoring HID interfaces)
+type PhysId = string;
+function _physId(d: HIDDevice): PhysId { return `${d.vendorId}_${d.productId}`; }
+
+function _storageKey(physId: PhysId) { return `hid_mapping_v2_${physId}`; }
+
+function _loadMapping(physId: PhysId): MappingStore {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as MappingStore) : {};
+    const raw = localStorage.getItem(_storageKey(physId));
+    return raw ? JSON.parse(raw) as MappingStore : {};
   } catch { return {}; }
 }
 
-function _persistMapping(m: MappingStore) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(m)); } catch {}
+function _persistMapping(physId: PhysId, m: MappingStore) {
+  try { localStorage.setItem(_storageKey(physId), JSON.stringify(m)); } catch {}
 }
 
 function _matchesMapping(data: Uint8Array, reportId: number, m: ButtonMapping): boolean {
@@ -63,90 +68,146 @@ function _matchesMapping(data: Uint8Array, reportId: number, m: ButtonMapping): 
   );
 }
 
-// ── Module-level singleton ────────────────────────────────────────────────────
+const GRUNDIG_DEFAULTS: Partial<Record<ButtonAction, (d: Uint8Array) => boolean>> = {
+  record: d => d[6] === 0x01,
+  stop:   d => d[6] === 0x08,
+  pause:  d => d[7] === 0x04,
+};
 
-let _device:      HIDDevice | null    = null;
-let _mapping:     MappingStore        = _loadMapping();
-let _calibrating: ButtonAction | null = null;
-let _calibrateLastCaptureAt           = 0; // debounce: ignore release events after a capture
+// ── Multi-device singleton (grouped by physical device) ───────────────────────
 
-// Per-action debounce: prevents rapid repeat-reports from toggling multiple times
+// One mapping + name per physical device
+const _physMappings: Map<PhysId, MappingStore>  = new Map();
+const _physNames:    Map<PhysId, string>         = new Map();
+// All open HID interfaces grouped by physical device
+const _physIfaces:   Map<PhysId, Set<HIDDevice>> = new Map();
+
+let _calibratingPhysId:         PhysId | null       = null;
+let _calibrating:               ButtonAction | null = null;
+let _calibrateLastCaptureAt     = 0;
+let _calibrationCompletedAt     = 0;
+const POST_CALIBRATION_COOLDOWN = 1500;
+
 const _lastFiredAt: Partial<Record<ButtonAction, number>> = {};
-const ACTION_DEBOUNCE_MS    = 350;
-const CALIBRATION_COOLDOWN  = 900; // ms to ignore after capturing one button press
+const ACTION_DEBOUNCE_MS   = 350;
+const CALIBRATION_COOLDOWN = 900;
 
-const _reportHandlers       = new Set<(e: HIDInputReportEvent) => void>();
-const _stateHandlers        = new Set<(connected: boolean) => void>();
-const _calibrationListeners = new Set<(action: ButtonAction | null) => void>();
+const _reportHandlers       = new Set<(e: HIDInputReportEvent, mapping: MappingStore) => void>();
+const _stateHandlers        = new Set<() => void>();
+const _calibrationListeners = new Set<() => void>();
 
-function _broadcastState(connected: boolean) {
-  _stateHandlers.forEach(fn => fn(connected));
-}
-
-function _broadcastCalibrating(action: ButtonAction | null) {
-  _calibrationListeners.forEach(fn => fn(action));
-}
+function _broadcast()      { _stateHandlers.forEach(fn => fn()); }
+function _broadcastCalib() { _calibrationListeners.forEach(fn => fn()); }
 
 function _dispatchReport(e: HIDInputReportEvent) {
-  const data = new Uint8Array(e.data.buffer);
+  const physId    = _physId(e.device);
+  const data      = new Uint8Array(e.data.buffer);
   const isAllZero = data.every(b => b === 0);
 
   // eslint-disable-next-line no-console
   console.log(
-    "[SonicMic] reportId:", e.reportId,
-    " bytes:", Array.from(data).map(b => `0x${b.toString(16).padStart(2, "0")}`).join(" "),
+    `[HIDMic:${_physNames.get(physId) ?? physId}] rid:${e.reportId}`,
+    Array.from(data).map(b => b.toString(16).padStart(2, "0")).join(" "),
   );
 
-  if (_calibrating) {
+  // ── Calibration: accept events from ANY interface of the target physical device
+  if (_calibrating && _calibratingPhysId === physId) {
     if (!isAllZero) {
       const now = Date.now();
-      // Ignore the button-release (or repeat) event that immediately follows the previous capture
       if (now - _calibrateLastCaptureAt < CALIBRATION_COOLDOWN) return;
       _calibrateLastCaptureAt = now;
 
-      _mapping[_calibrating] = { reportId: e.reportId, bytes: Array.from(data) };
+      const mapping = _physMappings.get(physId) ?? {};
+      mapping[_calibrating] = { reportId: e.reportId, bytes: Array.from(data) };
+      _physMappings.set(physId, mapping);
 
       const idx  = CALIBRATION_ORDER.indexOf(_calibrating);
       const next = CALIBRATION_ORDER[idx + 1] ?? null;
       _calibrating = next;
 
-      if (!next) _persistMapping(_mapping);
-      _broadcastCalibrating(_calibrating);
+      if (!next) {
+        _persistMapping(physId, mapping);
+        _calibratingPhysId      = null;
+        _calibrationCompletedAt = Date.now();
+      }
+      _broadcastCalib();
     }
     return;
   }
 
-  _reportHandlers.forEach(fn => fn(e));
+  if (isAllZero) return;
+  if (Date.now() - _calibrationCompletedAt < POST_CALIBRATION_COOLDOWN) return;
+
+  const mapping = _physMappings.get(physId) ?? {};
+  _reportHandlers.forEach(fn => fn(e, mapping));
 }
 
-async function _attach(d: HIDDevice): Promise<void> {
-  if (_device === d) return;
+async function _attachIface(d: HIDDevice): Promise<void> {
+  const physId = _physId(d);
+
+  if (!_physIfaces.has(physId)) _physIfaces.set(physId, new Set());
+  const ifaces = _physIfaces.get(physId)!;
+
+  if (ifaces.has(d)) return; // already attached
   if (!d.opened) await d.open();
-  _device = d;
+  ifaces.add(d);
   d.addEventListener("inputreport", _dispatchReport);
-  // eslint-disable-next-line no-console
-  console.log(
-    `[SonicMic] device found  vendorId: 0x${d.vendorId.toString(16).padStart(4, "0")}`,
-    ` productId: 0x${d.productId.toString(16).padStart(4, "0")}`,
-    ` name: "${d.productName}"`,
-  );
-  _broadcastState(true);
+
+  // Register physical device on first interface
+  if (!_physMappings.has(physId)) {
+    _physMappings.set(physId, _loadMapping(physId));
+    _physNames.set(physId, d.productName || `Micro USB (${d.productId.toString(16)})`);
+    _broadcast();
+  }
+}
+
+function _detachIface(d: HIDDevice) {
+  const physId = _physId(d);
+  d.removeEventListener("inputreport", _dispatchReport);
+
+  const ifaces = _physIfaces.get(physId);
+  if (ifaces) {
+    ifaces.delete(d);
+    if (ifaces.size === 0) {
+      _physIfaces.delete(physId);
+      _physMappings.delete(physId);
+      _physNames.delete(physId);
+      if (_calibratingPhysId === physId) {
+        _calibratingPhysId = null;
+        _calibrating       = null;
+        _broadcastCalib();
+      }
+      _broadcast();
+    }
+  }
 }
 
 if (typeof navigator !== "undefined" && navigator.hid) {
-  navigator.hid.addEventListener("connect", (e) => {
-    if (VENDOR_IDS.includes(e.device.vendorId)) _attach(e.device).catch(() => {});
-  });
-  navigator.hid.addEventListener("disconnect", (e) => {
-    if (e.device === _device) {
-      _device = null;
-      _broadcastState(false);
-    }
-  });
+  navigator.hid.addEventListener("connect",    e => { if (VENDOR_IDS.includes(e.device.vendorId)) _attachIface(e.device).catch(() => {}); });
+  navigator.hid.addEventListener("disconnect", e => { if (_physIfaces.get(_physId(e.device))?.has(e.device)) _detachIface(e.device); });
   navigator.hid.getDevices().then(devices => {
-    const mic = devices.find(d => VENDOR_IDS.includes(d.vendorId));
-    if (mic) _attach(mic).catch(() => {});
+    devices.filter(d => VENDOR_IDS.includes(d.vendorId)).forEach(d => _attachIface(d).catch(() => {}));
   }).catch(() => {});
+}
+
+// ── Per-physical-device info exposed to UI ────────────────────────────────────
+
+export interface HIDDeviceInfo {
+  physId:          PhysId;
+  name:            string;
+  hasCalibration:  boolean;
+  isCalibrating:   boolean;
+  calibratingStep: ButtonAction | null;
+}
+
+function _getDeviceInfos(): HIDDeviceInfo[] {
+  return Array.from(_physMappings.keys()).map(physId => ({
+    physId,
+    name:            _physNames.get(physId) ?? physId,
+    hasCalibration:  Object.keys(_physMappings.get(physId) ?? {}).length >= CALIBRATION_ORDER.length,
+    isCalibrating:   _calibratingPhysId === physId,
+    calibratingStep: _calibratingPhysId === physId ? _calibrating : null,
+  }));
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
@@ -158,109 +219,97 @@ export interface UseSonicMicOptions {
 }
 
 export interface UseSonicMicReturn {
-  connected:         boolean;
-  connect:           () => Promise<void>;
+  deviceInfos:       HIDDeviceInfo[];
+  anyConnected:      boolean;
+  lastFiredAction:   ButtonAction | null;
   error:             string | null;
-  calibrating:       ButtonAction | null;
-  hasCustomMapping:  boolean;
-  startCalibration:  () => void;
-  cancelCalibration: () => void;
+  connect:           () => Promise<void>;
+  startCalibration:  (physId: string) => void;
+  cancelCalibration: (physId: string) => void;
+  resetMapping:      (physId: string) => void;
 }
 
 export function useSonicMic(options: UseSonicMicOptions = {}): UseSonicMicReturn {
-  const [connected,   setConnected]   = useState<boolean>(() => !!_device?.opened);
-  const [error,       setError]       = useState<string | null>(null);
-  const [calibrating, setCalibrating] = useState<ButtonAction | null>(_calibrating);
-  const [mappingSize, setMappingSize] = useState(() => Object.keys(_mapping).length);
+  const [deviceInfos,     setDeviceInfos]     = useState<HIDDeviceInfo[]>(() => _getDeviceInfos());
+  const [lastFiredAction, setLastFiredAction] = useState<ButtonAction | null>(null);
+  const [error,           setError]           = useState<string | null>(null);
 
   const cbRef = useRef(options);
   useEffect(() => { cbRef.current = options; });
 
   useEffect(() => {
-    const listener = (c: boolean) => setConnected(c);
-    _stateHandlers.add(listener);
-    return () => { _stateHandlers.delete(listener); };
+    const sync = () => setDeviceInfos(_getDeviceInfos());
+    _stateHandlers.add(sync);
+    _calibrationListeners.add(sync);
+    return () => { _stateHandlers.delete(sync); _calibrationListeners.delete(sync); };
   }, []);
 
   useEffect(() => {
-    const listener = (action: ButtonAction | null) => {
-      setCalibrating(action);
-      setMappingSize(Object.keys(_mapping).length);
-    };
-    _calibrationListeners.add(listener);
-    return () => { _calibrationListeners.delete(listener); };
-  }, []);
-
-  useEffect(() => {
-    const handler = (e: HIDInputReportEvent) => {
+    const handler = (e: HIDInputReportEvent, mapping: MappingStore) => {
       const data = new Uint8Array(e.data.buffer);
-      if (data.every(b => b === 0)) return;
-
-      const now = Date.now();
-      const canFire = (action: ButtonAction) => {
-        const last = _lastFiredAt[action] ?? 0;
+      const now  = Date.now();
+      const canFire = (a: ButtonAction) => {
+        const last = _lastFiredAt[a] ?? 0;
         if (now - last < ACTION_DEBOUNCE_MS) return false;
-        _lastFiredAt[action] = now;
+        _lastFiredAt[a] = now;
         return true;
       };
-
-      const m = _mapping;
-      if      (m.record && _matchesMapping(data, e.reportId, m.record)) { if (canFire("record")) cbRef.current.onRecord?.(); }
-      else if (m.pause  && _matchesMapping(data, e.reportId, m.pause))  { if (canFire("pause"))  cbRef.current.onPause?.();  }
-      else if (m.stop   && _matchesMapping(data, e.reportId, m.stop))   { if (canFire("stop"))   cbRef.current.onStop?.();   }
-      else {
-        // Fallback: Grundig SonicMic 3 default byte positions
-        if      (data[6] === 0x01 && canFire("record")) cbRef.current.onRecord?.();
-        else if (data[6] === 0x08 && canFire("stop"))   cbRef.current.onStop?.();
-        else if (data[7] === 0x04 && canFire("pause"))  cbRef.current.onPause?.();
+      const fire = (a: ButtonAction, cb?: () => void) => {
+        if (canFire(a)) { cb?.(); setLastFiredAction(a); }
+      };
+      const hasCalib = Object.keys(mapping).length >= CALIBRATION_ORDER.length;
+      if      (mapping.record && _matchesMapping(data, e.reportId, mapping.record)) fire("record", cbRef.current.onRecord);
+      else if (mapping.pause  && _matchesMapping(data, e.reportId, mapping.pause))  fire("pause",  cbRef.current.onPause);
+      else if (mapping.stop   && _matchesMapping(data, e.reportId, mapping.stop))   fire("stop",   cbRef.current.onStop);
+      else if (!hasCalib) {
+        if      (GRUNDIG_DEFAULTS.record?.(data)) fire("record", cbRef.current.onRecord);
+        else if (GRUNDIG_DEFAULTS.stop?.(data))   fire("stop",   cbRef.current.onStop);
+        else if (GRUNDIG_DEFAULTS.pause?.(data))  fire("pause",  cbRef.current.onPause);
       }
     };
-
     _reportHandlers.add(handler);
     return () => { _reportHandlers.delete(handler); };
   }, []);
 
   const connect = useCallback(async () => {
-    if (!navigator.hid) {
-      setError("WebHID non supporté — utilisez Chrome ou Edge.");
-      return;
-    }
+    if (!navigator.hid) { setError("WebHID non supporté — utilisez Chrome ou Edge."); return; }
     setError(null);
     try {
       const devices = await navigator.hid.requestDevice({ filters: [] });
-      if (!devices.length) {
-        setError("Aucun périphérique sélectionné.");
-        return;
-      }
-      await _attach(devices[0]);
+      if (!devices.length) { setError("Aucun périphérique sélectionné."); return; }
+      for (const d of devices) await _attachIface(d).catch(() => {});
     } catch (err) {
-      if ((err as DOMException)?.name !== "NotAllowedError") {
-        setError("Connexion échouée. Vérifiez que le SonicMic est branché.");
-      }
+      if ((err as DOMException)?.name !== "NotAllowedError")
+        setError("Connexion échouée. Vérifiez que le microphone est branché.");
     }
   }, []);
 
-  const startCalibration = useCallback(() => {
-    _mapping               = {};
-    _calibrating           = "record";
+  const startCalibration = useCallback((physId: string) => {
+    _physMappings.set(physId, {});
+    _calibratingPhysId      = physId;
+    _calibrating            = "record";
     _calibrateLastCaptureAt = 0;
-    _broadcastCalibrating(_calibrating);
+    _broadcastCalib();
   }, []);
 
-  const cancelCalibration = useCallback(() => {
-    _mapping     = _loadMapping(); // restore persisted mapping
-    _calibrating = null;
-    _broadcastCalibrating(null);
-    setMappingSize(Object.keys(_mapping).length);
+  const cancelCalibration = useCallback((physId: string) => {
+    if (_calibratingPhysId === physId) {
+      _physMappings.set(physId, _loadMapping(physId));
+      _calibratingPhysId = null;
+      _calibrating       = null;
+      _broadcastCalib();
+    }
   }, []);
 
-  return {
-    connected,
-    connect,
-    error,
-    calibrating,
-    hasCustomMapping: mappingSize === CALIBRATION_ORDER.length,
-    startCalibration,
-    cancelCalibration,
-  };
+  const resetMapping = useCallback((physId: string) => {
+    try { localStorage.removeItem(_storageKey(physId)); } catch {}
+    try { localStorage.removeItem("sonicmic_mapping_v1"); } catch {}
+    _physMappings.set(physId, {});
+    _calibratingPhysId      = physId;
+    _calibrating            = "record";
+    _calibrateLastCaptureAt = 0;
+    _broadcastCalib();
+  }, []);
+
+  return { deviceInfos, anyConnected: deviceInfos.length > 0, lastFiredAction, error, connect, startCalibration, cancelCalibration, resetMapping };
 }

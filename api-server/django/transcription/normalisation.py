@@ -323,7 +323,20 @@ _NO_RE = re.compile(r'\bno\b(?=\s*\.?\s*\d)', re.IGNORECASE)
 
 def normalize_abbrevs(text: str) -> str:
     """Met en majuscules les abréviations médicales reconnues."""
+    # Séquences IRM composées — avant le passage en majuscules génériques
+    text = re.sub(r'\bt2\s*[eé]toile\b',          'T2*',      text, flags=re.IGNORECASE)
+    text = re.sub(r'\bt2\s*star\b',               'T2*',      text, flags=re.IGNORECASE)
+    text = re.sub(r'\b[il][13][dD]\b',            '3D',       text)   # I3d / l3d → 3D
+    text = re.sub(r'\bécho\s+de\s+gradient\b',    'écho de gradient', text, flags=re.IGNORECASE)
+    text = re.sub(r'\badc\b',                     'ADC',      text, flags=re.IGNORECASE)
+    # Sépare les séquences IRM collées par Whisper : T2flair → T2 FLAIR, T2flairt → T2 FLAIR
+    text = re.sub(r'\b(T[12]\*?)(flair)',         r'\1 FLAIR', text, flags=re.IGNORECASE)
+    text = re.sub(r'(FLAIR)(diffusion)',           r'FLAIR diffusion', text, flags=re.IGNORECASE)
+    text = re.sub(r'(FLAIR)t(diffusion)',          r'FLAIR diffusion', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bet([123]?[dD][tT]?[12]?)\b', r'et \1', text)  # et3dt1 → et 3D T1
     text = _ABBREV_RE.sub(lambda m: m.group(0).upper(), text)
+    # Ré-applique après process() qui lowercases tout (t1→T1, t2→T2, l5→L5…)
+    text = normalize_letter_digit(text)
     text = _CI_RE.sub('CI', text)
     text = _NO_RE.sub('NO', text)
     return text
@@ -413,11 +426,21 @@ _COLON_CMD_RE = re.compile(
 # "Indication" dans les rapports de radiologie tunisiens.
 
 _SECTION_ALIASES: list[tuple[re.Pattern, str]] = [
-    # "Renseignement(s) clinique(s)" — pattern générique qui capture toutes les
-    # variantes Whisper : Renseignement, Réseignement, Enségnement, Enseignement…
-    # Le mot varie mais se termine toujours par "gnement" suivi de "clinique".
+    # ── Mots canoniques seuls (début de texte, de ligne, ou après ponctuation) ──
+    # (?:^|[.\n]) : après début, newline ou point (fin de phrase précédente)
+    # (?=\s) : suivi d'un espace → le mot est bien isolé (pas "indicateur")
+    (re.compile(r'(?:(?:^|(?<=[.\n]))\s*)indication\s*(?:deux\s*points?)?\s*:?(?=\s)',  re.IGNORECASE), '\nIndication:'),
+    (re.compile(r'(?:(?:^|(?<=[.\n]))\s*)technique\s*(?:deux\s*points?)?\s*:?(?=\s)',   re.IGNORECASE), '\nTechnique:'),
+    (re.compile(r'(?:(?:^|(?<=[.\n]))\s*)r[eé]sultat\s*(?:deux\s*points?)?\s*:?(?=\s)', re.IGNORECASE), '\nResultat:'),
+    (re.compile(r'(?:(?:^|(?<=[.\n]))\s*)conclusion\s*(?:deux\s*points?)?\s*:?(?=\s)',  re.IGNORECASE), '\nConclusion:'),
+
+    # ── Variantes dictées → noms canoniques (toujours actifs) ─────────────────
+    # "Renseignement(s) clinique(s)" — variantes Whisper
     (re.compile(r'\b\w*gnements?\s+cliniques?\b\s*:?', re.IGNORECASE), 'Indication:'),
-    # Technique variants (Whisper mishears / alternate dictation forms)
+    # Technique variants (dont mishears Whisper : técnique, tecnique, technographie…)
+    (re.compile(r'\bt[eéè]c[hn]*iques?\b\s*:?', re.IGNORECASE), 'Technique:'),
+    (re.compile(r'\btechnographi[eé]\b\s*:?', re.IGNORECASE), 'Technique:'),
+    (re.compile(r'\btechnograph\b\s*:?', re.IGNORECASE), 'Technique:'),
     (re.compile(r'\btechniques?\s+utilis[eé]e?s?\b\s*:?', re.IGNORECASE), 'Technique:'),
     (re.compile(r'\ben\s+technique\b\s*:?', re.IGNORECASE), 'Technique:'),
     (re.compile(r'\bprotocole\s+technique\b\s*:?', re.IGNORECASE), 'Technique:'),
@@ -437,7 +460,7 @@ def normalize_section_aliases(text: str) -> str:
     """Remplace les alias de sections par leurs noms canoniques."""
     for pattern, canonical in _SECTION_ALIASES:
         text = pattern.sub(canonical, text)
-    return text
+    return text.lstrip('\n').strip()
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -487,6 +510,8 @@ def normalize_spoken_punct(text: str) -> str:
     text = _DOT_SPACE_NL_RE.sub('.\n', text)   # ". \n" → ".\n"
     # "deux points" restant (qui n'était pas suivi de "à la ligne") → ":"
     text = _COLON_CMD_RE.sub(':', text)
+    # "2." (Whisper transcrit parfois "deux points" en "2.") → ":" sauf si suivi d'un chiffre (ex: 2.5)
+    text = re.sub(r'\b2\.(?!\d)', ':', text)
     text = _WHISPER_MISHEAR_RE.sub(' ', text)
     # "Ladigne" / "la digne" → saut de ligne (mishear Whisper de "à la ligne")
     text = _LADIGNE_RE.sub('\n', text)
@@ -508,6 +533,23 @@ _ASR_ACCENT_FIXES: list[tuple[str, str]] = [
     # Whisper phonetic misheards — common in radiology
     ("à son particularité",         "sans particularité"),
     ("à son anomalie",              "sans anomalie"),
+    ("pas de absence",              "absence"),
+    ("pas d'absence",               "absence"),
+
+    # Mishears neurologiques / IRM
+    ("célèbrale",                   "cérébrale"),
+    ("célébrale",                   "cérébrale"),
+    ("cérebrale",                   "cérébrale"),
+    ("cerebrale",                   "cérébrale"),
+    ("célèbral",                    "cérébral"),
+    ("célébral",                    "cérébral"),
+    ("cérebral",                    "cérébral"),
+    ("cerebral",                    "cérébral"),
+    ("vasculaire célèbre",          "vasculaire cérébrale"),
+    # Whisper coupe "IRM cérébrale" → "Irmc" + "lébrale"
+    ("irmc",                        "IRM"),
+    ("lébrale",                     "cérébrale"),
+    ("lébral",                      "cérébral"),
     # Common French words with accents stripped by ASR
     ("fievre",                      "fièvre"),
     ("fevrier",                     "février"),
@@ -615,6 +657,18 @@ def fix_asr_accents(text: str) -> str:
     return text
 
 
+# Lettre anatomique + chiffre → majuscule  (l5→L5, t1→T1, c3→C3, s1→S1…)
+# Lettres : T H I Q L C S D  (vertèbres cervicales, thoraciques, lombaires,
+# sacrées, séquences IRM).  \b garantit que la lettre est en début de mot
+# (pas "cal5", "bal5" etc.)
+_LETTER_DIGIT_RE = re.compile(r'\b([thiqLlcsd])(\d)', re.IGNORECASE)
+
+
+def normalize_letter_digit(text: str) -> str:
+    """Capitalise la lettre anatomique devant un chiffre : l5→L5, t1→T1, c3→C3."""
+    return _LETTER_DIGIT_RE.sub(lambda m: m.group(1).upper() + m.group(2), text)
+
+
 def normalize(text: str) -> str:
     """
     Applique toutes les normalisations dans l'ordre :
@@ -624,6 +678,7 @@ def normalize(text: str) -> str:
       4. Unités comp. — "mg par dL" → "mg/dL"
       5. Nombres      — "cent vingt" → "120"
       6. Abréviations — irm → IRM, flair → FLAIR, t1 → T1 …
+      7. Lettre+chiffre — l5→L5, t1→T1, c3→C3, s1→S1
     Note: section headers (Indication/Résultat/Conclusion) are preserved
     so the frontend can parse them into separate fields.
     """
@@ -635,6 +690,7 @@ def normalize(text: str) -> str:
     text = normalize_compound_units(text)
     text = normalize_numbers(text)
     text = normalize_abbrevs(text)
+    text = normalize_letter_digit(text)
     return text
 
 
