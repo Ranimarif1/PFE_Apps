@@ -133,6 +133,10 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
       setError("Veuillez saisir votre code senior.");
       return;
     }
+    if (isSenior && (!/^\d{1,3}$/.test(form.seniorCode.trim()))) {
+      setError("Le code senior doit être numérique et contenir au maximum 3 chiffres.");
+      return;
+    }
     if (isSenior && codeStatus === "taken") {
       setError("Ce code senior est déjà utilisé. Veuillez en choisir un autre.");
       return;
@@ -283,9 +287,10 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
             <div className="relative">
               <input
                 value={form.seniorCode}
-                onChange={e => handleChange("seniorCode", e.target.value.replace(/\D/g, ""))}
+                onChange={e => handleChange("seniorCode", e.target.value.replace(/\D/g, "").slice(0, 3))}
                 required
                 inputMode="numeric"
+                maxLength={3}
                 className={`w-full px-4 py-3 pr-10 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 transition-colors ${
                   codeStatus === "taken"
                     ? "border-destructive/60 focus:ring-destructive/25"
@@ -293,7 +298,7 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
                     ? "border-success/60 focus:ring-success/25"
                     : "border-border focus:ring-primary/30"
                 }`}
-                placeholder="Ex : 12345"
+                placeholder="Ex : 123"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                 {codeStatus === "checking" && <Loader2 size={14} className="text-muted-foreground animate-spin" />}
