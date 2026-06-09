@@ -13,13 +13,15 @@ function fmt(s: number): string {
 // All styles are inline — this component renders into a separate window
 // (Document PiP or fallback popup) that has no access to Tailwind/CSS modules.
 export function PiPFloatingUI({ isRecording, isPaused, seconds, onStop, onPause }: Props) {
-  const idle   = !isRecording && !isPaused;
-  const accent = isPaused ? "#fbbf24" : "#f87171";
+  const idle    = !isRecording && !isPaused;
+  const bgColor = idle ? "#0D1119" : isPaused ? "#4A7BBE" : "#DC2626";
+  const accent  = idle ? "#475569" : "#ffffff";
 
   return (
     <div style={{
       fontFamily: "system-ui, -apple-system, sans-serif",
-      background: "#0f172a",
+      background: bgColor,
+      transition: "background 0.4s ease",
       color: "#f8fafc",
       height: "100vh",
       width: "100%",
@@ -37,7 +39,7 @@ export function PiPFloatingUI({ isRecording, isPaused, seconds, onStop, onPause 
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{
           width: 8, height: 8, borderRadius: "50%",
-          background: idle ? "#475569" : accent,
+          background: accent,
           display: "inline-block", flexShrink: 0,
           transition: "background 0.3s",
           animation: (!idle && !isPaused) ? "pip-pulse 1.2s ease-in-out infinite" : "none",
@@ -45,7 +47,7 @@ export function PiPFloatingUI({ isRecording, isPaused, seconds, onStop, onPause 
         <span style={{
           fontSize: 11, fontWeight: 600,
           letterSpacing: "0.02em",
-          color: idle ? "#94a3b8" : accent,
+          color: accent,
           transition: "color 0.3s",
         }}>
           {idle
@@ -60,7 +62,7 @@ export function PiPFloatingUI({ isRecording, isPaused, seconds, onStop, onPause 
       <div style={{
         fontFamily: "ui-monospace, monospace",
         fontSize: 32, fontWeight: 700,
-        color: idle ? "#334155" : "#f1f5f9",
+        color: idle ? "#475569" : "#f1f5f9",
         letterSpacing: "0.06em", lineHeight: 1,
         transition: "color 0.3s",
       }}>
@@ -75,8 +77,8 @@ export function PiPFloatingUI({ isRecording, isPaused, seconds, onStop, onPause 
             style={{
               fontSize: 11, fontWeight: 600,
               padding: "5px 14px", borderRadius: 8, border: "none",
-              background: isPaused ? "rgba(5,150,105,0.25)" : "rgba(245,158,11,0.15)",
-              color: isPaused ? "#34d399" : "#fbbf24",
+              background: "rgba(255,255,255,0.20)",
+              color: "#ffffff",
               cursor: "pointer",
             }}
           >
@@ -87,8 +89,8 @@ export function PiPFloatingUI({ isRecording, isPaused, seconds, onStop, onPause 
             style={{
               fontSize: 11, fontWeight: 600,
               padding: "5px 14px", borderRadius: 8, border: "none",
-              background: "rgba(239,68,68,0.15)",
-              color: "#f87171", cursor: "pointer",
+              background: "rgba(255,255,255,0.20)",
+              color: "#ffffff", cursor: "pointer",
             }}
           >
             ⏹ Arrêter

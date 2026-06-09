@@ -95,20 +95,14 @@ export default function RapportDetail() {
   const [analyseError,       setAnalyseError]       = useState<string | null>(null);
   const [ollamaUnavailable,  setOllamaUnavailable]  = useState(false);
 
-  /* ── Copy for Oracle (plain DOM popup) ── */
-  const [oracleIndex, setOracleIndex] = useState(-1);
-  const pipWinRef = useRef<Window | null>(null);
+  /* ── Copy vers RIS popup window ── */
+  const risWinRef = useRef<Window | null>(null);
 
-  const closePiP = useCallback(() => {
-    try { pipWinRef.current?.close(); } catch { /* */ }
-    pipWinRef.current = null;
-    setOracleIndex(-1);
-  }, []);
-
-  useEffect(() => () => { closePiP(); }, [closePiP]);
-
-  const handleCopyForOracle = useCallback(() => {
-    if (pipWinRef.current) { closePiP(); return; }
+  const openRisPopup = useCallback(() => {
+    if (risWinRef.current && !risWinRef.current.closed) {
+      risWinRef.current.focus();
+      return;
+    }
 
     const sections = [
       { label: "Indication", text: indication },
@@ -118,95 +112,74 @@ export default function RapportDetail() {
     ].filter(s => s.text.trim() !== "");
     if (sections.length === 0) return;
 
-    const win = window.open("", "oracle-pip",
-      "width=320,height=180,top=40,left=40,toolbar=no,menubar=no,location=no,status=no,scrollbars=no,resizable=no");
+    const win = window.open("", "ris-copy",
+      "width=300,height=" + (80 + sections.length * 54) + ",top=80,left=80,toolbar=no,menubar=no,location=no,status=no,scrollbars=no,resizable=no");
     if (!win) return;
+    risWinRef.current = win;
 
-    pipWinRef.current = win;
-    win.addEventListener("beforeunload", () => { pipWinRef.current = null; setOracleIndex(-1); });
-
-    function renderStep(idx: number) {
-      if (!win) return;
-      const current = sections[idx];
-      const next    = idx + 1 < sections.length ? sections[idx + 1] : null;
-
-      // Copy current section from the popup window (it has focus)
+    // Expose copy helper on the popup's window
+    (win as Window & { __risCopy: (i: number) => void }).__risCopy = (i: number) => {
+      const text = sections[i].text;
       const ta = win.document.createElement("textarea");
-      ta.value = current.text;
+      ta.value = text;
       ta.style.cssText = "position:fixed;opacity:0;top:0;left:0;";
       win.document.body.appendChild(ta);
       ta.focus(); ta.select();
       win.document.execCommand("copy");
       win.document.body.removeChild(ta);
+      // Visual feedback
+      const btn = win.document.getElementById("btn-" + i);
+      if (btn) {
+        btn.textContent = "✓ Copié";
+        (btn as HTMLButtonElement).style.background = "rgba(52,211,153,0.20)";
+        (btn as HTMLButtonElement).style.color = "#34d399";
+        (btn as HTMLButtonElement).style.borderColor = "rgba(52,211,153,0.40)";
+        setTimeout(() => {
+          btn.textContent = "Copier";
+          (btn as HTMLButtonElement).style.background = "rgba(74,123,190,0.20)";
+          (btn as HTMLButtonElement).style.color = "#6B97D0";
+          (btn as HTMLButtonElement).style.borderColor = "rgba(74,123,190,0.30)";
+        }, 2000);
+      }
+    };
 
-      // Render UI
-      win.document.body.style.cssText = "margin:0;padding:0;background:#0f172a;";
-      win.document.body.innerHTML = `
-        <style>
-          * { box-sizing: border-box; }
-          #cancel-btn:hover { background: #1e293b !important; }
-          #next-btn:hover   { opacity: 0.88; }
-          #cancel-btn, #next-btn { transition: opacity .15s, background .15s; }
-        </style>
-        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-                    background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);
-                    color:#f8fafc;height:100vh;display:flex;flex-direction:column;
-                    align-items:center;justify-content:center;gap:14px;
-                    padding:20px;box-sizing:border-box;">
-
-          <!-- Progress bar -->
-          <div style="display:flex;gap:5px;margin-bottom:2px;">
-            ${sections.map((s, i) => `
-              <div title="${s.label}" style="width:${Math.floor(220/sections.length)-5}px;height:3px;border-radius:999px;
-                background:${i < idx ? '#34d399' : i === idx ? '#60a5fa' : '#1e3a5f'};
-                transition:background .3s;"></div>
-            `).join("")}
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+      <title>Copier vers RIS</title>
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #0D1119; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        .header { display:flex; align-items:center; justify-content:space-between;
+                  padding: 10px 14px 8px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+        .header-title { font-size:12px; font-weight:700; color:#f1f5f9; letter-spacing:.02em; }
+        .header-sub { font-size:10px; color:#475569; margin-top:1px; }
+        .rows { padding: 8px; display:flex; flex-direction:column; gap:6px; }
+        .row { display:flex; align-items:center; justify-content:space-between;
+               background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+               border-radius: 10px; padding: 8px 10px; }
+        .row-label { font-size:12px; font-weight:600; color:#cbd5e1; }
+        .copy-btn { font-size:11px; font-weight:600; padding: 5px 12px; border-radius:7px;
+                    border: 1px solid rgba(74,123,190,0.30); background: rgba(74,123,190,0.20);
+                    color:#6B97D0; cursor:pointer; transition: all .15s; white-space:nowrap; }
+        .copy-btn:hover { background: rgba(74,123,190,0.35); color:#93b8e0; }
+      </style>
+    </head><body>
+      <div class="header">
+        <div>
+          <div class="header-title">📋 Copier vers RIS</div>
+          <div class="header-sub">Cliquez sur une section pour la copier</div>
+        </div>
+      </div>
+      <div class="rows">
+        ${sections.map((s, i) => `
+          <div class="row">
+            <span class="row-label">${s.label}</span>
+            <button id="btn-${i}" class="copy-btn" onclick="__risCopy(${i})">Copier</button>
           </div>
-
-          <!-- Icon + label -->
-          <div style="text-align:center;line-height:1.4;">
-            <div style="font-size:22px;margin-bottom:4px;">✓</div>
-            <div style="font-size:13px;font-weight:700;color:#f1f5f9;letter-spacing:.01em;">
-              ${current.label}
-            </div>
-            <div style="font-size:11px;color:#64748b;margin-top:3px;">
-              copiée — collez dans Oracle
-            </div>
-          </div>
-
-          <!-- Buttons -->
-          <div style="display:flex;gap:8px;width:100%;">
-            <button id="cancel-btn"
-              style="flex:1;padding:9px 0;border-radius:10px;
-                     border:1px solid #1e3a5f;background:#111827;
-                     color:#64748b;font-size:11px;font-weight:600;cursor:pointer;">
-              Annuler
-            </button>
-            <button id="next-btn"
-              style="flex:2;padding:9px 0;border-radius:10px;border:none;
-                     background:${next ? 'linear-gradient(135deg,#3b82f6,#2563eb)' : 'linear-gradient(135deg,#10b981,#059669)'};
-                     color:#fff;font-size:12px;font-weight:700;cursor:pointer;
-                     box-shadow:0 2px 8px ${next ? 'rgba(59,130,246,.4)' : 'rgba(16,185,129,.4)'};">
-              ${next ? `Suivant &rarr; ${next.label}` : '✓ Terminer'}
-            </button>
-          </div>
-
-          <span style="font-size:10px;color:#334155;font-variant-numeric:tabular-nums;">
-            ${idx + 1} / ${sections.length}
-          </span>
-        </div>`;
-
-      win.document.getElementById("cancel-btn")!.onclick = () => { win!.close(); };
-      win.document.getElementById("next-btn")!.onclick = () => {
-        if (!next) { win!.close(); return; }
-        renderStep(idx + 1);
-      };
-
-      setOracleIndex(idx);
-    }
-
-    renderStep(0);
-  }, [indication, technique, resultat, conclusion, closePiP]);
+        `).join("")}
+      </div>
+    </body></html>`);
+    win.document.close();
+  }, [indication, technique, resultat, conclusion]);
 
   /* ── Auto-save ── */
   const autoSaveTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -757,7 +730,7 @@ export default function RapportDetail() {
                         )}
 
                         {/* Ollama unavailable */}
-                        {!analyseLoading && !analyseError && analyseSentences !== null && ollamaUnavailable && !analyseSentences.some(s => s.corrections.length > 0) && (
+                        {!analyseLoading && !analyseError && analyseSentences !== null && ollamaUnavailable && (
                           <div className="flex items-start gap-3 bg-amber-500/8 border border-amber-500/30 rounded-lg px-3 py-3">
                             <div className="w-7 h-7 rounded-full bg-amber-500/15 flex items-center justify-center shrink-0">
                               <AlertTriangle size={14} className="text-amber-600 dark:text-amber-400" />
@@ -809,20 +782,14 @@ export default function RapportDetail() {
               <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 text-destructive text-sm">{error}</div>
             )}
 
-            {/* ── Copy for Oracle (PiP floating window) ── */}
+            {/* ── Copy vers RIS ── */}
             <button
               type="button"
-              onClick={handleCopyForOracle}
-              className={`w-full flex items-center justify-center gap-2 border rounded-xl py-2.5 text-sm font-medium transition-all ${
-                oracleIndex >= 0
-                  ? "border-primary/40 bg-primary/5 text-primary"
-                  : "border-border hover:border-primary/40 hover:text-primary hover:bg-primary/5"
-              }`}
+              onClick={openRisPopup}
+              className="w-full flex items-center justify-center gap-2 border border-border rounded-xl py-2.5 text-sm font-medium hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-all"
             >
-              {oracleIndex >= 0
-                ? <><Check size={15} className="text-emerald-500" /><span className="text-emerald-600">Oracle en cours…</span></>
-                : <><ClipboardCopy size={15} /><span>Copier pour Oracle</span></>
-              }
+              <ClipboardCopy size={15} />
+              <span>Copier vers RIS</span>
             </button>
 
             {/* ── Actions ── */}
