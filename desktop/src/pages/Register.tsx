@@ -142,6 +142,10 @@ export default function Register() {
       setError("Veuillez saisir votre numéro / code senior.");
       return;
     }
+    if (isSenior && (!/^\d{1,3}$/.test(form.seniorCode.trim()))) {
+      setError("Le code senior doit être numérique et contenir au maximum 3 chiffres.");
+      return;
+    }
     if (isSenior && seniorCodeStatus === "taken") {
       setError("Ce code senior est déjà utilisé. Veuillez en choisir un autre.");
       return;
@@ -482,9 +486,10 @@ export default function Register() {
                   <Hash size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                   <input
                     value={form.seniorCode}
-                    onChange={e => handleChange("seniorCode", e.target.value.replace(/\D/g, ""))}
+                    onChange={e => handleChange("seniorCode", e.target.value.replace(/\D/g, "").slice(0, 3))}
                     required
                     inputMode="numeric"
+                    maxLength={3}
                     className={`w-full pl-10 pr-10 py-3 text-sm rounded-xl border bg-background focus:outline-none focus:ring-2 transition-colors ${
                       seniorCodeStatus === "taken"
                         ? "border-destructive/60 focus:ring-destructive/25"
@@ -492,7 +497,7 @@ export default function Register() {
                         ? "border-success/60 focus:ring-success/25"
                         : "border-border focus:ring-primary/30"
                     }`}
-                    placeholder="Ex : 12345"
+                    placeholder="Ex : 123"
                   />
                   <span className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
                     {seniorCodeStatus === "checking"  && <Loader2 size={14} className="text-muted-foreground animate-spin" />}

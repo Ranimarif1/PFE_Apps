@@ -415,12 +415,14 @@ export default function AdminMedecins() {
                   type="text"
                   inputMode="numeric"
                   value={promoteCode}
-                  onChange={e => setPromoteCode(e.target.value.replace(/\D/g, ""))}
-                  placeholder="Ex : 12345"
+                  onChange={e => setPromoteCode(e.target.value.replace(/\D/g, "").slice(0, 3))}
+                  placeholder="Ex : 123"
+                  inputMode="numeric"
+                  maxLength={3}
                   className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
                 <p className="text-xs text-muted-foreground mt-1.5">
-                  Les admins sont seniors par défaut. Ce code les identifie auprès des médecins sous leur supervision.
+                  Code numérique de 1 à 3 chiffres. Identifie le senior auprès des médecins sous sa supervision.
                 </p>
               </div>
             )}
@@ -431,7 +433,7 @@ export default function AdminMedecins() {
               </button>
               <button
                 onClick={() => promoteMutation.mutate({ id: confirmPromote._id, code: confirmPromote.senior ? confirmPromote.seniorCode! : promoteCode })}
-                disabled={promoteMutation.isPending || (!confirmPromote.senior && !promoteCode.trim())}
+                disabled={promoteMutation.isPending || (!confirmPromote.senior && !/^\d{1,3}$/.test(promoteCode.trim()))}
                 className="flex-1 py-2.5 rounded-xl gradient-hero text-white font-semibold hover:opacity-90 disabled:opacity-60 transition-all text-sm">
                 {promoteMutation.isPending ? "Modification..." : "Confirmer le changement"}
               </button>

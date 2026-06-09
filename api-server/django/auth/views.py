@@ -222,8 +222,8 @@ def register(request: HttpRequest) -> JsonResponse:
     email = (data.get("email") or "").strip().lower()
     password = data.get("password") or ""
     role = (data.get("role") or "doctor").strip()
-    nom = (data.get("nom") or "").strip()
-    prenom = (data.get("prenom") or "").strip()
+    nom = (data.get("nom") or "").strip().title()
+    prenom = (data.get("prenom") or "").strip().title()
     genre = (data.get("genre") or "").strip()
 
     if role not in {"doctor", "admin", "adminIT"}:
@@ -243,6 +243,8 @@ def register(request: HttpRequest) -> JsonResponse:
     if senior:
         if not senior_code:
             return JsonResponse({"detail": "Le numéro / code du senior est requis."}, status=400)
+        if not senior_code.isdigit() or len(senior_code) > 3:
+            return JsonResponse({"detail": "Le code senior doit être numérique et contenir au maximum 3 chiffres."}, status=400)
         if get_collection("users").find_one({"seniorCode": senior_code}):
             return JsonResponse({"detail": "Ce code senior est déjà utilisé."}, status=400)
 
@@ -328,6 +330,16 @@ def login_view(request: HttpRequest) -> JsonResponse:
     # Doctors and admins must be validated before login.
     if user["role"] in {"doctor", "admin"} and user.get("status") != "validated":
         return JsonResponse({"detail": "Compte en attente de validation."}, status=403)
+
+    # Capitalize nom/prenom on every login — fixes existing accounts transparently.
+    cap_fields = {}
+    if user.get("nom")    and user["nom"]    != user["nom"].strip().title():
+        cap_fields["nom"]    = user["nom"].strip().title()
+    if user.get("prenom") and user["prenom"] != user["prenom"].strip().title():
+        cap_fields["prenom"] = user["prenom"].strip().title()
+    if cap_fields:
+        users_col.update_one({"_id": user["_id"]}, {"$set": cap_fields})
+        user = {**user, **cap_fields}
 
     access = create_access_token(user)
     refresh = create_refresh_token(user)
@@ -615,6 +627,8 @@ def update_profile(request: HttpRequest) -> JsonResponse:
             return JsonResponse({"detail": "Seuls les seniors peuvent définir un code."}, status=403)
         if not senior_code:
             return JsonResponse({"detail": "Le code senior ne peut pas être vide."}, status=400)
+        if not senior_code.isdigit() or len(senior_code) > 3:
+            return JsonResponse({"detail": "Le code senior doit être numérique et contenir au maximum 3 chiffres."}, status=400)
         clash = get_collection("users").find_one({"seniorCode": senior_code, "_id": {"$ne": ObjectId(current.id)}})
         if clash:
             return JsonResponse({"detail": "Ce code senior est déjà utilisé."}, status=400)
@@ -688,8 +702,8 @@ def change_user_role(request: HttpRequest, user_id: str) -> JsonResponse:
     if new_role == "admin":
         if not senior_code:
             return JsonResponse({"detail": "Un code senior est requis pour promouvoir un médecin en admin."}, status=400)
-        if not senior_code.isdigit():
-            return JsonResponse({"detail": "Le code senior doit être numérique."}, status=400)
+        if not senior_code.isdigit() or len(senior_code) > 3:
+            return JsonResponse({"detail": "Le code senior doit être numérique et contenir au maximum 3 chiffres."}, status=400)
         clash = users_col.find_one({"seniorCode": senior_code, "_id": {"$ne": oid}})
         if clash:
             return JsonResponse({"detail": "Ce code senior est déjà utilisé."}, status=400)

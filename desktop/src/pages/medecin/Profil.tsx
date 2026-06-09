@@ -82,6 +82,10 @@ export default function Profil() {
       setError("Le code senior ne peut pas être vide.");
       return;
     }
+    if (user?.senior && (!/^\d{1,3}$/.test(form.seniorCode.trim()))) {
+      setError("Le code senior doit être numérique et contenir au maximum 3 chiffres.");
+      return;
+    }
     setLoading(true);
     try {
       const payload: Record<string, string> = {
@@ -149,9 +153,13 @@ export default function Profil() {
             {user?.senior && (
               <div>
                 <label className="text-sm font-medium text-foreground mb-1.5 block">Code senior</label>
-                <input value={form.seniorCode} onChange={e => setForm(f => ({ ...f, seniorCode: e.target.value }))}
+                <input
+                  value={form.seniorCode}
+                  onChange={e => setForm(f => ({ ...f, seniorCode: e.target.value.replace(/\D/g, "").slice(0, 3) }))}
+                  inputMode="numeric"
+                  maxLength={3}
                   className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  placeholder="Ex : 12345" />
+                  placeholder="Ex : 123" />
                 <p className="text-xs text-muted-foreground mt-1.5">
                   Ce code vous identifie auprès des médecins travaillant sous votre supervision.
                 </p>

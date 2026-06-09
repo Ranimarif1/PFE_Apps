@@ -32,8 +32,8 @@ function mapUser(raw: BackendUser): User {
   return {
     id: raw._id,
     email: raw.email,
-    nom: raw.nom || "",
-    prénom: raw.prenom || "",
+    nom: (raw.nom || "").replace(/\b\w/g, (c: string) => c.toUpperCase()),
+    prénom: (raw.prenom || "").replace(/\b\w/g, (c: string) => c.toUpperCase()),
     rôle: roleMap[raw.role] ?? "médecin",
     statut: statusMap[raw.status] ?? "en_attente",
     genre: (raw.genre === "homme" || raw.genre === "femme") ? raw.genre : "",

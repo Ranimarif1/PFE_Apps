@@ -12,9 +12,17 @@ export interface BackendUserRecord {
   seniorCode?: string;
 }
 
+function capitalizeName(s: string): string {
+  return s.replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function normalizeRecord(u: BackendUserRecord): BackendUserRecord {
+  return { ...u, nom: capitalizeName(u.nom || ""), prenom: capitalizeName(u.prenom || "") };
+}
+
 export async function getUsers(): Promise<BackendUserRecord[]> {
   const data = await api.get<{ results: BackendUserRecord[] }>("/api/auth/users");
-  return data.results;
+  return data.results.map(normalizeRecord);
 }
 
 export interface UpdateStatusResult {
@@ -33,7 +41,7 @@ export async function updateUserStatus(
     `/api/auth/users/${userId}/status`,
     body
   );
-  return data;
+  return { ...data, user: normalizeRecord(data.user) };
 }
 
 export async function deleteUser(userId: string): Promise<void> {
@@ -44,20 +52,20 @@ export async function changeUserRole(userId: string, role: "doctor" | "admin", s
   const body: Record<string, string> = { role };
   if (seniorCode) body.seniorCode = seniorCode;
   const data = await api.put<{ user: BackendUserRecord }>(`/api/auth/users/${userId}/role`, body);
-  return data.user;
+  return normalizeRecord(data.user);
 }
 
 export async function updateSeniorCode(userId: string, seniorCode: string): Promise<BackendUserRecord> {
   const data = await api.patch<{ user: BackendUserRecord }>(`/api/auth/users/${userId}/senior-code`, { seniorCode });
-  return data.user;
+  return normalizeRecord(data.user);
 }
 
 export async function revokeSenior(userId: string): Promise<BackendUserRecord> {
   const data = await api.patch<{ user: BackendUserRecord }>(`/api/auth/users/${userId}/revoke-senior`, {});
-  return data.user;
+  return normalizeRecord(data.user);
 }
 
 export async function grantSenior(userId: string, seniorCode: string): Promise<BackendUserRecord> {
   const data = await api.patch<{ user: BackendUserRecord }>(`/api/auth/users/${userId}/grant-senior`, { seniorCode });
-  return data.user;
+  return normalizeRecord(data.user);
 }
