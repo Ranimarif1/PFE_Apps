@@ -22,18 +22,61 @@ function getSupportedMimeType() {
 export function useAudioRecorder({ onStop } = {}) {
   const recorderRef  = useRef(null);
   const streamRef    = useRef(null);
-  const chunksRef    = useRef([]);   // accumulated locally until Send is pressed
+  const chunksRef    = useRef([]);
+  const wakeLockRef  = useRef(null);
 
-  const [status, setStatus]   = useState('idle'); // idle | requesting | recording | paused | stopped | error
-  const [error, setError]     = useState(null);
-  const [mimeType]            = useState(getSupportedMimeType);
+  const [status, setStatus]           = useState('idle'); // idle | requesting | recording | paused | stopped | error
+  const [error, setError]             = useState(null);
+  const [mimeType]                    = useState(getSupportedMimeType);
+  const [interrupted, setInterrupted] = useState(false); // true when paused by phone call / app switch
 
-  useEffect(() => () => stopStream(), []);
+  useEffect(() => () => { stopStream(); releaseWakeLock(); }, []);
 
   function stopStream() {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
   }
+
+  // ── Wake Lock ─────────────────────────────────────────────────────────────
+  async function requestWakeLock() {
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLockRef.current = await navigator.wakeLock.request('screen');
+        wakeLockRef.current.addEventListener('release', () => {
+          wakeLockRef.current = null;
+        });
+      }
+    } catch {
+      // Wake Lock not supported or permission denied — non-critical
+    }
+  }
+
+  function releaseWakeLock() {
+    wakeLockRef.current?.release().catch(() => {});
+    wakeLockRef.current = null;
+  }
+
+  // ── Visibility change: phone call / app switch ────────────────────────────
+  // When the page goes to background, pause the recorder to preserve audio.
+  // When the page comes back, re-request wake lock if still active.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (recorderRef.current?.state === 'recording') {
+          recorderRef.current.pause();
+          setStatus('paused');
+          setInterrupted(true);
+        }
+      } else {
+        // Re-acquire wake lock (OS releases it when screen was off)
+        if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+          requestWakeLock();
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   // ── Start ────────────────────────────────────────────────────────────────
   const start = useCallback(async () => {
@@ -41,10 +84,13 @@ export function useAudioRecorder({ onStop } = {}) {
     if (recorderRef.current?.state === 'paused') {
       recorderRef.current.resume();
       setStatus('recording');
+      setInterrupted(false);
+      await requestWakeLock();
       return;
     }
 
     setError(null);
+    setInterrupted(false);
 
     if (!navigator.mediaDevices?.getUserMedia) {
       setError('Microphone not available. The page must be opened over HTTPS.');
@@ -79,6 +125,7 @@ export function useAudioRecorder({ onStop } = {}) {
 
     recorder.onstop = () => {
       stopStream();
+      releaseWakeLock();
       setStatus('stopped');
       const blob = new Blob(chunksRef.current, { type: recorder.mimeType });
       onStop?.(blob, recorder.mimeType);
@@ -88,11 +135,13 @@ export function useAudioRecorder({ onStop } = {}) {
       setError(`Recorder error: ${e.error?.message}`);
       setStatus('error');
       stopStream();
+      releaseWakeLock();
     };
 
     recorder.start(250);
     recorderRef.current = recorder;
     setStatus('recording');
+    await requestWakeLock();
   }, [mimeType, onStop]);
 
   // ── Pause ────────────────────────────────────────────────────────────────
@@ -100,6 +149,7 @@ export function useAudioRecorder({ onStop } = {}) {
     if (recorderRef.current?.state === 'recording') {
       recorderRef.current.pause();
       setStatus('paused');
+      setInterrupted(false);
     }
   }, []);
 
@@ -118,6 +168,7 @@ export function useAudioRecorder({ onStop } = {}) {
     status,
     error,
     mimeType,
+    interrupted,
     isRecording: status === 'recording',
     isPaused:    status === 'paused',
   };

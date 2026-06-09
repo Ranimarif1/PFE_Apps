@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getUsers, updateUserStatus, deleteUser, changeUserRole, updateSeniorCode, revokeSenior, grantSenior, type BackendUserRecord } from "@/services/usersService";
+import { getUsers, updateUserStatus, deleteUser, changeUserRole, revokeSenior, grantSenior, type BackendUserRecord } from "@/services/usersService";
 import { toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
 import {
-  Search, Check, X, Trash2, AlertTriangle, UserRoundCheck, Star, Pencil, StarOff, ShieldCheck,
+  Search, Check, X, Trash2, AlertTriangle, UserRoundCheck, Star, StarOff, ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getStatusBadgeClass, getStatusLabel } from "@/styles/statusSystem";
@@ -26,9 +26,6 @@ export default function AdminMedecins() {
   const [grantSeniorTarget,   setGrantSeniorTarget]   = useState<BackendUserRecord | null>(null);
   const [grantSeniorCode,     setGrantSeniorCode]     = useState("");
   const [promoteCode,         setPromoteCode]         = useState("");
-  const [editingCodeId,  setEditingCodeId]  = useState<string | null>(null);
-  const [editingCodeVal, setEditingCodeVal] = useState("");
-  const codeInputRef = useRef<HTMLInputElement>(null);
 
   const { data: users = [] } = useQuery<BackendUserRecord[]>({ queryKey: ["users"], queryFn: getUsers });
 
@@ -109,35 +106,6 @@ export default function AdminMedecins() {
     },
   });
 
-  const seniorCodeMutation = useMutation({
-    mutationFn: ({ id, code }: { id: string; code: string }) => updateSeniorCode(id, code),
-    onSuccess: (updated) => {
-      queryClient.setQueryData<BackendUserRecord[]>(["users"], (old) =>
-        old?.map(u => u._id === updated._id ? { ...u, seniorCode: updated.seniorCode } : u) ?? old
-      );
-      setEditingCodeId(null);
-      toast.success("Code senior mis à jour.");
-    },
-    onError: (err: Error) => {
-      toast.error(err.message || "Erreur lors de la mise à jour.");
-    },
-  });
-
-  useEffect(() => {
-    if (editingCodeId) codeInputRef.current?.focus();
-  }, [editingCodeId]);
-
-  function startEditCode(doc: BackendUserRecord) {
-    setEditingCodeId(doc._id);
-    setEditingCodeVal(doc.seniorCode || "");
-  }
-
-  function saveCode(id: string) {
-    const trimmed = editingCodeVal.trim();
-    if (!trimmed) return;
-    seniorCodeMutation.mutate({ id, code: trimmed });
-  }
-
   const tabDoctors = userFilter === "all" ? doctors : doctors.filter(u => u.status === userFilter);
   const filteredDoctors = tabDoctors.filter(u => {
     const q = search.toLowerCase();
@@ -206,40 +174,16 @@ export default function AdminMedecins() {
                     <td className="px-4 py-3 text-xs text-muted-foreground truncate">{doc.email}</td>
                     <td className="px-4 py-3">
                       {doc.senior ? (
-                        editingCodeId === doc._id ? (
-                          <div className="inline-flex items-center gap-1.5">
-                            <Star size={10} className="fill-amber-400 text-amber-400 shrink-0" />
-                            <input
-                              ref={codeInputRef}
-                              value={editingCodeVal}
-                              onChange={e => setEditingCodeVal(e.target.value.replace(/\D/g, ""))}
-                              onKeyDown={e => {
-                                if (e.key === "Enter") saveCode(doc._id);
-                                if (e.key === "Escape") setEditingCodeId(null);
-                              }}
-                              onBlur={() => saveCode(doc._id)}
-                              className="w-24 text-[11px] font-mono font-bold text-amber-900 bg-amber-50 border border-amber-300 rounded-md px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-amber-400"
-                            />
-                          </div>
-                        ) : (
-                          <div className="group/senior inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 shadow-sm w-fit">
-                            <Star size={10} className="fill-amber-400 text-amber-400 shrink-0" />
-                            <span className="text-[11px] font-semibold text-amber-700">Senior</span>
-                            {doc.seniorCode && (
-                              <>
-                                <span className="text-amber-300 text-[11px]">·</span>
-                                <span className="text-[11px] font-mono font-bold text-amber-900">{doc.seniorCode}</span>
-                              </>
-                            )}
-                            <button
-                              onClick={() => startEditCode(doc)}
-                              title="Modifier le code"
-                              className="ml-0.5 opacity-0 group-hover/senior:opacity-100 transition-opacity text-amber-500 hover:text-amber-700"
-                            >
-                              <Pencil size={9} />
-                            </button>
-                          </div>
-                        )
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 shadow-sm w-fit">
+                          <Star size={10} className="fill-amber-400 text-amber-400 shrink-0" />
+                          <span className="text-[11px] font-semibold text-amber-700">Senior</span>
+                          {doc.seniorCode && (
+                            <>
+                              <span className="text-amber-300 text-[11px]">·</span>
+                              <span className="text-[11px] font-mono font-bold text-amber-900">{doc.seniorCode}</span>
+                            </>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-[11px] text-muted-foreground/40">—</span>
                       )}

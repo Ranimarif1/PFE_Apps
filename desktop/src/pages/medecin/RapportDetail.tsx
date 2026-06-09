@@ -38,7 +38,8 @@ function AutoTextarea({ value, onChange, className }: { value: string; onChange:
       value={value}
       onChange={e => onChange(e.target.value)}
       className={className}
-      style={{ overflow: "hidden", resize: "none" }}
+      wrap="off"
+      style={{ overflowX: "auto", overflowY: "hidden", resize: "none", whiteSpace: "nowrap" }}
     />
   );
 }
@@ -261,14 +262,14 @@ export default function RapportDetail() {
 
   /* ── Auto-analyse: trigger suggestions 3s after last change (edit mode only) ── */
   useEffect(() => {
-    if (!editing || !contenu.trim()) return;
+    if (!editing || !contenu.trim() || ollamaUnavailable) return;
     if (autoAnalyseTimer.current) clearTimeout(autoAnalyseTimer.current);
     autoAnalyseTimer.current = setTimeout(() => {
       handleAnalyse();
     }, 3000);
     return () => { if (autoAnalyseTimer.current) clearTimeout(autoAnalyseTimer.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contenu, editing]);
+  }, [contenu, editing, ollamaUnavailable]);
 
   /* ── Auto-save as draft when arriving from transcription ── */
   useEffect(() => {
@@ -638,7 +639,7 @@ export default function RapportDetail() {
                     <AutoTextarea value={indication} onChange={setIndication}
                       className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                   ) : (
-                    <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3 whitespace-pre-wrap break-words min-h-[2.75rem]">{indication || "—"}</p>
+                    <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3 whitespace-pre overflow-x-auto min-h-[2.75rem]">{indication || "—"}</p>
                   )}
                 </div>
 
@@ -650,7 +651,7 @@ export default function RapportDetail() {
                       <AutoTextarea value={technique} onChange={setTechnique}
                         className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                     ) : (
-                      <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3 whitespace-pre-wrap break-words min-h-[2.75rem]">{technique || "—"}</p>
+                      <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3 whitespace-pre overflow-x-auto min-h-[2.75rem]">{technique || "—"}</p>
                     )}
                   </div>
                 )}
@@ -662,7 +663,7 @@ export default function RapportDetail() {
                     <AutoTextarea value={resultat} onChange={setResultat}
                       className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                   ) : (
-                    <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3 whitespace-pre-wrap break-words min-h-[2.75rem]">{resultat || "—"}</p>
+                    <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3 whitespace-pre overflow-x-auto min-h-[2.75rem]">{resultat || "—"}</p>
                   )}
                 </div>
 
@@ -673,7 +674,7 @@ export default function RapportDetail() {
                     <AutoTextarea value={conclusion} onChange={setConclusion}
                       className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                   ) : (
-                    <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3 whitespace-pre-wrap break-words min-h-[2.75rem]">{conclusion || "—"}</p>
+                    <p className="text-foreground leading-relaxed text-sm bg-muted/30 rounded-xl p-3 whitespace-pre overflow-x-auto min-h-[2.75rem]">{conclusion || "—"}</p>
                   )}
                 </div>
               </div>

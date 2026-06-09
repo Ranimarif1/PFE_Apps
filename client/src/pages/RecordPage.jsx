@@ -32,7 +32,7 @@ export default function RecordPage() {
   const {
     start, pause, stop,
     status, error: recorderError,
-    isRecording, isPaused,
+    isRecording, isPaused, interrupted,
   } = useAudioRecorder({ onStop: handleStop });
 
   const handleStart = useCallback(() => {
@@ -130,6 +130,13 @@ export default function RecordPage() {
           </div>
         ) : (
           <>
+            {/* Interrupted by call banner */}
+            {interrupted && (
+              <div className="rp-interrupted-banner">
+                ⚠️ Enregistrement mis en pause (appel reçu). Appuyez sur <strong>Reprendre</strong> pour continuer.
+              </div>
+            )}
+
             {/* Pulsing indicator */}
             <div className={`rp-indicator ${isRecording ? 'rp-indicator--active' : isPaused ? 'rp-indicator--paused' : ''}`}>
               <span className="rp-indicator__dot" />
