@@ -25,6 +25,16 @@ function getLocalIP(): string {
 
 function loadCert() {
   const ip = getLocalIP();
+  const certScript = path.join(certDir, "generate-cert.js");
+  if (fs.existsSync(certScript)) {
+    try {
+      require("child_process").execSync(`node "${certScript}"`, { stdio: "inherit" });
+    } catch {}
+  }
+  const current = { key: path.join(certDir, "current-key.pem"), cert: path.join(certDir, "current.pem") };
+  if (fs.existsSync(current.key) && fs.existsSync(current.cert)) {
+    return { key: fs.readFileSync(current.key), cert: fs.readFileSync(current.cert) };
+  }
   const candidates = [
     { key: "local-network-key.pem", cert: "local-network.pem" },
     ...[ `${ip}+2`, `${ip}+1`, ip ].map(p => ({ key: `${p}-key.pem`, cert: `${p}.pem` })),

@@ -23,23 +23,31 @@ function getLocalIP() {
   return '127.0.0.1';
 }
 
-function loadCert(ip) {
-  // Try wildcard cert first, then IP-specific certs
+function generateAndLoadCert(ip) {
+  const certScript = path.join(certsDir, 'generate-cert.js');
+  if (fs.existsSync(certScript)) {
+    try {
+      require('child_process').execSync(`node "${certScript}"`, { stdio: 'inherit' });
+    } catch {}
+  }
+  const key  = path.join(certsDir, 'current-key.pem');
+  const cert = path.join(certsDir, 'current.pem');
+  if (fs.existsSync(key) && fs.existsSync(cert)) return { key, cert };
+  // fallback to IP-specific or wildcard certs
   const candidates = [
     { key: 'local-network-key.pem', cert: 'local-network.pem' },
     ...[ `${ip}+2`, `${ip}+1`, ip ].map(p => ({ key: `${p}-key.pem`, cert: `${p}.pem` })),
   ];
-  for (const { key, cert } of candidates) {
-    const k = path.join(certsDir, key);
-    const c = path.join(certsDir, cert);
-    if (fs.existsSync(k) && fs.existsSync(c)) return { key: k, cert: c };
+  for (const { key: k, cert: c } of candidates) {
+    const kp = path.join(certsDir, k), cp = path.join(certsDir, c);
+    if (fs.existsSync(kp) && fs.existsSync(cp)) return { key: kp, cert: cp };
   }
   return null;
 }
 
 export default defineConfig(() => {
   const ip = getLocalIP();
-  const tlsFiles = loadCert(ip);
+  const tlsFiles = generateAndLoadCert(ip);
 
   console.log(`[mobile client] LAN IP: ${ip}`);
   if (!tlsFiles) console.warn(`[mobile client] No cert found for ${ip} — running HTTP (mic may be blocked on mobile)`);
