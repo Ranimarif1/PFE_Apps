@@ -126,6 +126,7 @@ export function useAudioRecorder({ onStop } = {}) {
     recorder.onstop = () => {
       stopStream();
       releaseWakeLock();
+      recorderRef.current = null;
       setStatus('stopped');
       const blob = new Blob(chunksRef.current, { type: recorder.mimeType });
       onStop?.(blob, recorder.mimeType);

@@ -14,7 +14,7 @@ const sessionId =
   (/\/([0-9a-f-]{36})$/i.exec(window.location.pathname)?.[1] ?? null);
 
 export default function RecordPage() {
-  const { connected, error: socketError, emit } = useSocket(sessionId);
+  const { connected, ready, error: socketError, emit } = useSocket(sessionId);
 
   const [pendingBlob, setPendingBlob] = useState(null);
   const [pendingMime, setPendingMime] = useState('');
@@ -40,9 +40,13 @@ export default function RecordPage() {
       setPendingBlob(null);
       setSent(false);
       setSessionKey((k) => k + 1);
+      emit('recording:start', { sessionId });
+    } else if (status === 'paused') {
+      emit('recording:resume', { sessionId });
+    } else {
+      emit('recording:start', { sessionId });
     }
     start();
-    emit('recording:start', { sessionId });
   }, [start, emit, status]);
 
   // ── Send full recording to desktop ───────────────────────────
@@ -67,10 +71,15 @@ export default function RecordPage() {
     if (isPaused || status === 'idle' || status === 'stopped') handleStart();
   }, [isPaused, status, handleStart]);
 
+  const handlePause = useCallback(() => {
+    pause();
+    emit('recording:pause', { sessionId });
+  }, [pause, emit]);
+
   const handlePttUp = useCallback((e) => {
     e.preventDefault();
-    if (isRecording) pause();
-  }, [isRecording, pause]);
+    if (isRecording) handlePause();
+  }, [isRecording, handlePause]);
 
   // ── No session guard ──────────────────────────────────────────
   if (!sessionId) {
@@ -86,7 +95,7 @@ export default function RecordPage() {
   }
 
   const error    = socketError || recorderError;
-  const canRecord = connected;
+  const canRecord = connected && ready;
   const hasPending = !!pendingBlob && !sent;
 
   return (
@@ -153,17 +162,17 @@ export default function RecordPage() {
             <div className="rp-controls">
               <button
                 className="rp-btn rp-btn--start"
-                disabled={!canRecord || isRecording}
+                disabled={!canRecord || isRecording || status === 'requesting'}
                 onClick={handleStart}
                 aria-label="Démarrer l'enregistrement"
               >
-                {isPaused ? '▶ Reprendre' : '● Démarrer'}
+                {status === 'requesting' ? '⏳ Accès micro...' : isPaused ? '▶ Reprendre' : '● Démarrer'}
               </button>
 
               <button
                 className="rp-btn rp-btn--pause"
                 disabled={!isRecording}
-                onClick={pause}
+                onClick={handlePause}
                 aria-label="Mettre en pause"
               >
                 ❙❙ Pause

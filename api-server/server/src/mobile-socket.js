@@ -46,6 +46,13 @@ function registerMobileHandlers(io, socket) {
     }
 
     const session = sessions.get(sessionId);
+
+    // Reject if another mobile already holds this session
+    if (session.mobileSocketId && session.mobileSocketId !== socket.id) {
+      socket.emit('session:error', { message: 'Cette session est déjà utilisée par un autre appareil.' });
+      return;
+    }
+
     session.mobileSocketId = socket.id;
     socket.join(sessionId);
 
@@ -90,6 +97,14 @@ function registerMobileHandlers(io, socket) {
 
   socket.on('recording:stop', ({ sessionId }) => {
     socket.to(sessionId).emit('recording:stop', { sessionId });
+  });
+
+  socket.on('recording:pause', ({ sessionId }) => {
+    socket.to(sessionId).emit('recording:pause', { sessionId });
+  });
+
+  socket.on('recording:resume', ({ sessionId }) => {
+    socket.to(sessionId).emit('recording:resume', { sessionId });
   });
 
   // ── Cleanup on disconnect ─────────────────────────────────────────

@@ -401,8 +401,10 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
     socket.on("session:status", ({ mobileConnected: mc }: { mobileConnected: boolean }) => setMobileConnected(mc));
     socket.on("mobile:connected",    () => setMobileConnected(true));
     socket.on("mobile:disconnected", () => setMobileConnected(false));
-    socket.on("recording:start",     () => { setIsRecording(true); startTimer(); });
-    socket.on("recording:stop",      () => { setIsRecording(false); stopTimer(); });
+    socket.on("recording:start",  () => { setIsRecording(true);  setIsPaused(false); setSeconds(0); startTimer(); });
+    socket.on("recording:stop",   () => { setIsRecording(false); setIsPaused(false); stopTimer(); });
+    socket.on("recording:pause",  () => { setIsRecording(false); setIsPaused(true);  stopTimer(); });
+    socket.on("recording:resume", () => { setIsRecording(true);  setIsPaused(false); startTimer(); });
     socket.on("audio:complete", ({ audio, mimeType }: { audio: ArrayBuffer; mimeType: string }) => {
       const blob = new Blob([audio], { type: mimeType });
       setAudioReceived(true);

@@ -49,13 +49,29 @@ if (fs.existsSync(certOut)) {
 
 console.log(`[cert] Generating cert for ${ip}...`);
 
-fs.writeFileSync(extOut, `subjectAltName=IP:${ip},IP:127.0.0.1`);
+const csrConf = path.join(DIR, "current.cnf");
+fs.writeFileSync(csrConf, `[req]
+prompt=no
+distinguished_name=dn
+req_extensions=ext
+[dn]
+CN=${ip}
+O=ReportEase
+[ext]
+subjectAltName=IP:${ip},IP:127.0.0.1,DNS:localhost
+`);
+fs.writeFileSync(extOut, `subjectAltName=IP:${ip},IP:127.0.0.1,DNS:localhost`);
 
 execSync(`"${OPENSSL}" genrsa -out "${keyOut}" 2048`, { stdio: "pipe" });
-execSync(`"${OPENSSL}" req -new -key "${keyOut}" -out "${csrOut}" -subj "//CN=${ip}"`, { stdio: "pipe" });
+execSync(`"${OPENSSL}" req -new -key "${keyOut}" -out "${csrOut}" -config "${csrConf}"`, { stdio: "pipe" });
 execSync(`"${OPENSSL}" x509 -req -days 825 -in "${csrOut}" -CA "${caCert}" -CAkey "${caKey}" -CAcreateserial -out "${certOut}" -extfile "${extOut}"`, { stdio: "pipe" });
 
 fs.unlinkSync(csrOut);
 fs.unlinkSync(extOut);
+fs.unlinkSync(csrConf);
 
-console.log(`[cert] Done — current.pem valid for ${ip}`);
+// Append CA cert to create full chain (required by Safari/iOS)
+const chain = fs.readFileSync(certOut, "utf8") + "\n" + fs.readFileSync(caCert, "utf8");
+fs.writeFileSync(certOut, chain);
+
+console.log(`[cert] Done — current.pem valid for ${ip} (full chain included)`);
