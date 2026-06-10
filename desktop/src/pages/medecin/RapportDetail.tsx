@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
-import { getReport, createReport, updateReport, deleteReport } from "@/services/reportsService";
+import { getReport, createReport, updateReport, deleteReport, checkExamId } from "@/services/reportsService";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle, Edit3, Save, FileText, Check, X, Loader2, ArrowLeft, Pencil, Wand2, CloudUpload, AlertTriangle, Trash2, ClipboardCopy, RotateCcw } from "lucide-react";
 import {
@@ -63,10 +63,14 @@ export default function RapportDetail() {
   const [technique,   setTechnique]   = useState(initialParsed.technique);
   const [resultat,    setResultat]    = useState(initialParsed.resultat);
   const [conclusion,  setConclusion]  = useState(initialParsed.conclusion);
-  const [examId,      setExamId]      = useState(fromState?.ID_Exam || "");
-  const [editingId,   setEditingId]   = useState(false);
-  const [examIdInput, setExamIdInput] = useState(fromState?.ID_Exam || "");
-  const [examIdError, setExamIdError] = useState("");
+  const [examId,          setExamId]          = useState(fromState?.ID_Exam || "");
+  const [editingId,       setEditingId]       = useState(false);
+  const [examIdInput,     setExamIdInput]     = useState(fromState?.ID_Exam || "");
+  const [examIdError,     setExamIdError]     = useState("");
+  const [examIdChecking,  setExamIdChecking]  = useState(false);
+  const [examIdAvailable, setExamIdAvailable] = useState<boolean | null>(null);
+  const [examIdSaving,    setExamIdSaving]    = useState(false);
+  const examIdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [status,      setStatus]      = useState<string>("draft");
   const [createdAt,   setCreatedAt]   = useState<string | null>(null);
   const [category,    setCategory]    = useState<ReportCategory | "">(fromState?.category ?? "");
@@ -490,46 +494,77 @@ export default function RapportDetail() {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 text-sm">
                 <div>
                   <p className="text-muted-foreground text-xs mb-0.5">ID Exam</p>
-                  {(isNew || status === "draft") && editingId ? (
-                    <div className="flex items-center gap-1">
-                      <input
-                        autoFocus
-                        value={examIdInput}
-                        onChange={e => {
-                          const v = e.target.value;
-                          setExamIdInput(v);
-                          setExamIdError(/^\d*$/.test(v) ? "" : "Chiffres uniquement");
-                        }}
-                        className="font-mono font-bold text-foreground bg-background border border-border rounded px-1.5 py-0.5 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                      />
-                      <button
-                        onClick={() => {
-                          if (examIdError) return;
-                          setExamId(examIdInput);
-                          setEditingId(false);
-                        }}
-                        className="text-success hover:text-success/80 transition-colors"
-                        title="Confirmer"
-                      ><Check size={13} /></button>
-                      <button
-                        onClick={() => { setExamIdInput(examId); setExamIdError(""); setEditingId(false); }}
-                        className="text-muted-foreground hover:text-foreground transition-colors"
-                        title="Annuler"
-                      ><X size={13} /></button>
+                  {editingId ? (
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-1">
+                        <input
+                          autoFocus
+                          value={examIdInput}
+                          onChange={e => {
+                            const v = e.target.value;
+                            setExamIdInput(v);
+                            setExamIdAvailable(null);
+                            if (!/^\d*$/.test(v)) { setExamIdError("Chiffres uniquement"); return; }
+                            setExamIdError("");
+                            if (!v || v === examId) return;
+                            if (examIdTimerRef.current) clearTimeout(examIdTimerRef.current);
+                            setExamIdChecking(true);
+                            examIdTimerRef.current = setTimeout(async () => {
+                              try {
+                                const { available } = await checkExamId(v, isNew ? undefined : id);
+                                setExamIdAvailable(available);
+                                if (!available) setExamIdError("ID déjà utilisé");
+                              } finally { setExamIdChecking(false); }
+                            }, 400);
+                          }}
+                          className="font-mono font-bold text-foreground bg-background border border-border rounded px-1.5 py-0.5 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        />
+                        {examIdChecking && <Loader2 size={12} className="animate-spin text-muted-foreground" />}
+                        {!examIdChecking && examIdAvailable === true && examIdInput !== examId && <Check size={12} className="text-success" />}
+                        <button
+                          disabled={!!examIdError || examIdChecking || examIdAvailable === false || examIdSaving}
+                          onClick={async () => {
+                            if (examIdError || examIdChecking || examIdAvailable === false) return;
+                            if (examIdInput === examId) { setEditingId(false); return; }
+                            if (!isNew && id) {
+                              setExamIdSaving(true);
+                              try {
+                                await updateReport(id, { ID_Exam: examIdInput });
+                                setExamId(examIdInput);
+                                queryClient.invalidateQueries({ queryKey: ["reports"] });
+                              } catch (err: unknown) {
+                                setExamIdError(err instanceof Error ? err.message : "Erreur lors de la mise à jour");
+                                setExamIdSaving(false);
+                                return;
+                              }
+                              setExamIdSaving(false);
+                            } else {
+                              setExamId(examIdInput);
+                            }
+                            setEditingId(false);
+                            setExamIdAvailable(null);
+                          }}
+                          className="text-success hover:text-success/80 transition-colors disabled:opacity-40"
+                          title="Confirmer"
+                        >{examIdSaving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}</button>
+                        <button
+                          onClick={() => { setExamIdInput(examId); setExamIdError(""); setExamIdAvailable(null); setEditingId(false); }}
+                          className="text-muted-foreground hover:text-foreground transition-colors"
+                          title="Annuler"
+                        ><X size={13} /></button>
+                      </div>
+                      {examIdError && <p className="text-destructive text-[10px]">{examIdError}</p>}
                     </div>
                   ) : (
                     <div className="flex items-center gap-1 group">
                       <p className="font-mono font-bold text-foreground">{examId || "—"}</p>
-                      {(isNew || status === "draft") && (
-                        <button
-                          onClick={() => { setExamIdInput(examId); setExamIdError(""); setEditingId(true); }}
-                          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-all"
-                          title="Modifier l'ID Exam"
-                        ><Pencil size={11} /></button>
-                      )}
+                      <button
+                        onClick={() => { setExamIdInput(examId); setExamIdError(""); setExamIdAvailable(null); setEditingId(true); }}
+                        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-all"
+                        title="Modifier l'ID Exam"
+                      ><Pencil size={11} /></button>
                     </div>
                   )}
-                  {examIdError && <p className="text-destructive text-[10px] mt-0.5">{examIdError}</p>}
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs mb-0.5">Type d'examen</p>

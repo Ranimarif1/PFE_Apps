@@ -196,7 +196,14 @@ def check_exam_id(request: HttpRequest) -> JsonResponse:
     if not exam_id:
         return JsonResponse({"detail": "Paramètre 'id' requis."}, status=400)
     reports_col = get_collection("reports")
-    taken = reports_col.find_one({"ID_Exam": exam_id}) is not None
+    exclude_id  = request.GET.get("exclude", "").strip()
+    query: Dict[str, Any] = {"ID_Exam": exam_id}
+    if exclude_id:
+        try:
+            query["_id"] = {"$ne": ObjectId(exclude_id)}
+        except Exception:
+            pass
+    taken = reports_col.find_one(query) is not None
     return JsonResponse({"available": not taken})
 
 
@@ -422,6 +429,15 @@ def get_or_update_report(request: HttpRequest, report_id: str):
                 return JsonResponse({"detail": "Catégorie invalide."}, status=400)
             if new_category:
                 update_doc["category"] = new_category
+
+        if "ID_Exam" in data:
+            new_exam_id = str(data["ID_Exam"]).strip()
+            if not re.match(r'^\d+$', new_exam_id):
+                return JsonResponse({"detail": "L'ID Exam doit contenir uniquement des chiffres."}, status=400)
+            conflict = reports_col.find_one({"ID_Exam": new_exam_id, "_id": {"$ne": oid}})
+            if conflict:
+                return JsonResponse({"detail": f"L'identifiant \"{new_exam_id}\" est déjà utilisé par un autre rapport."}, status=409)
+            update_doc["ID_Exam"] = new_exam_id
 
         # Compute accuracy when transitioning into "validated" for the first time
         # or when content changes while already validated.
