@@ -17,20 +17,35 @@ function getSupportedMimeType() {
  * Chunks are accumulated internally and returned as a Blob on stop.
  *
  * @param {object} opts
- * @param {(blob: Blob, mimeType: string) => void} opts.onStop - called when recording stops with the full audio blob.
+ * @param {(blob: Blob, mimeType: string) => void} opts.onStop       - called when recording stops with the full audio blob.
+ * @param {(blob: Blob, mimeType: string) => void} opts.onCheckpoint - called every 30s with current audio snapshot (for crash recovery).
  */
-export function useAudioRecorder({ onStop } = {}) {
-  const recorderRef  = useRef(null);
-  const streamRef    = useRef(null);
-  const chunksRef    = useRef([]);
-  const wakeLockRef  = useRef(null);
+export function useAudioRecorder({ onStop, onCheckpoint } = {}) {
+  const recorderRef       = useRef(null);
+  const streamRef         = useRef(null);
+  const chunksRef         = useRef([]);
+  const wakeLockRef       = useRef(null);
+  const checkpointRef     = useRef(null);
 
   const [status, setStatus]           = useState('idle'); // idle | requesting | recording | paused | stopped | error
   const [error, setError]             = useState(null);
   const [mimeType]                    = useState(getSupportedMimeType);
   const [interrupted, setInterrupted] = useState(false); // true when paused by phone call / app switch
 
-  useEffect(() => () => { stopStream(); releaseWakeLock(); }, []);
+  function startCheckpoint(mimeType) {
+    if (checkpointRef.current) clearInterval(checkpointRef.current);
+    checkpointRef.current = setInterval(() => {
+      if (chunksRef.current.length === 0) return;
+      const blob = new Blob(chunksRef.current, { type: mimeType });
+      onCheckpoint?.(blob, mimeType);
+    }, 30_000);
+  }
+
+  function stopCheckpoint() {
+    if (checkpointRef.current) { clearInterval(checkpointRef.current); checkpointRef.current = null; }
+  }
+
+  useEffect(() => () => { stopStream(); releaseWakeLock(); stopCheckpoint(); }, []);
 
   function stopStream() {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -126,6 +141,7 @@ export function useAudioRecorder({ onStop } = {}) {
     recorder.onstop = () => {
       stopStream();
       releaseWakeLock();
+      stopCheckpoint();
       recorderRef.current = null;
       setStatus('stopped');
       const blob = new Blob(chunksRef.current, { type: recorder.mimeType });
@@ -142,8 +158,9 @@ export function useAudioRecorder({ onStop } = {}) {
     recorder.start(250);
     recorderRef.current = recorder;
     setStatus('recording');
+    startCheckpoint(mimeType || recorder.mimeType);
     await requestWakeLock();
-  }, [mimeType, onStop]);
+  }, [mimeType, onStop, onCheckpoint]);
 
   // ── Pause ────────────────────────────────────────────────────────────────
   const pause = useCallback(() => {

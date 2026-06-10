@@ -1,7 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useSocket } from '../hooks/useSocket';
 import { useAudioRecorder } from '../hooks/useAudioRecorder';
 import { useTimer } from '../hooks/useTimer';
+import { saveCheckpoint, loadCheckpoint, clearCheckpoint } from '../hooks/useAudioStorage';
 import StatusBadge from '../components/StatusBadge';
 import ConnectionBanner from '../components/ConnectionBanner';
 import '../styles/RecordPage.css';
@@ -16,24 +17,43 @@ const sessionId =
 export default function RecordPage() {
   const { connected, ready, error: socketError, emit } = useSocket(sessionId);
 
-  const [pendingBlob, setPendingBlob] = useState(null);
-  const [pendingMime, setPendingMime] = useState('');
-  const [sent, setSent]               = useState(false);
-  const [sessionKey, setSessionKey]   = useState(0);
+  const [pendingBlob, setPendingBlob]     = useState(null);
+  const [pendingMime, setPendingMime]     = useState('');
+  const [sent, setSent]                   = useState(false);
+  const [sessionKey, setSessionKey]       = useState(0);
+  const [recovered, setRecovered]         = useState(false);
+
+  // ── Recover audio from IndexedDB on mount (crash/tab-kill recovery) ──
+  useEffect(() => {
+    if (!sessionId) return;
+    loadCheckpoint(sessionId).then(saved => {
+      if (saved?.blob) {
+        setPendingBlob(saved.blob);
+        setPendingMime(saved.mimeType);
+        setSent(false);
+        setRecovered(true);
+      }
+    });
+  }, []);
 
   // ── Audio recorder ───────────────────────────────────────────
   const handleStop = useCallback((blob, mimeType) => {
     setPendingBlob(blob);
     setPendingMime(mimeType);
     setSent(false);
+    saveCheckpoint(sessionId, blob, mimeType);
     emit('recording:stop', { sessionId });
   }, [emit]);
+
+  const handleCheckpoint = useCallback((blob, mimeType) => {
+    saveCheckpoint(sessionId, blob, mimeType);
+  }, []);
 
   const {
     start, pause, stop,
     status, error: recorderError,
     isRecording, isPaused, interrupted,
-  } = useAudioRecorder({ onStop: handleStop });
+  } = useAudioRecorder({ onStop: handleStop, onCheckpoint: handleCheckpoint });
 
   const handleStart = useCallback(() => {
     if (status === 'idle' || status === 'stopped') {
@@ -60,6 +80,8 @@ export default function RecordPage() {
       timestamp: Date.now(),
     });
     setSent(true);
+    setRecovered(false);
+    clearCheckpoint(sessionId);
   }, [pendingBlob, pendingMime, emit]);
 
   // ── Timer ────────────────────────────────────────────────────
@@ -139,6 +161,13 @@ export default function RecordPage() {
           </div>
         ) : (
           <>
+            {/* Recovered audio banner */}
+            {recovered && (
+              <div className="rp-interrupted-banner" style={{ background: '#1a3a1a', borderColor: '#166534', color: '#4ade80' }}>
+                🔄 Enregistrement récupéré après interruption. Appuyez sur <strong>Envoyer</strong> pour l'envoyer.
+              </div>
+            )}
+
             {/* Interrupted by call banner */}
             {interrupted && (
               <div className="rp-interrupted-banner">
