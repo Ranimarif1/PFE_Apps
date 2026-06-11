@@ -39,27 +39,27 @@ function registerMobileHandlers(io, socket) {
 
   // ── Mobile: join a session room ──────────────────────────────────
   socket.on('mobile:join', ({ sessionId }) => {
-    // Auto-create the session if it doesn't exist yet.
-    // This handles: server restart, direct URL access, or mobile joining before desktop.
     if (!sessions.has(sessionId)) {
       sessions.set(sessionId, { desktopSocketId: null, mobileSocketId: null });
     }
 
     const session = sessions.get(sessionId);
 
-    // Reject if another mobile already holds this session
+    // Block if another device is actively connected on a different socket
     if (session.mobileSocketId && session.mobileSocketId !== socket.id) {
-      socket.emit('session:error', { message: 'Cette session est déjà utilisée par un autre appareil.' });
-      return;
+      const existing = io.sockets.sockets.get(session.mobileSocketId);
+      if (existing) {
+        socket.emit('session:error', { message: 'Cette session est déjà utilisée par un autre appareil.' });
+        return;
+      }
     }
 
+    // Allow: first connection or reconnection after network cut
     session.mobileSocketId = socket.id;
     socket.join(sessionId);
 
-    // Confirm to mobile so it can enable the Record button
     socket.emit('session:ready', { sessionId });
 
-    // Notify desktop that the phone is connected
     if (session.desktopSocketId) {
       io.to(session.desktopSocketId).emit('mobile:connected', { sessionId });
     }

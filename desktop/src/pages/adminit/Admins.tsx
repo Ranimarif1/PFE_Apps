@@ -177,24 +177,23 @@ export default function AdminITAdmins() {
               </div>
               <h2 className="text-lg font-semibold text-foreground">Supprimer le compte admin</h2>
             </div>
-            <p className="text-sm text-muted-foreground mb-2">
-              Vous êtes sur le point de supprimer définitivement le compte de :
-            </p>
-            <p className="text-sm font-semibold text-foreground mb-1">
-              {confirmDelete.prenom} {confirmDelete.nom}
-            </p>
+            <p className="text-sm text-muted-foreground mb-1">Compte à supprimer :</p>
+            <p className="text-sm font-semibold text-foreground">{confirmDelete.prenom} {confirmDelete.nom}</p>
             <p className="text-xs text-muted-foreground mb-4">{confirmDelete.email}</p>
-            <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 mb-5">
+
+            <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 mb-4">
               <p className="text-xs text-destructive font-medium">
-                ⚠️ Cette action est irréversible. Le compte sera définitivement supprimé de la base de données.
+                Cette action est irréversible. Le compte sera définitivement supprimé.
               </p>
             </div>
+
             <div className="flex gap-3">
               <button onClick={() => setConfirmDelete(null)}
                 className="flex-1 py-2.5 rounded-xl border border-border text-foreground hover:bg-muted transition-all text-sm font-medium">
                 Annuler
               </button>
-              <button onClick={() => deleteMutation.mutate(confirmDelete._id)}
+              <button
+                onClick={() => deleteMutation.mutate(confirmDelete._id)}
                 disabled={deleteMutation.isPending}
                 className="flex-1 py-2.5 rounded-xl bg-destructive text-white font-semibold hover:bg-destructive/90 disabled:opacity-60 transition-all text-sm">
                 {deleteMutation.isPending ? "Suppression..." : "Supprimer définitivement"}

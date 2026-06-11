@@ -44,6 +44,15 @@ export async function updateUserStatus(
   return { ...data, user: normalizeRecord(data.user) };
 }
 
+export interface UserReportInfo {
+  report_count: number;
+  auto_senior: { id: string; name: string } | null;
+}
+
+export async function getUserReportInfo(userId: string): Promise<UserReportInfo> {
+  return api.get<UserReportInfo>(`/api/auth/users/${userId}/report-info`);
+}
+
 export async function deleteUser(userId: string): Promise<void> {
   await api.delete(`/api/auth/users/${userId}`);
 }

@@ -69,12 +69,12 @@ def _build_filtered_csv(start: dt.date, end: dt.date) -> bytes:
     }).sort("createdAt", 1)
 
     buf = io.StringIO()
-    buf.write("﻿")  # UTF-8 BOM for Excel compatibility
-    writer = csvlib.writer(buf, delimiter=";")
-    writer.writerow(["id_exam", "doctor_name", "date", "time", "superviseur_senior", "code_senior", "indication", "technique", "resultat", "conclusion", "transcription"])
+    buf.write("﻿")  # UTF-8 BOM
+    writer = csvlib.writer(buf, delimiter="\t", quoting=csvlib.QUOTE_MINIMAL)
+    writer.writerow(["ID Examen", "Médecin", "Type", "Date", "Superviseur Senior", "Code Senior", "Indication", "Technique", "Resultat", "Conclusion", "Fichier"])
 
     for report in cursor:
-        doctor_name = ""
+        doctor_name = report.get("doctorName") or ""
         try:
             doctor = users_col.find_one(
                 {"_id": ObjectId(report.get("doctorId", ""))},
@@ -100,10 +100,10 @@ def _build_filtered_csv(start: dt.date, end: dt.date) -> bytes:
         writer.writerow([
             report.get("ID_Exam", ""),
             doctor_name,
-            dt_obj.date().isoformat(),
-            dt_obj.time().strftime("%H:%M:%S"),
-            report.get("seniorName") or "—",
-            report.get("seniorCode") or "—",
+            report.get("category", ""),
+            dt_obj.strftime("%d/%m/%Y %H:%M"),
+            report.get("seniorName") or "",
+            report.get("seniorCode") or "",
             sections.get("indication", "").replace("\n", " ").strip(),
             sections.get("technique", "").replace("\n", " ").strip(),
             sections.get("resultat", "").replace("\n", " ").strip(),

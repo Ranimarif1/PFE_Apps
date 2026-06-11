@@ -58,8 +58,15 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       overlay: false,
     },
+    proxy: {
+      "/socket.io": {
+        target: "http://localhost:4000",
+        ws: true,
+        changeOrigin: true,
+      },
+    },
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [react()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

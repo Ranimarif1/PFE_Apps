@@ -86,6 +86,28 @@ function structureContent(text: string, category?: ReportCategory | null): strin
   let resultat    = extract(rMatch, nextAfter(rIdx, cIdx));
   let conclusion  = extract(cMatch, -1);
 
+  // ── Auto-split Indication → Indication + Résultat ─────────────────────────
+  // Two cases land here:
+  // 1. Doctor never said "Résultat" → everything before Conclusion is in indication
+  // 2. Doctor said "Résultat" AFTER the findings (as a transition) → indication
+  //    contains all findings, résultat is empty
+  // Fix: if indication is multi-line and résultat is empty, split at first line.
+  if (indication && !resultat) {
+    const newlineIdx  = indication.search(/\n/);
+    const sentenceIdx = indication.search(/\.\s+[A-ZÀ-Ü]/);
+    const splitAt = newlineIdx > 0 ? newlineIdx
+                  : sentenceIdx > 0 ? sentenceIdx + 1
+                  : -1;
+    if (splitAt > 0 && splitAt < indication.length - 2) {
+      const firstPart = indication.slice(0, splitAt).trim();
+      const restPart  = indication.slice(splitAt).replace(/^[\s.]+/, "").trim();
+      if (restPart) {
+        indication = firstPart;
+        resultat   = restPart;
+      }
+    }
+  }
+
   // ── Safety net ────────────────────────────────────────────────────────────
   // Verify no text was silently lost. Compare total captured characters
   // against the original. Any significant orphaned text is appended to

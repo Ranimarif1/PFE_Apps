@@ -468,6 +468,48 @@ def update_user_status(request: HttpRequest, user_id: str) -> JsonResponse:
 
 
 @csrf_exempt
+def user_report_info(request: HttpRequest, user_id: str) -> JsonResponse:
+    """GET /api/auth/users/<id>/report-info — report count + auto-senior for pre-delete modal."""
+    if request.method != "GET":
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+
+    current = get_current_user(request)
+    if not current or current.role not in {"admin", "adminIT"}:
+        return JsonResponse({"detail": "Accès refusé."}, status=403)
+
+    users_col = get_collection("users")
+    try:
+        oid = ObjectId(user_id)
+    except Exception:
+        return JsonResponse({"detail": "Identifiant invalide."}, status=400)
+
+    user = users_col.find_one({"_id": oid})
+    if not user:
+        return JsonResponse({"detail": "Utilisateur introuvable."}, status=404)
+
+    reports_col = get_collection("reports")
+    report_count = reports_col.count_documents({"doctorId": str(oid)})
+
+    # For a non-senior doctor, try to find their senior automatically from their reports.
+    auto_senior = None
+    is_senior = user.get("senior") or user.get("role") == "admin"
+    if not is_senior and report_count > 0:
+        sample = reports_col.find_one({"doctorId": str(oid), "seniorId": {"$nin": [None, ""]}})
+        if sample:
+            senior_id = sample.get("seniorId")
+            try:
+                senior_doc = users_col.find_one({"_id": ObjectId(senior_id)})
+                if senior_doc:
+                    name = f"{senior_doc.get('prenom', '')} {senior_doc.get('nom', '')}".strip()
+                    auto_senior = {"id": str(senior_doc["_id"]), "name": name or senior_doc.get("email", senior_id)}
+            except Exception:
+                pass
+            # If senior_doc not found (deleted user), auto_senior stays None → frontend shows dropdown
+
+    return JsonResponse({"report_count": report_count, "auto_senior": auto_senior})
+
+
+@csrf_exempt
 def delete_user(request: HttpRequest, user_id: str) -> JsonResponse:
     if request.method != "DELETE":
         return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
@@ -495,6 +537,14 @@ def delete_user(request: HttpRequest, user_id: str) -> JsonResponse:
     if current.role == "adminIT" and user.get("role") != "admin":
         return JsonResponse({"detail": "L'Admin IT ne peut supprimer que des comptes admin."}, status=403)
 
+    # Clear seniorId on any reports this user supervised
+    reports_col = get_collection("reports")
+    reports_col.update_many(
+        {"seniorId": str(oid)},
+        {"$set": {"seniorId": None, "seniorName": None, "seniorCode": None}},
+    )
+
+    # ── Delete user ──────────────────────────────────────────────────────────
     prenom = user.get("prenom", "")
     nom = user.get("nom", "")
     user_email = user.get("email", "")

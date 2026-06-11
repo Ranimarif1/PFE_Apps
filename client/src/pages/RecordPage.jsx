@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { useSocket } from '../hooks/useSocket';
 import { useAudioRecorder } from '../hooks/useAudioRecorder';
 import { useTimer } from '../hooks/useTimer';
@@ -6,6 +6,68 @@ import { saveCheckpoint, loadCheckpoint, clearCheckpoint } from '../hooks/useAud
 import StatusBadge from '../components/StatusBadge';
 import ConnectionBanner from '../components/ConnectionBanner';
 import '../styles/RecordPage.css';
+
+// ── MP3 conversion + download ─────────────────────────────────────────────────
+async function convertToMp3(blob) {
+  const { Mp3Encoder } = await import('@breezystack/lamejs');
+  const arrayBuffer = await blob.arrayBuffer();
+  const audioCtx = new AudioContext();
+  const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+  audioCtx.close();
+
+  const channelData = audioBuffer.getChannelData(0); // mono
+  const sampleRate  = audioBuffer.sampleRate;
+
+  const samples = new Int16Array(channelData.length);
+  for (let i = 0; i < channelData.length; i++) {
+    const s = Math.max(-1, Math.min(1, channelData[i]));
+    samples[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+  }
+
+  const encoder   = new Mp3Encoder(1, sampleRate, 128);
+  const mp3Parts  = [];
+  const blockSize = 1152;
+  for (let i = 0; i < samples.length; i += blockSize) {
+    const chunk   = samples.subarray(i, i + blockSize);
+    const encoded = encoder.encodeBuffer(chunk);
+    if (encoded.length > 0) mp3Parts.push(new Uint8Array(encoded));
+  }
+  const flushed = encoder.flush();
+  if (flushed.length > 0) mp3Parts.push(new Uint8Array(flushed));
+
+  return new Blob(mp3Parts, { type: 'audio/mpeg' });
+}
+
+function DownloadMp3Button({ blob }) {
+  const [loading, setLoading] = useState(false);
+
+  const handleClick = async () => {
+    setLoading(true);
+    try {
+      const mp3Blob = await convertToMp3(blob);
+      const name = `dictee_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.mp3`;
+      const url  = URL.createObjectURL(mp3Blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = name; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      console.error('MP3 conversion failed:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      className="rp-btn rp-btn--download"
+      onClick={handleClick}
+      disabled={loading}
+      aria-label="Télécharger en MP3"
+    >
+      {loading ? '⏳ Conversion MP3…' : '💾 Télécharger en MP3'}
+    </button>
+  );
+}
 
 // Support both URL formats:
 //   ?sessionId=<uuid>          (current format)
@@ -226,6 +288,11 @@ export default function RecordPage() {
             >
               {hasPending ? '↑ Envoyer vers le bureau' : 'En attente d\'un enregistrement'}
             </button>
+
+            {/* Download as MP3 — always visible when audio is ready */}
+            {hasPending && (
+              <DownloadMp3Button blob={pendingBlob} />
+            )}
 
             {/* Hold-to-record (PTT) */}
             <button

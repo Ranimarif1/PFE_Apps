@@ -368,7 +368,6 @@ export default function AdminMedecins() {
                   value={promoteCode}
                   onChange={e => setPromoteCode(e.target.value.replace(/\D/g, "").slice(0, 3))}
                   placeholder="Ex : 123"
-                  inputMode="numeric"
                   maxLength={3}
                   className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />

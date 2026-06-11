@@ -20,6 +20,7 @@ urlpatterns = [
     path("notifications", views.list_notifications, name="list_notifications"),
     path("notifications/mark-read", views.mark_notifications_read, name="mark_notifications_read"),
     path("users/<str:user_id>/role", views.change_user_role, name="change_user_role"),
+    path("users/<str:user_id>/report-info", views.user_report_info, name="user_report_info"),
     path("users/<str:user_id>", views.delete_user, name="delete_user"),
     path("profile", views.update_profile, name="update_profile"),
     path("forgot-password", views.forgot_password, name="forgot_password"),
