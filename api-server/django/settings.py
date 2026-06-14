@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "csvapp",
     "transcription",
     "audios",
+    "lifecycle",
 ]
 
 MIDDLEWARE = [
@@ -85,4 +86,11 @@ EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:8080")
+
+# ── Lifecycle management ───────────────────────────────────────────────────────
+LIFECYCLE_GRACE_PERIOD_DAYS    = int(os.getenv("LIFECYCLE_GRACE_PERIOD_DAYS",    "30"))
+LIFECYCLE_DRAFT_MAX_AGE_DAYS   = int(os.getenv("LIFECYCLE_DRAFT_MAX_AGE_DAYS",   "365"))
+LIFECYCLE_CORPUS_RETENTION_DAYS = int(os.getenv("LIFECYCLE_CORPUS_RETENTION_DAYS", "730"))
+LIFECYCLE_FROZEN_TESTSET_SIZE  = int(os.getenv("LIFECYCLE_FROZEN_TESTSET_SIZE",  "500"))
+LIFECYCLE_CORPUS_ROOT          = os.getenv("LIFECYCLE_CORPUS_ROOT", "/opt/corpus")
 

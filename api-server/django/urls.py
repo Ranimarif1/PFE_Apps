@@ -13,7 +13,8 @@ urlpatterns = [
     path("api/contact/", include("contact.urls")),
     path("api/csv/", include("csvapp.urls")),
     path("api/transcribe/", include("transcription.urls")),
-    path("api/audios/", include("audios.urls")),
+    path("api/audios/",     include("audios.urls")),
+    path("api/lifecycle/",  include("lifecycle.urls")),
     # Serve user avatars publicly. Audios stay behind their own JWT-protected views.
     path("media/avatars/<path:path>", serve, {"document_root": settings.MEDIA_ROOT / "avatars"}),
 ]

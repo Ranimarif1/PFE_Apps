@@ -18,6 +18,7 @@ export interface Report {
   updatedAt: string;
   doctorName?: string;
   isOwn?: boolean;
+  pinnedForCorpus?: boolean;
 }
 
 export async function getReports(): Promise<Report[]> {
@@ -65,6 +66,7 @@ export async function updateReport(
     category?: ReportCategory;
     originalContent?: string;
     ID_Exam?: string;
+    pinnedForCorpus?: boolean;
   }
 ): Promise<Report> {
   return api.put<Report>(`/api/reports/${id}`, payload);

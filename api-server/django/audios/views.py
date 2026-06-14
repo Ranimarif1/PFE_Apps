@@ -154,6 +154,7 @@ def save_note(request: HttpRequest) -> JsonResponse:
         "source":          "note",
         "createdAt":       now,
         "updatedAt":       now,
+        "finalizedAt":     now,
     }
     report_ins = reports_col.insert_one(report_doc)
 
