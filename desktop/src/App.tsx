@@ -86,6 +86,7 @@ import AdminITAdmins from "./pages/adminit/Admins";
 import AdminITProfil from "./pages/adminit/Profil";
 import AdminITTraining from "./pages/adminit/Training";
 import { ChangePasswordModal } from "./components/ChangePasswordModal";
+import AdminITLifecycle from "./pages/adminit/Lifecycle";
 
 const queryClient = new QueryClient();
 
@@ -135,7 +136,8 @@ function AppWithLoading() {
       <Route path="/adminit/dashboard" element={<RouteGuard allowedRoles={["adminIT"]}><AdminITDashboard /></RouteGuard>} />
       <Route path="/adminit/reclamations" element={<RouteGuard allowedRoles={["adminIT"]}><AdminITReclamations /></RouteGuard>} />
       <Route path="/adminit/admins" element={<RouteGuard allowedRoles={["adminIT"]}><AdminITAdmins /></RouteGuard>} />
-      <Route path="/adminit/training" element={<RouteGuard allowedRoles={["adminIT"]}><AdminITTraining /></RouteGuard>} />
+      <Route path="/adminit/training"   element={<RouteGuard allowedRoles={["adminIT"]}><AdminITTraining /></RouteGuard>} />
+      <Route path="/adminit/lifecycle"  element={<RouteGuard allowedRoles={["adminIT"]}><AdminITLifecycle /></RouteGuard>} />
       <Route path="/adminit/profil" element={<RouteGuard allowedRoles={["adminIT"]}><AdminITProfil /></RouteGuard>} />
 
       {/* Aide — accessible à tous les rôles authentifiés */}

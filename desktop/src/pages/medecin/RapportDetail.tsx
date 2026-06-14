@@ -3,7 +3,7 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { getReport, createReport, updateReport, deleteReport } from "@/services/reportsService";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle, Edit3, Save, FileText, Check, X, Loader2, ArrowLeft, Pencil, Wand2, CloudUpload, AlertTriangle, Trash2, ClipboardCopy, RotateCcw } from "lucide-react";
+import { CheckCircle, Edit3, Save, FileText, Check, X, Loader2, ArrowLeft, Pencil, Wand2, CloudUpload, AlertTriangle, Trash2, ClipboardCopy, RotateCcw, Star } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -79,6 +79,10 @@ export default function RapportDetail() {
   const [loading,              setLoading]              = useState(false);
   const [savedAsValidated,     setSavedAsValidated]     = useState<"validate" | "save" | false>(false);
   const [error,                setError]                = useState("");
+
+  /* ── Pin for corpus ── */
+  const [pinnedForCorpus, setPinnedForCorpus] = useState(false);
+  const [pinning,         setPinning]         = useState(false);
 
   /* ── Delete ── */
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -281,11 +285,27 @@ export default function RapportDetail() {
           if (r.category) setCategory(r.category);
           setSeniorName(r.seniorName || "");
           setSeniorCode(r.seniorCode || "");
+          setPinnedForCorpus(!!r.pinnedForCorpus);
         })
         .catch(() => setError("Rapport introuvable."))
         .finally(() => setLoading(false));
     }
   }, [id, isNew]);
+
+  /* ── Pin / unpin for corpus ── */
+  const handleTogglePin = async () => {
+    if (!id || isNew) return;
+    setPinning(true);
+    const next = !pinnedForCorpus;
+    try {
+      await updateReport(id, { pinnedForCorpus: next });
+      setPinnedForCorpus(next);
+    } catch {
+      // silently ignore
+    } finally {
+      setPinning(false);
+    }
+  };
 
   /* ── Toggle edit mode ── */
   const handleToggleEdit = () => setEditing(prev => !prev);
@@ -493,13 +513,27 @@ export default function RapportDetail() {
                   )}
                 </div>
                 {!isNew && (
-                  <button
-                    onClick={() => { setConfirmDelete(true); setDeleteError(""); }}
-                    className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-destructive transition-colors"
-                    title="Supprimer le rapport"
-                  >
-                    <Trash2 size={14} /> Supprimer
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={handleTogglePin}
+                      disabled={pinning}
+                      title={pinnedForCorpus ? "Retirer du corpus permanent" : "Épingler pour le corpus (stockage à vie)"}
+                      className="flex items-center gap-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+                      style={{ color: pinnedForCorpus ? "#D97706" : "#94A3B8" }}
+                    >
+                      {pinning
+                        ? <Loader2 size={14} className="animate-spin" />
+                        : <Star size={14} fill={pinnedForCorpus ? "#D97706" : "none"} />}
+                      {pinnedForCorpus ? "Épinglé corpus" : "Épingler corpus"}
+                    </button>
+                    <button
+                      onClick={() => { setConfirmDelete(true); setDeleteError(""); }}
+                      className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-destructive transition-colors"
+                      title="Supprimer le rapport"
+                    >
+                      <Trash2 size={14} /> Supprimer
+                    </button>
+                  </div>
                 )}
               </div>
 

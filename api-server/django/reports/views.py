@@ -340,6 +340,9 @@ def list_or_create_reports(request: HttpRequest) -> JsonResponse:
             "createdAt": now,
             "updatedAt": now,
         }
+        # Track when the report first reaches a finalized state (used by lifecycle)
+        if status in {"saved", "validated"}:
+            doc["finalizedAt"] = now
         # If the report is created directly as "validated", compute accuracy now
         if status == "validated":
             acc = _compute_accuracy(original_content, content)
@@ -401,11 +404,15 @@ def get_or_update_report(request: HttpRequest, report_id: str):
         if new_status not in {"draft", "validated", "saved"}:
             return JsonResponse({"detail": "Statut invalide."}, status=400)
 
+        now_iso = dt.datetime.utcnow().isoformat()
         update_doc: Dict[str, Any] = {
             "content": content,
             "status": new_status,
-            "updatedAt": dt.datetime.utcnow().isoformat(),
+            "updatedAt": now_iso,
         }
+        # Set finalizedAt on first transition to a finalized state
+        if new_status in {"saved", "validated"} and not report.get("finalizedAt"):
+            update_doc["finalizedAt"] = now_iso
 
         # Back-fill originalContent if it was missing and caller provides it.
         if not report.get("originalContent") and data.get("originalContent"):
@@ -417,6 +424,19 @@ def get_or_update_report(request: HttpRequest, report_id: str):
                 return JsonResponse({"detail": "Catégorie invalide."}, status=400)
             if new_category:
                 update_doc["category"] = new_category
+
+        if "ID_Exam" in data:
+            new_exam_id = str(data["ID_Exam"]).strip()
+            if not re.match(r'^\d+$', new_exam_id):
+                return JsonResponse({"detail": "L'ID Exam doit contenir uniquement des chiffres."}, status=400)
+            conflict = reports_col.find_one({"ID_Exam": new_exam_id, "_id": {"$ne": oid}})
+            if conflict:
+                return JsonResponse({"detail": f"L'identifiant \"{new_exam_id}\" est déjà utilisé par un autre rapport."}, status=409)
+            update_doc["ID_Exam"] = new_exam_id
+
+        if "pinnedForCorpus" in data:
+            update_doc["pinnedForCorpus"] = bool(data["pinnedForCorpus"])
+
 
         # Compute accuracy when transitioning into "validated" for the first time
         # or when content changes while already validated.

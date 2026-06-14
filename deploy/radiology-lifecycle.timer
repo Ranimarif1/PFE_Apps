@@ -1,0 +1,11 @@
+[Unit]
+Description=ReportEase — Lifecycle cleanup timer (daily at 03:00)
+Requires=radiology-lifecycle.service
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+AccuracySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

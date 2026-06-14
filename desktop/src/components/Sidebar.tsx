@@ -7,7 +7,7 @@ import {
   Users, LogOut, Sun, Moon,
   ChevronLeft, ChevronRight,
   AlertCircle, Plus, FileAudio, Sparkles, Loader2, Database, X, Download,
-  HelpCircle, Star, NotebookPen,
+  HelpCircle, Star, NotebookPen, Recycle,
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -197,9 +197,10 @@ const adminITSections: Section[] = [
   {
     label: "GESTION",
     links: [
-      { to: "/adminit/admins",    icon: Users,     label: "Comptes Admin"     },
-      { to: "/adminit/training",  icon: Database,  label: "Données entraîn."  },
-      { to: "/adminit/profil",    icon: User,      label: "Mon profil"        },
+      { to: "/adminit/admins",     icon: Users,    label: "Comptes Admin"     },
+      { to: "/adminit/training",  icon: Database, label: "Données entraîn."  },
+      { to: "/adminit/lifecycle", icon: Recycle,  label: "Cycle de vie"      },
+      { to: "/adminit/profil",    icon: User,     label: "Mon profil"        },
     ],
   },
   {

@@ -1,0 +1,23 @@
+[Unit]
+Description=ReportEase — Lifecycle cleanup (audio corpus + purge)
+After=network.target radiology-django.service
+Wants=radiology-django.service
+
+[Service]
+Type=oneshot
+User=radio
+Group=radio
+WorkingDirectory=/opt/radiology/api-server/django
+ExecStart=/opt/radiology/venv/bin/python manage.py lifecycle_cleanup --phase=all --check-auto
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=radiology-lifecycle
+
+# Ensure /opt/corpus exists and is owned by radio before running
+ExecStartPre=/bin/mkdir -p /opt/corpus
+ExecStartPre=/bin/chown radio:radio /opt/corpus
+
+TimeoutStartSec=1800
+
+[Install]
+WantedBy=multi-user.target
