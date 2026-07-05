@@ -42,8 +42,9 @@ export async function createReport(payload: {
   return api.post<Report>("/api/reports/", payload);
 }
 
-export async function checkExamId(id: string): Promise<{ available: boolean }> {
-  return api.get<{ available: boolean }>(`/api/reports/check-exam-id/?id=${encodeURIComponent(id)}`);
+export async function checkExamId(id: string, exclude?: string): Promise<{ available: boolean }> {
+  const q = exclude ? `&exclude=${encodeURIComponent(exclude)}` : "";
+  return api.get<{ available: boolean }>(`/api/reports/check-exam-id/?id=${encodeURIComponent(id)}${q}`);
 }
 
 export interface ReportStats {

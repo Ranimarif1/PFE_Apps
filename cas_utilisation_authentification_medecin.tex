@@ -1,0 +1,62 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[french]{babel}
+\usepackage[margin=1in]{geometry}
+\usepackage{enumitem}
+
+\begin{document}
+
+\section*{Cas d'utilisation : Authentification Médecin}
+
+\begin{description}[leftmargin=4.2cm, style=nextline]
+    \item[Titre de cas d'utilisation] Authentification Médecin
+
+    \item[Acteur principal] Médecin
+
+    \item[Description] Permet au Médecin de s'identifier dans le système
+    et d'accéder à son espace personnel (création de rapports radiologiques,
+    consultation de l'historique).
+
+    \item[Préconditions]
+    \begin{itemize}[leftmargin=*, nosep]
+        \item Un compte Médecin a été créé et approuvé par l'Administrateur
+              ou l'Administrateur IT.
+        \item Le système est en cours d'exécution sur le poste de travail.
+    \end{itemize}
+
+    \item[Scénario principal]
+    \begin{enumerate}[leftmargin=*, topsep=0pt, itemsep=0pt]
+        \item Le Médecin ouvre l'application et accède à la page de connexion.
+        \item Le système affiche le formulaire de connexion (identifiant et mot de passe).
+        \item Le Médecin saisit son identifiant et son mot de passe, puis clique sur
+              «~Se connecter~».
+        \item Le système vérifie les informations saisies.
+        \item Le système reconnaît le rôle «~Médecin~» et génère une session.
+        \item Le système redirige le Médecin vers son tableau de bord~:
+              création de rapports, consultation de l'historique des rapports
+              et accès aux fonctionnalités de dictée vocale.
+    \end{enumerate}
+
+    \item[Postconditions]
+    \begin{itemize}[leftmargin=*, nosep]
+        \item Le Médecin est connecté et accède aux fonctionnalités
+              correspondant à son rôle.
+        \item Une session active est ouverte jusqu'à la déconnexion.
+    \end{itemize}
+
+    \item[Exceptions]
+    \textbf{Exception 1 : Identifiant ou mot de passe incorrect}
+    \begin{itemize}[leftmargin=*, nosep]
+        \item Le système affiche «~Identifiant ou mot de passe incorrect~»
+              sans préciser lequel est erroné.
+    \end{itemize}
+    \textbf{Exception 2 : Compte inactif ou en attente}
+    \begin{itemize}[leftmargin=*, nosep]
+        \item Si le compte n'a pas encore été approuvé ou a été désactivé,
+              le système refuse la connexion et affiche un message approprié.
+    \end{itemize}
+\end{description}
+
+\end{document}

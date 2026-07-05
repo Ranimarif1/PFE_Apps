@@ -4,42 +4,84 @@ import os
 import tempfile
 
 import numpy as np
-import torch
-import av
-import librosa
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from transformers import WhisperForConditionalGeneration, WhisperProcessor
 
 from core.auth import jwt_required
 from .normalisation import normalize, normalize_abbrevs
 from .ponctuation import process, correct_with_ollama, diff_corrections
 
-# ── Constants ─────────────────────────────────────────────────────────────────
-# Override via env vars in production (offline deployment with local model files):
-#   WHISPER_MODEL_ID=/opt/models/whisper-medical
-#   WHISPER_BASE_MODEL_ID=/opt/models/whisper-medical
-MODEL_ID      = os.getenv("WHISPER_MODEL_ID", "amnbk/whisper-medium-medical-fr-v2")
-BASE_MODEL_ID = os.getenv("WHISPER_BASE_MODEL_ID", "openai/whisper-medium")  # fallback for missing preprocessor_config.json
-SAMPLE_RATE   = 16_000
-_MAX_CHUNK  = 28 * SAMPLE_RATE   # 28 s — Whisper 30 s window with safety margin
-_MIN_CHUNK  = SAMPLE_RATE // 2   # ignore segments < 0.5 s
+# ── Model paths ────────────────────────────────────────────────────────────────
+# Set WHISPER_CT2_MODEL to a CTranslate2 model directory for fast inference.
+# If not set, falls back to the HuggingFace transformers model (slower).
+#
+# One-time conversion (run on any machine with internet access):
+#   pip install ctranslate2 transformers
+#   ct2-transformers-converter \
+#     --model amnbk/whisper-medium-medical-fr-v2 \
+#     --output_dir /opt/models/whisper-ct2 \
+#     --quantization float16
+#   scp -r /opt/models/whisper-ct2 radio@server:/opt/models/
+#   Then set WHISPER_CT2_MODEL=/opt/models/whisper-ct2 in .env
+CT2_MODEL_PATH  = os.getenv("WHISPER_CT2_MODEL", "")          # faster-whisper path
+HF_MODEL_ID     = os.getenv("WHISPER_MODEL_ID",  "amnbk/whisper-medium-medical-fr-v2")
+HF_BASE_MODEL   = os.getenv("WHISPER_BASE_MODEL_ID", "openai/whisper-medium")
+SAMPLE_RATE     = 16_000
 
-# ── Lazy singleton ─────────────────────────────────────────────────────────────
-_processor: WhisperProcessor | None = None
-_model: WhisperForConditionalGeneration | None = None
-_device: str | None = None
+# ── Lazy singletons ────────────────────────────────────────────────────────────
+_fw_model   = None   # faster-whisper WhisperModel
+_hf_proc    = None   # HuggingFace processor
+_hf_model   = None   # HuggingFace model
+_hf_device  = None
 
 
-def _load_model():
-    global _processor, _model, _device
-    if _model is not None:
-        return _processor, _model, _device
+# ══════════════════════════════════════════════════════════════════════════════
+# Backend A — faster-whisper (CTranslate2, GPU float16) — PRIMARY
+# ══════════════════════════════════════════════════════════════════════════════
 
-    # Workaround: this fine-tuned model stores extra_special_tokens as a list
-    # in tokenizer_config.json, but some transformers versions expect a dict.
-    # The method may not exist in all versions (e.g. 4.46.x), so guard the patch.
+def _load_fw():
+    global _fw_model
+    if _fw_model is not None:
+        return _fw_model
+    from faster_whisper import WhisperModel
+    import torch
+    device  = "cuda" if torch.cuda.is_available() else "cpu"
+    # int8_float16: weights stored as int8 (low VRAM), compute in float16 — best
+    # balance for mid-range GPUs (GTX 1650, etc.). Falls back to int8 on CPU.
+    compute = "int8_float16" if device == "cuda" else "int8"
+    _fw_model = WhisperModel(CT2_MODEL_PATH, device=device, compute_type=compute,
+                             cpu_threads=4, num_workers=2)
+    return _fw_model
+
+
+def _transcribe_fw(audio_path: str) -> str:
+    model = _load_fw()
+    beam = int(os.getenv("WHISPER_BEAM_SIZE", "1"))
+    segments, _ = model.transcribe(
+        audio_path,
+        language="fr",
+        beam_size=beam,
+        best_of=beam,
+        vad_filter=True,
+        vad_parameters={"min_silence_duration_ms": 500},
+    )
+    return " ".join(seg.text.strip() for seg in segments)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Backend B — HuggingFace transformers — FALLBACK
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _load_hf():
+    global _hf_proc, _hf_model, _hf_device
+    if _hf_model is not None:
+        return _hf_proc, _hf_model, _hf_device
+
+    import torch
+    from transformers import WhisperForConditionalGeneration, WhisperProcessor
     from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+
+    # Patch for fine-tuned models with list extra_special_tokens
     _orig = getattr(PreTrainedTokenizerBase, '_set_model_specific_special_tokens', None)
     if _orig is not None:
         def _patched(self, special_tokens=None):
@@ -49,105 +91,81 @@ def _load_model():
         PreTrainedTokenizerBase._set_model_specific_special_tokens = _patched
 
     try:
-        _device = "cuda" if torch.cuda.is_available() else "cpu"
-
-        # The fine-tuned model may lack preprocessor_config.json (feature extractor).
-        # Feature extraction doesn't change during fine-tuning, so fall back to the
-        # base model's processor when the fine-tuned repo is missing that file.
+        _hf_device = "cuda" if torch.cuda.is_available() else "cpu"
         try:
-            _processor = WhisperProcessor.from_pretrained(MODEL_ID)
+            _hf_proc = WhisperProcessor.from_pretrained(HF_MODEL_ID)
         except EnvironmentError:
-            _processor = WhisperProcessor.from_pretrained(BASE_MODEL_ID)
-
-        _model = WhisperForConditionalGeneration.from_pretrained(MODEL_ID).to(_device)
-        _model.eval()
+            _hf_proc = WhisperProcessor.from_pretrained(HF_BASE_MODEL)
+        _hf_model = WhisperForConditionalGeneration.from_pretrained(HF_MODEL_ID).to(_hf_device)
+        _hf_model.eval()
     finally:
         if _orig is not None:
             PreTrainedTokenizerBase._set_model_specific_special_tokens = _orig
 
-    return _processor, _model, _device
+    return _hf_proc, _hf_model, _hf_device
 
 
-# ── Transcription helpers ──────────────────────────────────────────────────────
+def _transcribe_hf(audio_path: str) -> str:
+    import torch
+    import av
+    import librosa
 
-def _transcribe_chunk(chunk: np.ndarray, processor, model, device) -> str:
-    """Transcribe one audio segment ≤ 30 s."""
-    inputs = processor(chunk, sampling_rate=SAMPLE_RATE, return_tensors="pt")
-    input_features = inputs.input_features.to(device)
-    attention_mask = torch.ones(
-        input_features.shape[:2], dtype=torch.long, device=device
-    )
-    with torch.no_grad():
-        predicted_ids = model.generate(
-            input_features,
-            attention_mask=attention_mask,
-            max_new_tokens=444,
-            language="fr",
-            task="transcribe",
-        )[0]
-    return processor.tokenizer.decode(predicted_ids, skip_special_tokens=True)
+    _MAX_CHUNK = 28 * SAMPLE_RATE
+    _MIN_CHUNK = SAMPLE_RATE // 2
 
+    def _load_audio(path):
+        container  = av.open(path)
+        resampler  = av.AudioResampler(format="fltp", layout="mono", rate=SAMPLE_RATE)
+        chunks = []
+        for frame in container.decode(audio=0):
+            for out in resampler.resample(frame):
+                chunks.append(out.to_ndarray()[0])
+        for out in resampler.resample(None):
+            chunks.append(out.to_ndarray()[0])
+        container.close()
+        return np.concatenate(chunks).astype(np.float32) if chunks else np.zeros(SAMPLE_RATE, dtype=np.float32)
 
-def _build_chunks(audio: np.ndarray) -> list[np.ndarray]:
-    """Split audio at natural silences into segments ≤ 28 s."""
-    intervals = librosa.effects.split(
-        audio, top_db=35, frame_length=2048, hop_length=512
-    )
-    if len(intervals) == 0:
-        return [audio] if len(audio) >= _MIN_CHUNK else []
+    def _build_chunks(audio):
+        intervals = librosa.effects.split(audio, top_db=35, frame_length=2048, hop_length=512)
+        if not len(intervals):
+            return [audio] if len(audio) >= _MIN_CHUNK else []
+        result, s, e = [], int(intervals[0][0]), int(intervals[0][1])
+        for iv_s, iv_e in intervals[1:]:
+            iv_s, iv_e = int(iv_s), int(iv_e)
+            if iv_e - s <= _MAX_CHUNK:
+                e = iv_e
+            else:
+                seg = audio[s:e]
+                if len(seg) >= _MIN_CHUNK: result.append(seg)
+                s, e = iv_s, iv_e
+        seg = audio[s:e]
+        if len(seg) >= _MIN_CHUNK: result.append(seg)
+        return result
 
-    chunks: list[np.ndarray] = []
-    seg_start = int(intervals[0][0])
-    seg_end   = int(intervals[0][1])
+    def _chunk_text(chunk, proc, mdl, dev):
+        inputs = proc(chunk, sampling_rate=SAMPLE_RATE, return_tensors="pt")
+        feats  = inputs.input_features.to(dev)
+        mask   = torch.ones(feats.shape[:2], dtype=torch.long, device=dev)
+        with torch.no_grad():
+            ids = mdl.generate(feats, attention_mask=mask, max_new_tokens=444, language="fr", task="transcribe")[0]
+        return proc.tokenizer.decode(ids, skip_special_tokens=True)
 
-    for iv_start, iv_end in intervals[1:]:
-        iv_start, iv_end = int(iv_start), int(iv_end)
-        if iv_end - seg_start <= _MAX_CHUNK:
-            seg_end = iv_end
-        else:
-            segment = audio[seg_start:seg_end]
-            if len(segment) >= _MIN_CHUNK:
-                chunks.append(segment)
-            seg_start = iv_start
-            seg_end   = iv_end
-
-    segment = audio[seg_start:seg_end]
-    if len(segment) >= _MIN_CHUNK:
-        chunks.append(segment)
-
-    return chunks
-
-
-def _transcribe(audio: np.ndarray, processor, model, device) -> str:
-    """Transcribe audio of any length by splitting at natural silences."""
+    proc, mdl, dev = _load_hf()
+    audio  = _load_audio(audio_path)
     chunks = _build_chunks(audio)
     if not chunks:
         return ""
-    if len(chunks) == 1:
-        return _transcribe_chunk(chunks[0], processor, model, device)
-
-    parts: list[str] = []
-    for chunk in chunks:
-        text = _transcribe_chunk(chunk, processor, model, device).strip()
-        if text:
-            parts.append(text)
-    return " ".join(parts)
+    return " ".join(_chunk_text(c, proc, mdl, dev).strip() for c in chunks if c is not None)
 
 
-# ── Audio loader (handles webm/opus/wav via PyAV) ─────────────────────────────
-def _load_audio(path: str, sample_rate: int) -> np.ndarray:
-    container = av.open(path)
-    resampler = av.AudioResampler(format="fltp", layout="mono", rate=sample_rate)
-    chunks: list[np.ndarray] = []
-    for frame in container.decode(audio=0):
-        for out in resampler.resample(frame):
-            chunks.append(out.to_ndarray()[0])
-    for out in resampler.resample(None):  # flush remaining samples
-        chunks.append(out.to_ndarray()[0])
-    container.close()
-    if not chunks:
-        return np.zeros(sample_rate, dtype=np.float32)
-    return np.concatenate(chunks).astype(np.float32)
+# ══════════════════════════════════════════════════════════════════════════════
+# Router — picks the right backend
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _transcribe(audio_path: str) -> str:
+    if CT2_MODEL_PATH and os.path.isdir(CT2_MODEL_PATH):
+        return _transcribe_fw(audio_path)
+    return _transcribe_hf(audio_path)
 
 
 # ── Django view ────────────────────────────────────────────────────────────────
@@ -167,19 +185,14 @@ def transcribe(request: HttpRequest) -> JsonResponse:
 
     tmp_path: str | None = None
     try:
-        # Write upload to a temp file
         with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
             for chunk in audio_file.chunks():
                 tmp.write(chunk)
             tmp_path = tmp.name
 
-        # Load and resample to 16 kHz mono float32 (handles webm/opus via PyAV)
-        audio = _load_audio(tmp_path, SAMPLE_RATE)
-
-        processor, model, device = _load_model()
-        raw  = _transcribe(audio, processor, model, device)
+        raw  = _transcribe(tmp_path)
         text = process(normalize(raw), auto_punct=True)
-        text = normalize_abbrevs(text)   # re-apply after process() lowercases everything
+        text = normalize_abbrevs(text)
         return JsonResponse({"text": text})
 
     except Exception as exc:

@@ -1,0 +1,651 @@
+\documentclass[12pt,a4paper]{report}
+
+%% ===== Packages =====
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{lmodern}
+\usepackage{ragged2e}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{caption}
+
+\geometry{
+  a4paper,
+  left=2.5cm, right=2.5cm,
+  top=2.5cm, bottom=2.5cm
+}
+
+%% ===== Couleurs des sprints =====
+\definecolor{sprint1bg}{RGB}{219,234,254}
+\definecolor{sprint2bg}{RGB}{220,252,231}
+\definecolor{sprint3bg}{RGB}{254,243,199}
+\definecolor{sprint1txt}{RGB}{30,64,175}
+\definecolor{sprint2txt}{RGB}{22,101,52}
+\definecolor{sprint3txt}{RGB}{146,64,14}
+\definecolor{headercolor}{RGB}{30,41,59}
+\definecolor{must}{RGB}{220,38,38}
+\definecolor{should}{RGB}{234,88,12}
+\definecolor{could}{RGB}{101,163,13}
+
+%% ===== Commandes personnalisées backlog =====
+\newcommand{\must}{\textcolor{must}{\textbf{Must}}}
+\newcommand{\should}{\textcolor{should}{\textbf{Should}}}
+\newcommand{\could}{\textcolor{could}{\textbf{Could}}}
+
+\newcommand{\sprintone}[1]{\cellcolor{sprint1bg}\textcolor{sprint1txt}{\textbf{#1}}}
+\newcommand{\sprinttwo}[1]{\cellcolor{sprint2bg}\textcolor{sprint2txt}{\textbf{#1}}}
+\newcommand{\sprintthree}[1]{\cellcolor{sprint3bg}\textcolor{sprint3txt}{\textbf{#1}}}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=sprint1txt,
+  urlcolor=sprint1txt,
+  pdftitle={Chapitre 3 -- RadioAI},
+  pdfauthor={PFE Hôpital Fattouma-Bourguiba}
+}
+
+\begin{document}
+
+\chapter{Analyse et spécification des besoins}
+\section{Introduction}
+\justify
+Ce chapitre est dédié à l'analyse et à la spécification des besoins de notre projet. Il permet d'identifier les différents acteurs impliqués, de situer le projet dans son contexte général et de préciser les exigences indispensables au bon fonctionnement de l'application. Cette phase constitue une base importante pour la suite du travail, car elle aide à déterminer les fonctionnalités attendues, les contraintes à respecter, ainsi que les cas d'utilisation décrivant les interactions entre les utilisateurs et le système.
+
+\section{Analyse et identification des besoins}
+Nous commençons par identifier les acteurs de l'application, avant d'aborder et détailler les exigences fonctionnelles et non fonctionnelles que notre système devra respecter afin de répondre efficacement aux besoins des utilisateurs finaux et de garantir une solution adaptée à leurs attentes.
+
+\subsection{Identification des acteurs et des services internes et externes}
+Nous identifierons les différents acteurs ainsi que les services internes et externes intégrés au projet, afin de préciser le rôle de chacun, de faciliter la communication et d'assurer une coordination efficace tout au long du processus de développement.
+
+\subsubsection{Acteurs }
+
+\begin{itemize}
+    \item \textbf{Médecin :} C'est un professionnel de santé inscrit sur la plateforme. Il peut enregistrer des observations radiologiques, convertir l'audio en texte, modifier les transcriptions générées, consulter son historique de comptes rendus et télécharger les documents finaux. Il s'authentifie via le système pour accéder à ses fonctionnalités.par ordre
+
+    \item \textbf {Admin :}
+   Médecin disposant de privilèges avancés lui permettant de superviser l'utilisation de la plateforme. Il assure la gestion des comptes des médecins (création, modification, suppression)
+
+   \item \textbf{Administrateur IT :} Acteur technique responsable de la supervision du système de transcription automatique . Il veille au bon fonctionnement de la plateforme, assure la maintenance corrective et préventive et intervient en cas de dysfonctionnement technique.reclamation
+
+
+\end{itemize}
+
+\subsubsection{Services internes intégrés}
+\begin{itemize}
+\item \textbf{API Whisper Fine-Tuned :} C'est un acteur système basé sur un modèle d'intelligence artificielle de reconnaissance vocale, spécialement adapté (fine-tuné) au vocabulaire radiologique. Il est utilisé pour transcrire les enregistrements audio en texte médical structuré, en reconnaissant les termes techniques, anatomiques et pathologiques.
+\end{itemize}
+
+
+
+\subsection{Identification des Besoins Fonctionnels}
+Les besoins fonctionnels représentent les fonctions offertes par le système afin de répondre aux exigences des utilisateurs. Dans cette section, nous détaillons toutes les fonctionnalités que les utilisateurs devront avoir à disposition dans l'application de transcription médicale. Il est crucial que l'application réponde aux besoins spécifiques des utilisateurs dans le service de radiologie.
+
+\subsubsection{Besoins fonctionnels de l'utilisateur (Médecin radiologue)}
+L'utilisateur principal de notre projet est un médecin radiologue souhaitant bénéficier d'une transcription audio automatisée et fiable pour la rédaction de comptes rendus médicaux. Les besoins fonctionnels suivants ont été identifiés :
+
+\begin{longtable}{|p{5cm}|p{10cm}|}
+\caption{Description des besoins fonctionnels de l'utilisateur Médecin radiologue} \\
+\hline
+\textbf{Besoin fonctionnel} & \textbf{Description} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Besoin fonctionnel} & \textbf{Description} \\
+\hline
+\endhead
+\hline
+\multicolumn{2}{|r|}{{Suite page suivante}} \\
+\hline
+\endfoot
+\hline
+\endlastfoot
+
+S'inscrire & L'utilisateur doit pouvoir envoyer une demande d'inscription afin de créer un compte, sous réserve d'approbation par l'administrateur, pour accéder aux fonctionnalités de l'application.\\
+\hline
+S'authentifier & Processus de vérification de l'identité de l'utilisateur lors de la connexion au système. \\
+\hline
+Ajouter audio & L'utilisateur doit pouvoir ajouter un enregistrement audio de ses observations radiologiques, soit en l'enregistrant directement via l'interface, soit en important un fichier audio. \\
+\hline
+Analyser le rapport généré &
+L'utilisateur doit pouvoir corriger manuellement la transcription généré pour améliorer la précision du compte rendu, ou valider directement le rapport final sans modification. \\
+\hline
+Consulter dashboard & L'utilisateur doit pouvoir visualiser et rechercher ses anciennes transcriptions et ses statistiques. \\
+\hline
+Soumettre une réclamation & Le système doit permettre à l'Utilisateur de soumettre une réclamation. Cette dernière est automatiquement acheminée vers l'Administrateur IT afin d'assurer son traitement et son suivi. \\
+
+\end{longtable}
+
+\subsubsection{Besoins fonctionnels de l'administrateur}
+L'administrateur du système dispose de fonctionnalités étendues pour la gestion des utilisateurs et la supervision du système.
+
+\begin{longtable}{|p{5cm}|p{10cm}|}
+\caption{Description des besoins fonctionnels de l'administrateur} \\
+\hline
+\textbf{Besoin fonctionnel} & \textbf{Description} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Besoin fonctionnel} & \textbf{Description} \\
+\hline
+\endhead
+\hline
+\multicolumn{2}{|r|}{{Suite page suivante}} \\
+\hline
+\endfoot
+\hline
+\endlastfoot
+Gérer les utilisateurs & L'administrateur doit pouvoir approuver,refuser, modifier, consulter et supprimer les comptes des utilisateurs. \\
+\end{longtable}
+\vspace{0.5cm}
+
+\subsubsection{Besoins fonctionnels de l'administrateur IT}
+L'administrateur du système dispose de fonctionnalités étendues pour la gestion du compte admin et la supervision du système.
+
+\begin{longtable}{|p{5cm}|p{10cm}|}
+\caption{Description des besoins fonctionnels de l'administrateur IT} \\
+\hline
+\textbf{Besoin fonctionnel} & \textbf{Description} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Besoin fonctionnel} & \textbf{Description} \\
+\hline
+\endhead
+\hline
+\multicolumn{2}{|r|}{{Suite page suivante}} \\
+\hline
+\endfoot
+\hline
+\endlastfoot
+
+Gérer Compte admin & L'administrateur IT doit pouvoir approuver, refuser,modifier, consulter et supprimer le comptes de l'admin au cas de necessité. \\
+\hline Consulter Dashboard & L'administrateur IT doit pouvoir consulter les réclamations et les statistiques liées au fonctionnement du système .  \\
+\hline
+Traiter les réclamations &
+L'administrateur IT doit pouvoir traiter les réclamations soumises par les médecins, changer leur statut (en cours, résolue, rejetée) et ajouter des commentaires de suivi. \\
+\hline
+Mettre à jour le modèle IA &
+L'administrateur IT doit pouvoir déployer une nouvelle version du modèle Whisper fine-tuné . \\
+\hline
+\end{longtable}
+
+\subsubsection{Besoins fonctionnels des services internes}
+\begin{enumerate}[label=\Alph*.]
+    \item \textbf{API Whisper Fine-Tuned}
+
+    \begin{longtable}{|p{5cm}|p{10cm}|}
+\caption{Description des besoins fonctionnels de l'API Whisper Fine-Tuned} \\
+\hline
+\textbf{Besoin fonctionnel} & \textbf{Description} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Besoin fonctionnel} & \textbf{Description} \\
+\hline
+\endhead
+\hline
+\multicolumn{2}{|r|}{{Suite page suivante}} \\
+\hline
+\endfoot
+\hline
+\endlastfoot
+Générer le rapport médical &
+L'API de transcription doit fournir une transcription fidèle et identifier correctement les termes anatomiques, pathologiques et techniques spécifiques au service de radiologie. \\
+\hline
+\end{longtable}
+\end{enumerate}
+
+
+\subsection{Identification des besoins non fonctionnels}
+En plus des fonctionnalités attendues, l'application doit respecter un ensemble de contraintes techniques et qualitatives afin d'assurer une expérience utilisateur optimale dans un environnement médical. Ces besoins non fonctionnels sont essentiels pour garantir la performance, la sécurité et la fiabilité du système.
+
+\begin{longtable}{|p{5cm}|p{10cm}|}
+\caption{Besoins non fonctionnels} \\
+\hline
+\textbf{Besoin non fonctionnel} & \textbf{Description} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Besoin non fonctionnel} & \textbf{Description} \\
+\hline
+\endhead
+\hline
+\multicolumn{2}{|r|}{{Suite page suivante}} \\
+\hline
+\endfoot
+\hline
+\endlastfoot
+
+Performance & Le temps de transcription doit être optimisé, même pour des fichiers audio longs. \\
+\hline
+Disponibilité & L'application doit être accessible 24h/24 et 7j/7 pour le personnel médical. \\
+\hline
+Ergonomie & L'interface doit être claire, intuitive et adaptée aux utilisateurs médicaux. \\
+\hline
+Sécurité et confidentialité & Les enregistrements audio et comptes rendus doivent être sécurisés pour respecter la confidentialité des patients (conformité avec la réglementation tunisienne sur la protection des données). \\
+\hline
+Fiabilité & Le système doit garantir une transcription précise et minimiser les erreurs pouvant affecter la qualité du compte rendu médical. \\
+\end{longtable}
+\section{Spécification des besoins }
+Après avoir identifié les acteurs et les besoins du système, nous passons maintenant à la spécification à travers les diagrammes de cas d'utilisation. Nous présentons d'abord une vue globale, puis nous détaillons les interactions propres à chaque acteur. Enfin, nous abordons le pilotage du projet avec Scrum, qui structure l'organisation et le déroulement du développement.
+\subsection{Diagramme de cas d'utilisation global}
+
+Dans le diagramme global des cas d'utilisation illustré à la figure \ref{scrcass}, nous regroupons tous les cas d'utilisation de base pour obtenir une vue d'ensemble du fonctionnement du système.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1\textwidth,keepaspectratio]{Chapter3/diagglobal.png}
+  \caption{Diagramme de cas d'utilisation globale}
+  \label{scrcass}
+\end{figure}
+\subsection{Diagrammes de cas d'utilisation détaillés}
+
+Après avoir présenté la vue globale, nous détaillons dans cette section les cas d'utilisation propres à chaque acteur du système.
+
+\subsubsection{Diagramme de cas d'utilisation détaillé : Médecin}
+
+Le médecin radiologue est l'utilisateur principal de la plateforme. La figure \ref{uc_medecin} illustre l'ensemble des fonctionnalités qui lui sont offertes, depuis l'enregistrement de sa dictée jusqu'à la validation du compte rendu final.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1\textwidth,keepaspectratio]{Chapter3/uc_medecin.png}
+  \caption{Diagramme de cas d'utilisation détaillé du Médecin}
+  \label{uc_medecin}
+\end{figure}
+
+\subsubsection{Diagramme de cas d'utilisation détaillé : Administrateur}
+
+L'administrateur supervise l'utilisation de la plateforme et gère les comptes des médecins. La figure \ref{uc_admin} présente les différents cas d'utilisation associés à ce rôle.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1\textwidth,keepaspectratio]{Chapter3/uc_admin.png}
+  \caption{Diagramme de cas d'utilisation détaillé de l'Administrateur}
+  \label{uc_admin}
+\end{figure}
+
+\subsubsection{Diagramme de cas d'utilisation détaillé : Administrateur IT}
+
+L'administrateur IT assure le bon fonctionnement technique du système. La figure \ref{uc_adminIT} regroupe les cas d'utilisation liés à la supervision, au traitement des réclamations et à la mise à jour du modèle d'IA.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1\textwidth,keepaspectratio]{Chapter3/uc_adminIT.png}
+  \caption{Diagramme de cas d'utilisation détaillé de l'Administrateur IT}
+  \label{uc_adminIT}
+\end{figure}
+
+\subsection{Pilotage du projet avec « Scrum » }
+Afin d'organiser le développement de notre plateforme, nous avons adopté la méthodologie Scrum. Celle-ci repose sur deux éléments essentiels : le backlog produit, qui regroupe et priorise l'ensemble des fonctionnalités à réaliser, et la planification des sprints, qui structure leur déroulement dans le temps.
+
+\subsubsection{Backlog du produit }
+Le backlog produit rassemble toutes les user stories identifiées à partir des besoins fonctionnels exprimés précédemment. Chaque story est rattachée à un épic et priorisée selon la méthode MoSCoW (Must, Should, Could, Won't), ce qui nous permet de distinguer les fonctionnalités essentielles de celles qui peuvent être reportées. Le tableau \ref{tab:backlog} présente le backlog produit.
+
+\begin{longtable}{
+  |>{\centering\arraybackslash}p{0.7cm}
+  |>{\centering\arraybackslash}p{2.2cm}
+  |p{3.8cm}
+  |p{6.8cm}
+  |>{\centering\arraybackslash}p{1.4cm}|
+}
+\caption{Backlog de produit}
+\label{tab:backlog} \\
+
+\hline
+\rowcolor{blue!60}
+\textcolor{white}{\textbf{ID}} &
+\textcolor{white}{\textbf{Sprint}} &
+\textcolor{white}{\textbf{Épic}} &
+\textcolor{white}{\textbf{User Story}} &
+\textcolor{white}{\textbf{MoSCoW}} \\ \hline
+\endfirsthead
+
+\hline
+\rowcolor{blue!60}
+\textcolor{white}{\textbf{ID}} &
+\textcolor{white}{\textbf{Sprint}} &
+\textcolor{white}{\textbf{Épic}} &
+\textcolor{white}{\textbf{User Story}} &
+\textcolor{white}{\textbf{MoSCoW}} \\ \hline
+\endhead
+
+\hline \multicolumn{5}{|r|}{{\textit{Suite page suivante}}} \\ \hline
+\endfoot
+
+\hline
+\endlastfoot
+
+%% ══════════════════════════════════════════════════════════
+%% SPRINT 1 — AUTHENTIFICATION & GESTION DES ACCÈS (US 1–5)
+%% ══════════════════════════════════════════════════════════
+
+\multicolumn{5}{|c|}{\cellcolor{sprint1bg}\textcolor{sprint1txt}{\Large\bfseries Sprint 1 — Authentification \& Gestion des accès}} \\ \hline
+
+%% --- Épic 1 : Authentification & Sessions ---
+1 & \sprintone{Sprint 1}
+  & \multirow{2}{3.8cm}{\textbf{Épic 1 :} Authentification et gestion des sessions}
+  & En tant qu'utilisateur, je veux me connecter via une interface sécurisée (email + mot de passe), obtenir un token JWT d'accès (15~min) et un token de rafraîchissement (7~jours), et me déconnecter à tout moment.
+  & \must \\ \cline{1-2}\cline{4-5}
+
+2 & \sprintone{Sprint 1} &
+  & En tant qu'administrateur, je veux que chaque compte soit associé à un rôle précis (médecin, admin, adminIT) afin de contrôler les droits d'accès à chaque fonctionnalité.
+  & \must \\ \hline
+
+%% --- Épic 2 : Inscription & Gestion des comptes ---
+3 & \sprintone{Sprint 1}
+  & \multirow{3}{3.8cm}{\textbf{Épic 2 :} Inscription et gestion des comptes utilisateurs}
+  & En tant qu'utilisateur (médecin ou administrateur), je veux m'inscrire sur la plateforme et attendre la validation de mon compte par le rôle supérieur (admin pour médecin, adminIT pour admin) avant de pouvoir me connecter.
+  & \must \\ \cline{1-2}\cline{4-5}
+
+4 & \sprintone{Sprint 1} &
+  & En tant qu'administrateur, je veux consulter la liste de tous les médecins avec leur statut (en attente, validé, refusé), les valider, les refuser ou les supprimer de la plateforme.
+  & \must \\ \cline{1-2}\cline{4-5}
+
+5 & \sprintone{Sprint 1} &
+  & En tant qu'adminIT, je veux gérer les comptes administrateurs (valider, refuser, supprimer, démoter en médecin) et modifier mes informations de profil (nom, prénom, email, photo, mot de passe).
+  & \must \\ \hline
+
+%% ══════════════════════════════════════════════════════════
+%% SPRINT 2 — TRANSCRIPTION & CRÉATION / CORRECTION DE RAPPORTS (US 6–15)
+%% ══════════════════════════════════════════════════════════
+
+\multicolumn{5}{|c|}{\cellcolor{sprint2bg}\textcolor{sprint2txt}{\Large\bfseries Sprint 2 — Transcription vocale \& Création / Correction de rapports}} \\ \hline
+
+%% --- Épic 3 : Capture audio ---
+6 & \sprinttwo{Sprint 2}
+  & \multirow{2}{3.8cm}{\textbf{Épic 3 :} Capture audio médicale}
+  & En tant que médecin, je veux appairer mon smartphone à l'application desktop via un QR code sur le réseau Wi-Fi local pour dicter depuis le mobile, ou utiliser directement le microphone du PC en cas d'absence de smartphone.
+  & \must \\ \cline{1-2}\cline{4-5}
+
+7 & \sprinttwo{Sprint 2} &
+  & En tant que médecin, je veux mettre en pause et reprendre l'enregistrement sans perdre l'audio déjà capturé, ou importer un fichier audio existant (MP3, WAV, M4A) pour le transcrire directement.
+  & \should \\ \hline
+
+%% --- Épic 4 : Transcription STT ---
+8 & \sprinttwo{Sprint 2}
+  & \multirow{2}{3.8cm}{\textbf{Épic 4 :} Transcription vocale médicale (STT)}
+  & En tant que médecin, je veux soumettre un enregistrement audio et obtenir une transcription automatique en français médical reconnaissant la terminologie radiologique spécialisée.
+  & \must \\ \cline{1-2}\cline{4-5}
+
+9 & \sprinttwo{Sprint 2} &
+  & En tant qu'administrateur, je veux que le traitement STT s'exécute entièrement en local sans aucun appel réseau externe, afin de garantir la confidentialité des données patient.
+  & \must \\ \hline
+
+%% --- Épic 5 : Correction automatique ---
+10 & \sprinttwo{Sprint 2}
+   & \multirow{2}{3.8cm}{\textbf{Épic 5 :} Correction automatique des termes médicaux}
+   & En tant que médecin, je veux que le système détecte automatiquement les erreurs de transcription sur les termes radiologiques et propose plusieurs suggestions de correction pertinentes parmi lesquelles je peux choisir.
+   & \must \\ \cline{1-2}\cline{4-5}
+
+%% --- Épic 6 : Gestion des rapports ---
+12 & \sprinttwo{Sprint 2}
+   & \multirow{4}{3.8cm}{\textbf{Épic 6 :} Création et gestion des comptes-rendus radiologiques}
+   & En tant que médecin, je veux créer un compte-rendu en saisissant un identifiant d'examen unique (format \texttt{AAAANNNN}) et le texte de transcription, avec un statut initial « brouillon ».
+   & \must \\ \cline{1-2}\cline{4-5}
+
+13 & \sprinttwo{Sprint 2} &
+   & En tant que médecin, je veux modifier le contenu de mes comptes-rendus et les faire passer du statut brouillon → validé → sauvegardé.
+   & \must \\ \cline{1-2}\cline{4-5}
+
+14 & \sprinttwo{Sprint 2} &
+   & En tant que médecin, je veux accéder à un compte-rendu depuis sa page de détail structurée (Indication, Technique, Conclusion).
+   & \must \\ \cline{1-2}\cline{4-5}
+
+15 & \sprinttwo{Sprint 2} &
+   & En tant qu'administrateur, je veux consulter l'ensemble des comptes-rendus sauvegardés de tous les médecins avec le nom du médecin associé.
+   & \must \\ \hline
+
+%% ══════════════════════════════════════════════════════════
+%% SPRINT 3 — HISTORIQUE, RÉCLAMATIONS & EXPORT CSV (US 16–25)
+%% ══════════════════════════════════════════════════════════
+
+\multicolumn{5}{|c|}{\cellcolor{sprint3bg}\textcolor{sprint3txt}{\Large\bfseries Sprint 3 — Historique, Réclamations \& Export CSV}} \\ \hline
+
+%% --- Épic 7 : Historique des rapports ---
+16 & \sprintthree{Sprint 3}
+   & \multirow{2}{3.8cm}{\textbf{Épic 7 :} Historique et consultation des rapports}
+   & En tant que médecin, je veux consulter l'historique de tous mes comptes-rendus avec leur statut, leur date et leur identifiant d'examen, et les rechercher par identifiant ou filtrer .
+   & \must \\ \cline{1-2}\cline{4-5}
+
+17 & \sprintthree{Sprint 3} &
+   & En tant que médecin, je veux visualiser un tableau de bord récapitulatif de mon activité (total rapports, validés, brouillons, dernier examen) avec un graphique d'activité sur 30~jours.
+   & \should \\ \hline
+
+%% --- Épic 8 : Export CSV ---
+18 & \sprintthree{Sprint 3}
+   & \multirow{2}{3.8cm}{\textbf{Épic 8 :} Export CSV global (Admin \& AdminIT)}
+   & En tant qu'adminIT ou administrateur, je veux que chaque compte-rendu passant au statut « sauvegardé » soit automatiquement archivé dans un fichier CSV global (\texttt{id\_exam;doctor\_name;date;heure;transcription}, encodage UTF-8 avec BOM), accessible uniquement aux rôles admin et adminIT (contrôle côté serveur).
+   & \must \\ \cline{1-2}\cline{4-5}
+
+19 & \sprintthree{Sprint 3} &
+   & En tant qu'adminIT ou administrateur, je veux télécharger le fichier CSV global contenant l'ensemble des transcriptions validées de tous les médecins depuis mon interface dédiée.
+   & \must \\ \hline
+
+%% --- Épic 9 : Réclamations ---
+20 & \sprintthree{Sprint 3}
+   & \multirow{3}{3.8cm}{\textbf{Épic 9 :} Gestion des réclamations}
+   & En tant que médecin, je veux soumettre une réclamation (titre + description) pour signaler un problème, consulter son état (en attente, en cours, traitée) et lire la réponse apportée par l'adminIT.
+   & \must \\ \cline{1-2}\cline{4-5}
+
+21 & \sprintthree{Sprint 3} &
+   & En tant qu'adminIT, je veux consulter toutes les réclamations soumises par les médecins et les admins, filtrées par statut.
+   & \must \\ \cline{1-2}\cline{4-5}
+
+22 & \sprintthree{Sprint 3} &
+   & En tant qu'adminIT, je veux mettre à jour le statut d'une réclamation et y rédiger une réponse écrite.
+   & \must \\ \hline
+
+%% --- Épic 10 : Tableaux de bord ---
+23 & \sprintthree{Sprint 3}
+   & \multirow{2}{3.8cm}{\textbf{Épic 10 :} Tableaux de bord et statistiques}
+   & En tant qu'administrateur, je veux visualiser des statistiques globales depuis mon tableau de bord.
+   & \should \\ \cline{1-2}\cline{4-5}
+
+24 & \sprintthree{Sprint 3} &
+   & En tant qu'adminIT, je veux visualiser un tableau de bord des réclamations (en attente, en cours, traitées), l'état des services applicatifs et un graphique hebdomadaire d'activité des réclamations.
+   & \should \\ \hline
+
+%% --- Épic 11 : Sécurité & Confidentialité ---
+25 & \sprintthree{Sprint 3}
+   & \textbf{Épic 11 :} Sécurité et confidentialité des données
+   & En tant qu'administrateur, je veux que toutes les communications soient chiffrées (HTTPS / WSS), que la plateforme fonctionne en mode 100\,\% hors ligne sans connexion Internet, et que les données patient soient stockées exclusivement sur le serveur interne de l'hôpital, conformément à la législation tunisienne sur la protection des données de santé.
+   & \must \\ \hline
+
+\end{longtable}
+
+
+\subsubsection{Planification des Sprints}
+Notre  solution est constituée de 2 Releases résumé dans la figure \ref{sprin}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth,keepaspectratio]{Chapter3/Figures/sprints.png}
+  \caption{Planification des Sprints}
+  \label{sprin}
+\end{figure}
+\section{Architecture du système adopté}
+\subsection{Architecture logicielle}
+Notre choix s'est porté sur le patron de conception MVT (Modèle-Vue-Template), adopté nativement par Django \cite{djangofaq}. Ce patron constitue une variante du MVC classique, dans laquelle le framework prend en charge le rôle du contrôleur via son mécanisme de routage d'URLs, laissant au développeur la responsabilité du Modèle, de la Vue et du Template. Cette séparation des responsabilités assure une structuration rigoureuse et maintenable du code :
+
+\begin{itemize}
+   \item \textbf{Modèle (Model) :} Constitue le cœur fonctionnel de l'application. Il encapsule la logique métier, assure la persistance des données via MongoDB et gère les interactions avec la base de données (comptes-rendus, utilisateurs, réclamations).
+
+   \item \textbf{Template :} Représente la couche de présentation. Dans notre architecture, cette couche est découplée du backend Django et implémentée via React TypeScript, offrant une interface dynamique et réactive, complétée par une application mobile React Native pour la capture audio.
+
+   \item \textbf{Vue (View) :} Joue le rôle de chef d'orchestre entre le Modèle et le Template. Elle intercepte les requêtes entrantes, applique la logique de traitement, coordonne les interactions avec les services internes tels que le moteur de transcription Whisper et le module de correction médicale MedCorrect, puis retourne les résultats sous forme de réponses API REST.
+\end{itemize}
+
+L'un des principes fondamentaux de Django est le couplage faible et la cohésion forte entre les différentes couches du framework \cite{djangophilosophy}. L'adoption de ce patron architectural favorise ainsi une meilleure lisibilité du code source, simplifie les opérations de maintenance et offre une extensibilité modulaire.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth,keepaspectratio]{Chapter3/Figures/MVT.png}
+  \caption{Modèle MVT}
+  \label{fig:mvt}
+\end{figure}
+\subsection{Architecture physique}
+L'architecture physique de notre système décrit l'organisation concrète des composants
+matériels et logiciels mobilisés pour assurer le bon fonctionnement de l'application.
+Elle met en évidence les interactions entre les différentes entités et services du système.
+
+\noindent L'architecture s'articule autour des composants suivants :
+
+\begin{itemize}
+\item La partie frontend, développée avec React, est accessible depuis un navigateur web.
+Elle permet l'authentification, le téléversement des fichiers audio et la consultation des transcriptions.
+
+\item La partie backend est assurée par FastAPI, qui gère l'authentification via JWT,
+orchestre les échanges entre le frontend, le modèle Whisper et la base de données.
+
+\item Les données sont stockées dans une base de données MongoDB, solution NoSQL,
+où sont conservées les informations des utilisateurs, les métadonnées audio et les transcriptions générées.
+
+
+
+\end{itemize}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1\textwidth,keepaspectratio]{Chapter3/Figures/archi.png}
+  \caption{Architecture physique }
+  %\label{sprin}
+\end{figure}
+
+
+\section{Étude des besoins techniques}
+\subsection{Environnement de matériel}
+
+\begin{longtable}{|p{4cm}|p{4cm}|p{4cm}|p{4cm}|}
+\caption{Environnement de matériel} \\
+\hline
+\textbf{Composant} & \textbf{Desktop 1} & \textbf{Desktop 2} & \textbf{Desktop 3} \\
+\hline
+\endfirsthead
+
+\hline
+\textbf{Composant} & \textbf{Desktop 1} & \textbf{Desktop 2} & \textbf{Desktop 3} \\
+\hline
+\endhead
+
+\hline
+\multicolumn{4}{|r|}{Suite page suivante} \\
+\hline
+\endfoot
+
+\hline
+\endlastfoot
+
+Processeur & Intel Core i5-11400H & Intel Core i5-11400H & Intel Core i9-12900F \\
+\hline
+RAM & 16 GB & 16 GB & 32 GB \\
+\hline
+Disque & 512 GB SSD & 512 GB SSD & 2 TB SSD \\
+\hline
+Système d'exploitation & Windows 11 & Windows 11 & Windows 11 \\
+\hline
+GPU & NVIDIA GeForce GTX 1650 & NVIDIA GeForce RTX 2050 & NVIDIA GeForce RTX 3080 \\
+\hline
+
+\end{longtable}
+\subsection{Outils de conception et de développement
+}
+
+Parmi les composants logiciels mobilisés, \textbf{Draw.io} et \textbf{Figma} ont été utilisés pour la conception, \textbf{Visual Studio Code}, \textbf{React.js}, \textbf{TypeScript}, \textbf{Django} et \textbf{FastAPI} pour le développement, et \textbf{GitHub} et \textbf{Postman} pour la gestion et le déploiement.
+
+
+Le Tableau \ref{tab:outils} présente l'ensemble de ces outils et leur rôle.
+\begin{longtable}{|>{\centering\arraybackslash}m{3cm}|>{\centering\arraybackslash}m{3cm}|m{9cm}|}
+\caption{Outils et technologies utilisés dans le projet}
+\label{tab:outils} \\
+\hline
+\textbf{Logo} & \textbf{Outil} & \textbf{Description} \\
+\hline
+\endfirsthead
+
+\hline
+\textbf{Logo} & \textbf{Outil} & \textbf{Description} \\
+\hline
+\endhead
+
+\hline
+\multicolumn{3}{|r|}{Suite page suivante} \\
+\hline
+\endfoot
+
+\hline
+\endlastfoot
+
+\includegraphics[height=1.5cm]{Chapter3/Figures/vscode.png} &
+\textbf{Visual Studio Code} &
+Éditeur de code multiplateforme développé par Microsoft, utilisé pour le développement du frontend, du backend et de l'application mobile. \\
+\hline
+
+\includegraphics[height=1.5cm]{Chapter3/Figures/re.png} &
+\textbf{React.js} &
+Bibliothèque JavaScript développée par Meta pour construire des interfaces web basées sur des composants réutilisables. \\
+\hline
+
+\includegraphics[height=1.5cm]{Chapter3/Figures/ts.png} &
+\textbf{TypeScript} &
+Sur-ensemble typé de JavaScript offrant un typage statique fort afin de rendre le développement du frontend plus fiable. \\
+\hline
+
+
+\includegraphics[height=2.5cm]{Chapter3/Figures/django.png} &
+\textbf{Django} &
+Framework Python utilisé comme backend principal pour la gestion des utilisateurs, l'authentification et les rapports. \\
+\hline
+
+\includegraphics[height=2.5cm]{Chapter3/Figures/fastapi.png} &
+\textbf{FastAPI} &
+Framework Python performant utilisé pour la transcription Whisper, la génération de QR codes et la communication WebSocket en temps réel. \\
+\hline
+
+\includegraphics[height=2.5cm]{Chapter3/Figures/mongodb.png} &
+\textbf{MongoDB} &
+Base de données NoSQL utilisée pour stocker les utilisateurs, rapports, audios et sessions du système. \\
+\hline
+
+\includegraphics[height=2cm]{Chapter3/Figures/github.png} &
+\textbf{GitHub} &
+Plateforme de gestion de code source utilisée pour le versionnement et la collaboration. \\
+\hline
+
+\includegraphics[height=2cm]{Chapter3/Figures/postmaaa.png} &
+\textbf{Postman} &
+Outil utilisé pour tester et documenter les API REST développées avec Django et FastAPI. \\
+\hline
+
+\includegraphics[height=2cm]{Chapter3/Figures/draw.png} &
+\textbf{Draw.io} &
+Application utilisée pour concevoir les diagrammes UML du projet. \\
+\hline
+
+\includegraphics[height=2cm]{Chapter3/Figures/2.png} &
+\textbf{Figma} &
+Outil de conception utilisé pour créer les maquettes de l'application web et mobile. \\
+\hline
+
+\includegraphics[height=2cm]{Chapter3/Figures/latex.png} &
+\textbf{\LaTeX} &
+Langage de composition utilisé pour la rédaction du rapport académique. \\
+\hline
+
+\end{longtable}
+
+\section{Conclusion}
+\justify
+En conclusion, ce chapitre a présenté les principaux outils et technologies utilisés dans notre application de speech-to-text. Parmi les plus importants, FastAPI et Django ont assuré le backend , tandis que React.js, TypeScript et React Native ont permis de développer des interfaces web et mobiles performantes. MongoDB a été utilisé pour le stockage des données, et GitHub a facilité la gestion du code et la collaboration. Enfin, Postman, Figma et Draw.io ont contribué respectivement aux tests des API et à la conception du projet.
+Ainsi, ces outils ont permis de mettre en place une architecture cohérente, adaptée aux besoins de l'application et à son évolutivité.
+\newpage
+
+\end{document}

@@ -1,0 +1,67 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[french]{babel}
+\usepackage[margin=1in]{geometry}
+\usepackage{enumitem}
+
+\begin{document}
+
+\section*{Cas d'utilisation : Authentification Administrateur et Administrateur IT}
+
+\begin{description}[leftmargin=4.2cm, style=nextline]
+    \item[Titre de cas d'utilisation] Authentification Administrateur / Administrateur IT
+
+    \item[Acteurs principaux] Administrateur, Administrateur IT (AdminIT)
+
+    \item[Description] Permet à l'Administrateur ou à l'Administrateur IT de s'identifier
+    dans le système. Le processus de connexion est identique pour les deux rôles~;
+    seul le tableau de bord accessible après connexion diffère selon le rôle reconnu.
+
+    \item[Préconditions]
+    \begin{itemize}[leftmargin=*, nosep]
+        \item Le compte de l'acteur existe et est actif dans le système.
+        \item Le système est en cours d'exécution sur le poste de travail.
+    \end{itemize}
+
+    \item[Scénario principal]
+    \begin{enumerate}[leftmargin=*, topsep=0pt, itemsep=0pt]
+        \item L'acteur ouvre l'application et accède à la page de connexion.
+        \item Le système affiche le formulaire de connexion (identifiant et mot de passe).
+        \item L'acteur saisit son identifiant et son mot de passe, puis clique sur
+              «~Se connecter~».
+        \item Le système vérifie les informations saisies.
+        \item Le système identifie le rôle de l'acteur~:
+        \begin{itemize}[leftmargin=*, nosep]
+            \item \textbf{Rôle Administrateur}~: le système redirige vers le tableau de bord
+                  Administrateur (liste des rapports \texttt{validated} et \texttt{saved},
+                  gestion des médecins, export CSV).
+            \item \textbf{Rôle Administrateur IT}~: le système redirige vers le tableau de bord
+                  AdminIT (gestion des comptes utilisateurs, traitement des demandes
+                  d'inscription, configuration du système).
+        \end{itemize}
+        \item Une session active est ouverte.
+    \end{enumerate}
+
+    \item[Postconditions]
+    \begin{itemize}[leftmargin=*, nosep]
+        \item L'acteur est connecté et accède exclusivement aux fonctionnalités
+              de son rôle.
+        \item Une session active est ouverte jusqu'à la déconnexion.
+    \end{itemize}
+
+    \item[Exceptions]
+    \textbf{Exception 1 : Identifiant ou mot de passe incorrect}
+    \begin{itemize}[leftmargin=*, nosep]
+        \item Le système affiche «~Identifiant ou mot de passe incorrect~»
+              sans préciser lequel est erroné.
+    \end{itemize}
+    \textbf{Exception 2 : Compte inactif ou supprimé}
+    \begin{itemize}[leftmargin=*, nosep]
+        \item Si le compte a été désactivé, le système refuse la connexion
+              et affiche «~Compte inactif, veuillez contacter l'administrateur IT~».
+    \end{itemize}
+\end{description}
+
+\end{document}

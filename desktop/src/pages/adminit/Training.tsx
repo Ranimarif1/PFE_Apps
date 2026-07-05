@@ -2,7 +2,7 @@ import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { getTrainingData, fetchAudioBlob, downloadTrainingZip, type TrainingEntry } from "@/services/audioService";
 import { useQuery } from "@tanstack/react-query";
-import { FileAudio, FileText, Search, Download, Loader2, Database, Calendar } from "lucide-react";
+import { FileAudio, FileText, Search, Download, Loader2, Database, Calendar, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getStatusBadgeClass, getStatusLabel, getActiveFilterTabClass, INACTIVE_TAB_CLASS } from "@/styles/statusSystem";
 import { REPORT_CATEGORIES, getCategoryLabel } from "@/constants/reportCategories";
@@ -34,19 +34,25 @@ export default function AdminITTraining() {
   const [expanded,       setExpanded]       = useState<string | null>(null);
   const [startDate,      setStartDate]      = useState("");
   const [endDate,        setEndDate]        = useState("");
+  const [sortOrder,      setSortOrder]      = useState<"desc" | "asc">("desc");
 
   const { data: entries = [], isLoading } = useQuery<TrainingEntry[]>({
     queryKey: ["training"],
     queryFn:  getTrainingData,
   });
 
-  const filtered = entries.filter(e => {
-    if (filterStatus !== "tous" && e.status !== filterStatus) return false;
-    if (filterCategory && e.category !== filterCategory) return false;
-    if (search && !e.examId.toLowerCase().includes(search.toLowerCase()) &&
-        !e.doctorName.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+  const filtered = entries
+    .filter(e => {
+      if (filterStatus !== "tous" && e.status !== filterStatus) return false;
+      if (filterCategory && e.category !== filterCategory) return false;
+      if (search && !e.examId.toLowerCase().includes(search.toLowerCase()) &&
+          !e.doctorName.toLowerCase().includes(search.toLowerCase())) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const diff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      return sortOrder === "asc" ? diff : -diff;
+    });
 
   const handleDownloadAudio = async (e: TrainingEntry) => {
     setDownloading(`audio-${e.audioId}`);
@@ -116,6 +122,15 @@ export default function AdminITTraining() {
             </div>
 
             <div className="ml-auto flex items-center gap-2">
+              <button
+                onClick={() => setSortOrder(o => o === "desc" ? "asc" : "desc")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-background text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                title={sortOrder === "desc" ? "Plus récent en premier" : "Plus ancien en premier"}
+              >
+                <ArrowUpDown size={13} />
+                {sortOrder === "desc" ? "Plus récent" : "Plus ancien"}
+              </button>
+
               <select
                 value={filterCategory}
                 onChange={e => setFilterCategory(e.target.value)}
@@ -180,7 +195,16 @@ export default function AdminITTraining() {
                 <thead className="bg-muted/50">
                   <tr>
                     {["ID Exam", "Type", "Section", "Médecin", "Date", "Durée", "Statut", "Transcription", "Téléchargement"].map(h => (
-                      <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                      h === "Date" ? (
+                        <th key={h}
+                          onClick={() => setSortOrder(o => o === "desc" ? "asc" : "desc")}
+                          title={sortOrder === "desc" ? "Plus récent en premier" : "Plus ancien en premier"}
+                          className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap cursor-pointer select-none hover:text-foreground transition-colors">
+                          {h} {sortOrder === "desc" ? "↓" : "↑"}
+                        </th>
+                      ) : (
+                        <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                      )
                     ))}
                   </tr>
                 </thead>

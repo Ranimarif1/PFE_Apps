@@ -139,8 +139,11 @@ def save_note(request: HttpRequest) -> JsonResponse:
     }
     audio_ins = audios_col.insert_one(audio_doc)
 
+    _prenom = (user.raw.get("prenom") or "").strip()
+    _nom = (user.raw.get("nom") or "").strip()
     report_doc = {
         "doctorId":        user.id,
+        "doctorName":      f"{_prenom} {_nom}".strip() or user.email,
         "ID_Exam":         exam_id,
         "content":         text,
         "originalContent": text,

@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Eye, EyeOff, CheckCircle, Check, X, Shield, Loader2 } from "lucide-react";
+import { Eye, EyeOff, CheckCircle, Check, X, Loader2, Mail, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { registerApi, checkSeniorCodeApi } from "@/services/authService";
 import { checkPassword, passwordScore, validateEmail, validatePassword } from "@/lib/validation";
@@ -35,7 +35,7 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
   const [codeStatus, setCodeStatus] = useState<CodeStatus>("idle");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const isSeniorForCheck = form.rôle === "admin" || (form.rôle === "médecin" && form.senior);
+  const isSeniorForCheck = form.rôle !== "adminIT" && form.senior;
 
   useEffect(() => {
     if (!isSeniorForCheck || !form.seniorCode.trim()) {
@@ -71,7 +71,7 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
     const pwErr = validatePassword(form.password);
     if (pwErr) { setError(pwErr); return; }
     if (form.password !== form.confirm) { setError("Les mots de passe ne correspondent pas."); return; }
-    const isSenior = form.rôle === "admin" || (form.rôle === "médecin" && form.senior);
+    const isSenior = form.rôle !== "adminIT" && form.senior;
     if (isSenior && !form.seniorCode.trim()) {
       setError("Veuillez saisir votre code senior.");
       return;
@@ -151,12 +151,12 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
           <div>
             <label className="text-sm font-medium text-foreground mb-1.5 block">Prénom</label>
             <input value={form.prénom} onChange={e => handleChange("prénom", e.target.value)} required
-              className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder="Jean" />
+              className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder="Mohamed" />
           </div>
           <div>
             <label className="text-sm font-medium text-foreground mb-1.5 block">Nom</label>
             <input value={form.nom} onChange={e => handleChange("nom", e.target.value)} required
-              className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder="Dupont" />
+              className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder="Ben Ali" />
           </div>
         </div>
 
@@ -180,28 +180,6 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
         </div>
 
         <div>
-          <label className="text-sm font-medium text-foreground mb-1.5 block">Email</label>
-          <div className="relative">
-            <input
-              type="email"
-              value={form.email}
-              onChange={e => handleChange("email", e.target.value)}
-              required
-              aria-invalid={!!emailError}
-              className={`w-full px-4 py-3 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 pr-10 transition-colors ${
-                emailError
-                  ? "border-destructive/60 focus:ring-destructive/25"
-                  : "border-border focus:ring-primary/30"
-              }`}
-              placeholder="jean.dupont@hopital.fr"
-            />
-          </div>
-          {emailError && (
-            <p className="text-xs text-destructive mt-1.5">{emailError}</p>
-          )}
-        </div>
-
-        <div>
           <label className="text-sm font-medium text-foreground mb-1.5 block">Rôle</label>
           <div className="grid grid-cols-3 gap-2">
             {([
@@ -222,40 +200,33 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
           </div>
         </div>
 
-        {/* Senior status — médecin chooses, admin senior by default, adminIT excluded */}
+        {/* Senior status — médecin & admin choose, adminIT excluded */}
         {form.rôle !== "adminIT" && (
           <div>
             <label className="text-sm font-medium text-foreground mb-1.5 block">Statut senior</label>
-            {form.rôle === "admin" ? (
-              <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-primary/30 bg-primary/5 text-sm text-foreground">
-                <Shield size={14} className="text-primary shrink-0" />
-                <span>En tant qu'administrateur, vous êtes senior par défaut.</span>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-2">
-                {([
-                  { value: true,  label: "Oui, je suis senior" },
-                  { value: false, label: "Non" },
-                ] as const).map(({ value, label }) => (
-                  <button key={String(value)} type="button"
-                    onClick={() => setForm(f => ({ ...f, senior: value, seniorCode: value ? f.seniorCode : "" }))}
-                    className={`px-3 py-2.5 rounded-xl border text-sm font-medium transition-all text-center ${
-                      form.senior === value
-                        ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/30"
-                        : "border-border bg-background text-muted-foreground hover:border-primary/40"
-                    }`}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { value: true,  label: "Oui, je suis senior" },
+                { value: false, label: "Non" },
+              ] as const).map(({ value, label }) => (
+                <button key={String(value)} type="button"
+                  onClick={() => setForm(f => ({ ...f, senior: value, seniorCode: value ? f.seniorCode : "" }))}
+                  className={`px-3 py-2.5 rounded-xl border text-sm font-medium transition-all text-center ${
+                    form.senior === value
+                      ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/30"
+                      : "border-border bg-background text-muted-foreground hover:border-primary/40"
+                  }`}>
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
         {/* Senior code — required whenever the account is senior */}
         {isSeniorForCheck && (
           <div>
-            <label className="text-sm font-medium text-foreground mb-1.5 block">Numéro / code senior</label>
+            <label className="text-sm font-medium text-foreground mb-1.5 block">Code senior</label>
             <div className="relative">
               <input
                 value={form.seniorCode}
@@ -291,6 +262,28 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
             )}
           </div>
         )}
+
+        <div>
+          <label className="text-sm font-medium text-foreground mb-1.5 block">Email</label>
+          <div className="relative">
+            <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <input
+              type="email"
+              value={form.email}
+              onChange={e => handleChange("email", e.target.value)}
+              required
+              aria-invalid={!!emailError}
+              className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              placeholder="mohamed@gmail.com"
+            />
+          </div>
+          {emailError && (
+            <p className="text-xs text-destructive mt-1.5 flex items-center gap-1">
+              <AlertCircle size={11} className="shrink-0" />
+              {emailError}
+            </p>
+          )}
+        </div>
 
         <div>
           <label className="text-sm font-medium text-foreground mb-1.5 block">Mot de passe</label>
@@ -367,7 +360,7 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !emailVerified || !passwordValid || !passwordsMatch}
           className="w-full gradient-hero text-white font-semibold py-3 rounded-xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {loading ? "Inscription en cours..." : "S'inscrire"}

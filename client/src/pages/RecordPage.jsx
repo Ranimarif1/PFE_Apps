@@ -1,10 +1,73 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { useSocket } from '../hooks/useSocket';
 import { useAudioRecorder } from '../hooks/useAudioRecorder';
 import { useTimer } from '../hooks/useTimer';
+import { saveCheckpoint, loadCheckpoint, clearCheckpoint } from '../hooks/useAudioStorage';
 import StatusBadge from '../components/StatusBadge';
 import ConnectionBanner from '../components/ConnectionBanner';
 import '../styles/RecordPage.css';
+
+// ── MP3 conversion + download ─────────────────────────────────────────────────
+async function convertToMp3(blob) {
+  const { Mp3Encoder } = await import('@breezystack/lamejs');
+  const arrayBuffer = await blob.arrayBuffer();
+  const audioCtx = new AudioContext();
+  const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+  audioCtx.close();
+
+  const channelData = audioBuffer.getChannelData(0); // mono
+  const sampleRate  = audioBuffer.sampleRate;
+
+  const samples = new Int16Array(channelData.length);
+  for (let i = 0; i < channelData.length; i++) {
+    const s = Math.max(-1, Math.min(1, channelData[i]));
+    samples[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+  }
+
+  const encoder   = new Mp3Encoder(1, sampleRate, 128);
+  const mp3Parts  = [];
+  const blockSize = 1152;
+  for (let i = 0; i < samples.length; i += blockSize) {
+    const chunk   = samples.subarray(i, i + blockSize);
+    const encoded = encoder.encodeBuffer(chunk);
+    if (encoded.length > 0) mp3Parts.push(new Uint8Array(encoded));
+  }
+  const flushed = encoder.flush();
+  if (flushed.length > 0) mp3Parts.push(new Uint8Array(flushed));
+
+  return new Blob(mp3Parts, { type: 'audio/mpeg' });
+}
+
+function DownloadMp3Button({ blob }) {
+  const [loading, setLoading] = useState(false);
+
+  const handleClick = async () => {
+    setLoading(true);
+    try {
+      const mp3Blob = await convertToMp3(blob);
+      const name = `dictee_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.mp3`;
+      const url  = URL.createObjectURL(mp3Blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = name; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      console.error('MP3 conversion failed:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      className="rp-btn rp-btn--download"
+      onClick={handleClick}
+      disabled={loading}
+      aria-label="Télécharger en MP3"
+    >
+      {loading ? '⏳ Conversion MP3…' : '💾 Télécharger en MP3'}
+    </button>
+  );
+}
 
 // Support both URL formats:
 //   ?sessionId=<uuid>          (current format)
@@ -14,35 +77,58 @@ const sessionId =
   (/\/([0-9a-f-]{36})$/i.exec(window.location.pathname)?.[1] ?? null);
 
 export default function RecordPage() {
-  const { connected, error: socketError, emit } = useSocket(sessionId);
+  const { connected, ready, error: socketError, emit } = useSocket(sessionId);
 
-  const [pendingBlob, setPendingBlob] = useState(null);
-  const [pendingMime, setPendingMime] = useState('');
-  const [sent, setSent]               = useState(false);
-  const [sessionKey, setSessionKey]   = useState(0);
+  const [pendingBlob, setPendingBlob]     = useState(null);
+  const [pendingMime, setPendingMime]     = useState('');
+  const [sent, setSent]                   = useState(false);
+  const [sessionKey, setSessionKey]       = useState(0);
+  const [recovered, setRecovered]         = useState(false);
+
+  // ── Recover audio from IndexedDB on mount (crash/tab-kill recovery) ──
+  useEffect(() => {
+    if (!sessionId) return;
+    loadCheckpoint(sessionId).then(saved => {
+      if (saved?.blob) {
+        setPendingBlob(saved.blob);
+        setPendingMime(saved.mimeType);
+        setSent(false);
+        setRecovered(true);
+      }
+    });
+  }, []);
 
   // ── Audio recorder ───────────────────────────────────────────
   const handleStop = useCallback((blob, mimeType) => {
     setPendingBlob(blob);
     setPendingMime(mimeType);
     setSent(false);
+    saveCheckpoint(sessionId, blob, mimeType);
     emit('recording:stop', { sessionId });
   }, [emit]);
+
+  const handleCheckpoint = useCallback((blob, mimeType) => {
+    saveCheckpoint(sessionId, blob, mimeType);
+  }, []);
 
   const {
     start, pause, stop,
     status, error: recorderError,
     isRecording, isPaused, interrupted,
-  } = useAudioRecorder({ onStop: handleStop });
+  } = useAudioRecorder({ onStop: handleStop, onCheckpoint: handleCheckpoint });
 
   const handleStart = useCallback(() => {
     if (status === 'idle' || status === 'stopped') {
       setPendingBlob(null);
       setSent(false);
       setSessionKey((k) => k + 1);
+      emit('recording:start', { sessionId });
+    } else if (status === 'paused') {
+      emit('recording:resume', { sessionId });
+    } else {
+      emit('recording:start', { sessionId });
     }
     start();
-    emit('recording:start', { sessionId });
   }, [start, emit, status]);
 
   // ── Send full recording to desktop ───────────────────────────
@@ -56,6 +142,8 @@ export default function RecordPage() {
       timestamp: Date.now(),
     });
     setSent(true);
+    setRecovered(false);
+    clearCheckpoint(sessionId);
   }, [pendingBlob, pendingMime, emit]);
 
   // ── Timer ────────────────────────────────────────────────────
@@ -67,10 +155,15 @@ export default function RecordPage() {
     if (isPaused || status === 'idle' || status === 'stopped') handleStart();
   }, [isPaused, status, handleStart]);
 
+  const handlePause = useCallback(() => {
+    pause();
+    emit('recording:pause', { sessionId });
+  }, [pause, emit]);
+
   const handlePttUp = useCallback((e) => {
     e.preventDefault();
-    if (isRecording) pause();
-  }, [isRecording, pause]);
+    if (isRecording) handlePause();
+  }, [isRecording, handlePause]);
 
   // ── No session guard ──────────────────────────────────────────
   if (!sessionId) {
@@ -86,7 +179,7 @@ export default function RecordPage() {
   }
 
   const error    = socketError || recorderError;
-  const canRecord = connected;
+  const canRecord = connected && ready;
   const hasPending = !!pendingBlob && !sent;
 
   return (
@@ -130,6 +223,14 @@ export default function RecordPage() {
           </div>
         ) : (
           <>
+            {/* Recovered audio banner */}
+            {recovered && (
+              <div className="rp-interrupted-banner" style={{ background: '#1a3a1a', borderColor: '#166534', color: '#4ade80' }}>
+                🔄 Enregistrement récupéré après interruption. Appuyez sur <strong>Envoyer</strong> pour l'envoyer.
+              </div>
+            )}
+
+
             {/* Interrupted by call banner */}
             {interrupted && (
               <div className="rp-interrupted-banner">
@@ -153,17 +254,17 @@ export default function RecordPage() {
             <div className="rp-controls">
               <button
                 className="rp-btn rp-btn--start"
-                disabled={!canRecord || isRecording}
+                disabled={!canRecord || isRecording || status === 'requesting'}
                 onClick={handleStart}
                 aria-label="Démarrer l'enregistrement"
               >
-                {isPaused ? '▶ Reprendre' : '● Démarrer'}
+                {status === 'requesting' ? '⏳ Accès micro...' : isPaused ? '▶ Reprendre' : '● Démarrer'}
               </button>
 
               <button
                 className="rp-btn rp-btn--pause"
                 disabled={!isRecording}
-                onClick={pause}
+                onClick={handlePause}
                 aria-label="Mettre en pause"
               >
                 ❙❙ Pause
@@ -188,6 +289,11 @@ export default function RecordPage() {
             >
               {hasPending ? '↑ Envoyer vers le bureau' : 'En attente d\'un enregistrement'}
             </button>
+
+            {/* Download as MP3 — always visible when audio is ready */}
+            {hasPending && (
+              <DownloadMp3Button blob={pendingBlob} />
+            )}
 
             {/* Hold-to-record (PTT) */}
             <button

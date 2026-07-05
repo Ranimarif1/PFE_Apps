@@ -1,0 +1,320 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{lmodern}
+
+\geometry{
+  a4paper,
+  left=2cm, right=2cm,
+  top=2.5cm, bottom=2.5cm
+}
+
+%% ===== Couleurs des sprints =====
+\definecolor{sprint1bg}{RGB}{219,234,254}   % bleu clair
+\definecolor{sprint2bg}{RGB}{220,252,231}   % vert clair
+\definecolor{sprint3bg}{RGB}{254,243,199}   % jaune clair
+\definecolor{sprint1txt}{RGB}{30,64,175}    % bleu foncé
+\definecolor{sprint2txt}{RGB}{22,101,52}    % vert foncé
+\definecolor{sprint3txt}{RGB}{146,64,14}    % orange foncé
+\definecolor{headercolor}{RGB}{30,41,59}    % gris très foncé
+\definecolor{must}{RGB}{220,38,38}          % rouge
+\definecolor{should}{RGB}{234,88,12}        % orange
+\definecolor{could}{RGB}{101,163,13}        % vert olive
+
+%% ===== Commandes utilitaires =====
+\newcommand{\must}{\textcolor{must}{\textbf{Must}}}
+\newcommand{\should}{\textcolor{should}{\textbf{Should}}}
+\newcommand{\could}{\textcolor{could}{\textbf{Could}}}
+
+\newcommand{\sprintone}[1]{\cellcolor{sprint1bg}\textcolor{sprint1txt}{\textbf{#1}}}
+\newcommand{\sprinttwo}[1]{\cellcolor{sprint2bg}\textcolor{sprint2txt}{\textbf{#1}}}
+\newcommand{\sprintthree}[1]{\cellcolor{sprint3bg}\textcolor{sprint3txt}{\textbf{#1}}}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=sprint1txt,
+  urlcolor=sprint1txt,
+  pdftitle={Backlog Produit -- RadioAI},
+  pdfauthor={PFE Hôpital Fattouma-Bourguiba}
+}
+
+\begin{document}
+
+%% ===== Page de titre =====
+\begin{titlepage}
+  \centering
+  \vspace*{2cm}
+  {\LARGE\bfseries Backlog Produit\par}
+  \vspace{0.5cm}
+  {\large Plateforme RadioAI -- Système de transcription vocale médicale\par}
+  \vspace{0.3cm}
+  {\normalsize Hôpital Fattouma-Bourguiba de Monastir\par}
+  \vspace{1.5cm}
+  \begin{tabular}{ll}
+    \textbf{Projet}       & RadioAI / ReportEase \\
+    \textbf{Version}      & 1.0 \\
+    \textbf{Date}         & Avril 2026 \\
+    \textbf{Sprints}      & 3 sprints \\
+    \textbf{User Stories} & 25 \\
+    \textbf{Rôles}        & Médecin, Admin, AdminIT \\
+  \end{tabular}
+  \vspace{1.5cm}
+
+  \begin{tabular}{|p{3.5cm}|p{9cm}|}
+    \hline
+    \rowcolor{sprint1bg}
+    \textcolor{sprint1txt}{\textbf{Sprint 1}} & Authentification \& Gestion des accès \\ \hline
+    \rowcolor{sprint2bg}
+    \textcolor{sprint2txt}{\textbf{Sprint 2}} & Transcription vocale \& Création/correction de rapports \\ \hline
+    \rowcolor{sprint3bg}
+    \textcolor{sprint3txt}{\textbf{Sprint 3}} & Historique, Réclamations \& Export CSV \\ \hline
+  \end{tabular}
+\end{titlepage}
+
+\newpage
+\tableofcontents
+\newpage
+
+%% ===== BACKLOG PRINCIPAL =====
+\section{Backlog de produit}
+
+\renewcommand{\arraystretch}{1.5}
+
+\begin{longtable}{
+  |>{\centering\arraybackslash}p{0.7cm}
+  |>{\centering\arraybackslash}p{2.2cm}
+  |p{3.8cm}
+  |p{6.8cm}
+  |>{\centering\arraybackslash}p{1.4cm}|
+}
+\caption{Backlog de produit -- RadioAI (25 User Stories)}
+\label{tab:backlog} \\
+
+\hline
+\rowcolor{headercolor}
+\textcolor{white}{\textbf{ID}} &
+\textcolor{white}{\textbf{Sprint}} &
+\textcolor{white}{\textbf{Épic}} &
+\textcolor{white}{\textbf{User Story}} &
+\textcolor{white}{\textbf{MoSCoW}} \\ \hline
+\endfirsthead
+
+\hline
+\rowcolor{headercolor}
+\textcolor{white}{\textbf{ID}} &
+\textcolor{white}{\textbf{Sprint}} &
+\textcolor{white}{\textbf{Épic}} &
+\textcolor{white}{\textbf{User Story}} &
+\textcolor{white}{\textbf{MoSCoW}} \\ \hline
+\endhead
+
+\hline \multicolumn{5}{|r|}{{\textit{Suite page suivante}}} \\ \hline
+\endfoot
+
+\hline
+\endlastfoot
+
+%% ══════════════════════════════════════════════════════════
+%% SPRINT 1 — AUTHENTIFICATION & GESTION DES ACCÈS (US 1–5)
+%% ══════════════════════════════════════════════════════════
+
+\multicolumn{5}{|c|}{\cellcolor{sprint1bg}\textcolor{sprint1txt}{\Large\bfseries Sprint 1 — Authentification \& Gestion des accès}} \\ \hline
+
+%% --- Épic 1 : Authentification & Sessions ---
+1 & \sprintone{Sprint 1}
+  & \multirow{2}{3.8cm}{\textbf{Épic 1 :} Authentification et gestion des sessions}
+  & En tant qu'utilisateur, je veux me connecter via une interface sécurisée (email + mot de passe), obtenir un token JWT d'accès (15~min) et un token de rafraîchissement (7~jours), et me déconnecter à tout moment.
+  & \must \\ \cline{1-2}\cline{4-5}
+
+2 & \sprintone{Sprint 1} &
+  & En tant qu'administrateur, je veux que chaque compte soit associé à un rôle précis (médecin, admin, adminIT) afin de contrôler les droits d'accès à chaque fonctionnalité.
+  & \must \\ \hline
+
+%% --- Épic 2 : Inscription & Gestion des comptes ---
+3 & \sprintone{Sprint 1}
+  & \multirow{3}{3.8cm}{\textbf{Épic 2 :} Inscription et gestion des comptes utilisateurs}
+  & En tant qu'utilisateur (médecin ou administrateur), je veux m'inscrire sur la plateforme et attendre la validation de mon compte par le rôle supérieur (admin pour médecin, adminIT pour admin) avant de pouvoir me connecter.
+  & \must \\ \cline{1-2}\cline{4-5}
+
+4 & \sprintone{Sprint 1} &
+  & En tant qu'administrateur, je veux consulter la liste de tous les médecins avec leur statut (en attente, validé, refusé), les valider, les refuser ou les supprimer de la plateforme.
+  & \must \\ \cline{1-2}\cline{4-5}
+
+5 & \sprintone{Sprint 1} &
+  & En tant qu'adminIT, je veux gérer les comptes administrateurs (valider, refuser, supprimer, démoter en médecin) et modifier mes informations de profil (nom, prénom, email, photo, mot de passe).
+  & \must \\ \hline
+
+%% ══════════════════════════════════════════════════════════
+%% SPRINT 2 — TRANSCRIPTION & CRÉATION / CORRECTION DE RAPPORTS (US 6–15)
+%% ══════════════════════════════════════════════════════════
+
+\multicolumn{5}{|c|}{\cellcolor{sprint2bg}\textcolor{sprint2txt}{\Large\bfseries Sprint 2 — Transcription vocale \& Création / Correction de rapports}} \\ \hline
+
+%% --- Épic 3 : Capture audio ---
+6 & \sprinttwo{Sprint 2}
+  & \multirow{2}{3.8cm}{\textbf{Épic 3 :} Capture audio médicale}
+  & En tant que médecin, je veux appairer mon smartphone à l'application desktop via un QR code sur le réseau Wi-Fi local pour dicter depuis le mobile, ou utiliser directement le microphone du PC en cas d'absence de smartphone.
+  & \must \\ \cline{1-2}\cline{4-5}
+
+7 & \sprinttwo{Sprint 2} &
+  & En tant que médecin, je veux mettre en pause et reprendre l'enregistrement sans perdre l'audio déjà capturé, ou importer un fichier audio existant (MP3, WAV, M4A) pour le transcrire directement.
+  & \should \\ \hline
+
+%% --- Épic 4 : Transcription STT ---
+8 & \sprinttwo{Sprint 2}
+  & \multirow{2}{3.8cm}{\textbf{Épic 4 :} Transcription vocale médicale (STT)}
+  & En tant que médecin, je veux soumettre un enregistrement audio et obtenir une transcription automatique en français médical reconnaissant la terminologie radiologique spécialisée (ex.~: hyperdensité, sténose, parenchyme).
+  & \must \\ \cline{1-2}\cline{4-5}
+
+9 & \sprinttwo{Sprint 2} &
+  & En tant qu'administrateur, je veux que le traitement STT s'exécute entièrement en local (modèle Whisper ONNX) sans aucun appel réseau externe, afin de garantir la confidentialité des données patient.
+  & \must \\ \hline
+
+%% --- Épic 5 : Correction automatique ---
+10 & \sprinttwo{Sprint 2}
+   & \multirow{2}{3.8cm}{\textbf{Épic 5 :} Correction automatique des termes médicaux}
+   & En tant que médecin, je veux que le système détecte automatiquement les erreurs de transcription sur les termes radiologiques et propose plusieurs suggestions de correction pertinentes parmi lesquelles je peux choisir.
+   & \must \\ \cline{1-2}\cline{4-5}
+
+11 & \sprinttwo{Sprint 2} &
+   & En tant que médecin, je veux accepter ou rejeter chaque correction proposée individuellement, grâce à un dictionnaire médical embarqué fonctionnant hors ligne sans dépendance à un service externe.
+   & \must \\ \hline
+
+%% --- Épic 6 : Gestion des rapports ---
+12 & \sprinttwo{Sprint 2}
+   & \multirow{4}{3.8cm}{\textbf{Épic 6 :} Création et gestion des comptes-rendus radiologiques}
+   & En tant que médecin, je veux créer un compte-rendu en saisissant un identifiant d'examen unique (format \texttt{AAAANNNN}) et le texte de transcription, avec un statut initial « brouillon ».
+   & \must \\ \cline{1-2}\cline{4-5}
+
+13 & \sprinttwo{Sprint 2} &
+   & En tant que médecin, je veux modifier le contenu de mes comptes-rendus et les faire passer du statut brouillon → validé → sauvegardé.
+   & \must \\ \cline{1-2}\cline{4-5}
+
+14 & \sprinttwo{Sprint 2} &
+   & En tant que médecin, je veux accéder à un compte-rendu depuis sa page de détail structurée (Indication, Technique, Conclusion, Signature).
+   & \must \\ \cline{1-2}\cline{4-5}
+
+15 & \sprinttwo{Sprint 2} &
+   & En tant qu'administrateur, je veux consulter l'ensemble des comptes-rendus sauvegardés de tous les médecins avec le nom du médecin associé.
+   & \must \\ \hline
+
+%% ══════════════════════════════════════════════════════════
+%% SPRINT 3 — HISTORIQUE, RÉCLAMATIONS & EXPORT CSV (US 16–25)
+%% ══════════════════════════════════════════════════════════
+
+\multicolumn{5}{|c|}{\cellcolor{sprint3bg}\textcolor{sprint3txt}{\Large\bfseries Sprint 3 — Historique, Réclamations \& Export CSV}} \\ \hline
+
+%% --- Épic 7 : Historique des rapports ---
+16 & \sprintthree{Sprint 3}
+   & \multirow{2}{3.8cm}{\textbf{Épic 7 :} Historique et consultation des rapports}
+   & En tant que médecin, je veux consulter l'historique de tous mes comptes-rendus avec leur statut, leur date et leur identifiant d'examen, et les rechercher par identifiant ou filtrer par statut (brouillon, validé, sauvegardé).
+   & \must \\ \cline{1-2}\cline{4-5}
+
+17 & \sprintthree{Sprint 3} &
+   & En tant que médecin, je veux visualiser un tableau de bord récapitulatif de mon activité (total rapports, validés, brouillons, dernier examen) avec un graphique d'activité sur 30~jours.
+   & \should \\ \hline
+
+%% --- Épic 8 : Export CSV ---
+18 & \sprintthree{Sprint 3}
+   & \multirow{2}{3.8cm}{\textbf{Épic 8 :} Export CSV global (Admin \& AdminIT)}
+   & En tant qu'adminIT ou administrateur, je veux que chaque compte-rendu passant au statut « sauvegardé » soit automatiquement archivé dans un fichier CSV global (\texttt{id\_exam;doctor\_name;date;heure;transcription}, encodage UTF-8 avec BOM), accessible uniquement aux rôles admin et adminIT (contrôle côté serveur).
+   & \must \\ \cline{1-2}\cline{4-5}
+
+19 & \sprintthree{Sprint 3} &
+   & En tant qu'adminIT ou administrateur, je veux télécharger le fichier CSV global contenant l'ensemble des transcriptions validées de tous les médecins depuis mon interface dédiée.
+   & \must \\ \hline
+
+%% --- Épic 9 : Réclamations ---
+20 & \sprintthree{Sprint 3}
+   & \multirow{3}{3.8cm}{\textbf{Épic 9 :} Gestion des réclamations}
+   & En tant que médecin, je veux soumettre une réclamation (titre + description) pour signaler un problème, consulter son état (en attente, en cours, traitée) et lire la réponse apportée par l'adminIT.
+   & \must \\ \cline{1-2}\cline{4-5}
+
+21 & \sprintthree{Sprint 3} &
+   & En tant qu'adminIT, je veux consulter toutes les réclamations soumises par les médecins et les admins, filtrées par statut.
+   & \must \\ \cline{1-2}\cline{4-5}
+
+22 & \sprintthree{Sprint 3} &
+   & En tant qu'adminIT, je veux mettre à jour le statut d'une réclamation (en attente → en cours → traitée) et y rédiger une réponse écrite.
+   & \must \\ \hline
+
+%% --- Épic 10 : Tableaux de bord ---
+23 & \sprintthree{Sprint 3}
+   & \multirow{2}{3.8cm}{\textbf{Épic 10 :} Tableaux de bord et statistiques}
+   & En tant qu'administrateur, je veux visualiser des statistiques globales (nombre de médecins, répartition des rapports par statut, file de validation en attente) depuis mon tableau de bord.
+   & \should \\ \cline{1-2}\cline{4-5}
+
+24 & \sprintthree{Sprint 3} &
+   & En tant qu'adminIT, je veux visualiser un tableau de bord des réclamations (en attente, en cours, traitées), l'état des services applicatifs (API Django, Serveur Node.js) et un graphique hebdomadaire d'activité des réclamations.
+   & \should \\ \hline
+
+%% --- Épic 11 : Sécurité & Confidentialité ---
+25 & \sprintthree{Sprint 3}
+   & \textbf{Épic 11 :} Sécurité et confidentialité des données
+   & En tant qu'administrateur, je veux que toutes les communications soient chiffrées (HTTPS / WSS), que la plateforme fonctionne en mode 100\,\% hors ligne sans connexion Internet, et que les données patient soient stockées exclusivement sur le serveur interne de l'hôpital, conformément à la législation tunisienne sur la protection des données de santé.
+   & \must \\ \hline
+
+\end{longtable}
+
+%% ===== SYNTHÈSE =====
+\newpage
+\section{Synthèse par sprint}
+
+\subsection*{Sprint 1 — Authentification \& Gestion des accès (US 1–5)}
+\begin{tabular}{|l|l|l|}
+\hline
+\rowcolor{sprint1bg}
+\textcolor{sprint1txt}{\textbf{Épic}} & \textcolor{sprint1txt}{\textbf{US}} & \textcolor{sprint1txt}{\textbf{Priorité}} \\ \hline
+Épic 1 : Authentification \& sessions    & US 1–2  & 2 Must \\ \hline
+Épic 2 : Inscription \& gestion comptes  & US 3–5  & 3 Must \\ \hline
+\end{tabular}
+
+\vspace{0.5cm}
+\subsection*{Sprint 2 — Transcription \& Création/Correction de rapports (US 6–15)}
+\begin{tabular}{|l|l|l|}
+\hline
+\rowcolor{sprint2bg}
+\textcolor{sprint2txt}{\textbf{Épic}} & \textcolor{sprint2txt}{\textbf{US}} & \textcolor{sprint2txt}{\textbf{Priorité}} \\ \hline
+Épic 3 : Capture audio médicale                   & US 6–7   & 1 Must, 1 Should \\ \hline
+Épic 4 : Transcription vocale (STT)               & US 8–9   & 2 Must \\ \hline
+Épic 5 : Correction automatique termes médicaux   & US 10–11 & 2 Must \\ \hline
+Épic 6 : Création \& gestion des rapports         & US 12–15 & 4 Must \\ \hline
+\end{tabular}
+
+\vspace{0.5cm}
+\subsection*{Sprint 3 — Historique, Réclamations \& Export CSV (US 16–25)}
+\begin{tabular}{|l|l|l|}
+\hline
+\rowcolor{sprint3bg}
+\textcolor{sprint3txt}{\textbf{Épic}} & \textcolor{sprint3txt}{\textbf{US}} & \textcolor{sprint3txt}{\textbf{Priorité}} \\ \hline
+Épic 7  : Historique des rapports         & US 16–17 & 1 Must, 1 Should \\ \hline
+Épic 8  : Export CSV global               & US 18–19 & 2 Must \\ \hline
+Épic 9  : Gestion des réclamations        & US 20–22 & 3 Must \\ \hline
+Épic 10 : Tableaux de bord \& stats       & US 23–24 & 2 Should \\ \hline
+Épic 11 : Sécurité \& confidentialité     & US 25    & 1 Must \\ \hline
+\end{tabular}
+
+\vspace{1cm}
+\begin{center}
+\begin{tabular}{|c|c|c|c|}
+\hline
+\rowcolor{headercolor}
+\textcolor{white}{\textbf{Sprint}} & \textcolor{white}{\textbf{Nb de US}} & \textcolor{white}{\textbf{Épics}} & \textcolor{white}{\textbf{Must / Should}} \\ \hline
+Sprint 1 &  5 & 2 & 5 Must \\ \hline
+Sprint 2 & 10 & 4 & 9 Must, 1 Should \\ \hline
+Sprint 3 & 10 & 5 & 7 Must, 3 Should \\ \hline
+\rowcolor{headercolor}
+\textcolor{white}{\textbf{Total}} & \textcolor{white}{\textbf{25}} & \textcolor{white}{\textbf{11}} & \textcolor{white}{\textbf{21 Must, 4 Should}} \\ \hline
+\end{tabular}
+\end{center}
+
+\end{document}

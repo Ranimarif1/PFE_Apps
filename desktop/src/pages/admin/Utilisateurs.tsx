@@ -25,10 +25,7 @@ export default function AdminUtilisateurs() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteUser(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] });
-      setConfirmDelete(null);
-    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["users"] }); setConfirmDelete(null); },
   });
 
   const promoteMutation = useMutation({
@@ -123,7 +120,6 @@ export default function AdminUtilisateurs() {
         </div>
       </div>
 
-      {/* Promote confirmation dialog */}
       {confirmPromote && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-card rounded-2xl border border-border shadow-xl p-6 max-w-md w-full mx-4">
@@ -133,16 +129,12 @@ export default function AdminUtilisateurs() {
               </div>
               <h2 className="text-lg font-semibold text-foreground">Promouvoir en administrateur</h2>
             </div>
-            <p className="text-sm text-muted-foreground mb-2">
-              Vous êtes sur le point de changer le rôle de :
-            </p>
-            <p className="text-sm font-semibold text-foreground mb-1">
-              {confirmPromote.prenom} {confirmPromote.nom}
-            </p>
+            <p className="text-sm text-muted-foreground mb-2">Vous êtes sur le point de changer le rôle de :</p>
+            <p className="text-sm font-semibold text-foreground mb-1">{confirmPromote.prenom} {confirmPromote.nom}</p>
             <p className="text-xs text-muted-foreground mb-4">{confirmPromote.email}</p>
             <div className="bg-warning/10 border border-warning/30 rounded-xl px-4 py-3 mb-5">
               <p className="text-xs text-warning font-medium">
-                ⚠️ Cette action est irréversible. Le compte passera du rôle <strong>Médecin</strong> au rôle <strong>Admin</strong> et obtiendra tous les accès administrateur.
+                ⚠️ Cette action est irréversible. Le compte passera du rôle <strong>Médecin</strong> au rôle <strong>Admin</strong>.
               </p>
             </div>
             <div className="flex gap-3">
@@ -160,7 +152,6 @@ export default function AdminUtilisateurs() {
         </div>
       )}
 
-      {/* Delete confirmation dialog */}
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-card rounded-2xl border border-border shadow-xl p-6 max-w-md w-full mx-4">
@@ -170,24 +161,23 @@ export default function AdminUtilisateurs() {
               </div>
               <h2 className="text-lg font-semibold text-foreground">Supprimer le médecin</h2>
             </div>
-            <p className="text-sm text-muted-foreground mb-2">
-              Vous êtes sur le point de supprimer définitivement le compte de :
-            </p>
-            <p className="text-sm font-semibold text-foreground mb-1">
-              {confirmDelete.prenom} {confirmDelete.nom}
-            </p>
+            <p className="text-sm text-muted-foreground mb-1">Compte à supprimer :</p>
+            <p className="text-sm font-semibold text-foreground">{confirmDelete.prenom} {confirmDelete.nom}</p>
             <p className="text-xs text-muted-foreground mb-4">{confirmDelete.email}</p>
-            <div className="bg-warning/10 border border-warning/30 rounded-xl px-4 py-3 mb-5">
-              <p className="text-xs text-warning font-medium">
-                Cette action est irréversible. Le compte sera supprimé de la base de données. Les rapports déjà enregistrés dans le CSV ne seront pas affectés.
+
+            <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 mb-4">
+              <p className="text-xs text-destructive font-medium">
+                Cette action est irréversible. Le compte sera définitivement supprimé.
               </p>
             </div>
+
             <div className="flex gap-3">
               <button onClick={() => setConfirmDelete(null)}
                 className="flex-1 py-2.5 rounded-xl border border-border text-foreground hover:bg-muted transition-all text-sm font-medium">
                 Annuler
               </button>
-              <button onClick={() => deleteMutation.mutate(confirmDelete._id)}
+              <button
+                onClick={() => deleteMutation.mutate(confirmDelete._id)}
                 disabled={deleteMutation.isPending}
                 className="flex-1 py-2.5 rounded-xl bg-destructive text-white font-semibold hover:bg-destructive/90 disabled:opacity-60 transition-all text-sm">
                 {deleteMutation.isPending ? "Suppression..." : "Supprimer définitivement"}

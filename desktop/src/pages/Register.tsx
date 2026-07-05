@@ -3,10 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
   Sun, Moon, Eye, EyeOff, CheckCircle, Check, X,
-  Mail, Shield, User, Lock, AlertCircle, Loader2, Award, Hash,
+  Mail, User, Lock, AlertCircle, Loader2, Hash,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { registerApi, sendVerificationCodeApi, verifyEmailCodeApi, checkSeniorCodeApi } from "@/services/authService";
+import { registerApi, checkSeniorCodeApi } from "@/services/authService";
 import { checkPassword, passwordScore, validateEmail, validatePassword } from "@/lib/validation";
 
 type Role = "médecin" | "admin" | "adminIT";
@@ -40,20 +40,11 @@ export default function Register() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
-  const [codeSending, setCodeSending] = useState(false);
-  const [codeVerifying, setCodeVerifying] = useState(false);
-  const [codeSent, setCodeSent] = useState(false);
-  const [emailVerified, setEmailVerified] = useState(false);
-  const [code, setCode] = useState("");
-  const [codeError, setCodeError] = useState("");
-  const [resendCooldown, setResendCooldown] = useState(0);
-  const codeInputRef = useRef<HTMLInputElement>(null);
-
   type CodeStatus = "idle" | "checking" | "available" | "taken";
   const [seniorCodeStatus, setSeniorCodeStatus] = useState<CodeStatus>("idle");
   const seniorDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const isSeniorForCheck = form.rôle === "admin" || (form.rôle === "médecin" && form.senior);
+  const isSeniorForCheck = form.rôle !== "adminIT" && form.senior;
 
   useEffect(() => {
     if (!isSeniorForCheck || !form.seniorCode.trim()) {
@@ -78,66 +69,17 @@ export default function Register() {
   const passwordValid = useMemo(() => validatePassword(form.password) === null, [form.password]);
   const passwordsMatch = form.confirm === "" || form.password === form.confirm;
 
-  useEffect(() => {
-    if (resendCooldown <= 0) return;
-    const t = setTimeout(() => setResendCooldown(n => Math.max(0, n - 1)), 1000);
-    return () => clearTimeout(t);
-  }, [resendCooldown]);
-
-  useEffect(() => {
-    if (codeSent || emailVerified) {
-      setCodeSent(false);
-      setEmailVerified(false);
-      setCode("");
-      setCodeError("");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.email]);
-
   const handleChange = (field: keyof typeof form, value: string) =>
     setForm(f => ({ ...f, [field]: value }));
-
-  const handleSendCode = async () => {
-    setError("");
-    setCodeError("");
-    const err = validateEmail(form.email);
-    if (err) { setCodeError(err); return; }
-    setCodeSending(true);
-    try {
-      await sendVerificationCodeApi(form.email.trim().toLowerCase());
-      setCodeSent(true);
-      setResendCooldown(30);
-      setTimeout(() => codeInputRef.current?.focus(), 50);
-    } catch (err: unknown) {
-      setCodeError(err instanceof Error ? err.message : "Erreur lors de l'envoi du code.");
-    } finally {
-      setCodeSending(false);
-    }
-  };
-
-  const handleVerifyCode = async () => {
-    setCodeError("");
-    if (code.length !== 5) { setCodeError("Le code doit comporter 5 chiffres."); return; }
-    setCodeVerifying(true);
-    try {
-      await verifyEmailCodeApi(form.email.trim().toLowerCase(), code);
-      setEmailVerified(true);
-    } catch (err: unknown) {
-      setCodeError(err instanceof Error ? err.message : "Code invalide.");
-    } finally {
-      setCodeVerifying(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     if (emailError) { setError(emailError); return; }
-    if (!emailVerified) { setError("Veuillez vérifier votre email avant de créer le compte."); return; }
     const pwErr = validatePassword(form.password);
     if (pwErr) { setError(pwErr); return; }
     if (form.password !== form.confirm) { setError("Les mots de passe ne correspondent pas."); return; }
-    const isSenior = form.rôle === "admin" || (form.rôle === "médecin" && form.senior);
+    const isSenior = form.rôle !== "adminIT" && form.senior;
     if (isSenior && !form.seniorCode.trim()) {
       setError("Veuillez saisir votre numéro / code senior.");
       return;
@@ -212,7 +154,7 @@ export default function Register() {
   const score = passwordScore(passwordChecks);
   const strengthLabel = score === 0 ? "" : score <= 2 ? "Faible" : score <= 3 ? "Moyen" : score <= 4 ? "Fort" : "Très fort";
   const strengthColor = score <= 2 ? "bg-destructive" : score <= 3 ? "bg-warning" : "bg-success";
-  const isSenior = form.rôle === "admin" || (form.rôle === "médecin" && form.senior);
+  const isSenior = form.rôle !== "adminIT" && form.senior;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-8">
@@ -269,7 +211,7 @@ export default function Register() {
                     onChange={e => handleChange("prénom", e.target.value)}
                     required
                     className="w-full pl-10 pr-4 py-3 text-sm"
-                    placeholder="Jean"
+                    placeholder="Mohamed"
                   />
                 </div>
               </div>
@@ -282,7 +224,7 @@ export default function Register() {
                     onChange={e => handleChange("nom", e.target.value)}
                     required
                     className="w-full pl-10 pr-4 py-3 text-sm"
-                    placeholder="Dupont"
+                    placeholder="Ben Ali"
                   />
                 </div>
               </div>
@@ -314,107 +256,25 @@ export default function Register() {
               </div>
             </motion.div>
 
-            {/* Email + verification */}
+            {/* Email */}
             <motion.div variants={itemVariants}>
               <label className="text-sm font-medium text-foreground mb-1.5 block">Email</label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={e => handleChange("email", e.target.value)}
-                    required
-                    disabled={emailVerified}
-                    aria-invalid={!!emailError}
-                    className="w-full pl-10 pr-10 py-3 text-sm disabled:opacity-70"
-                    placeholder="jean.dupont@hopital.fr"
-                  />
-                  {emailVerified && (
-                    <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 text-success" size={16} />
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={handleSendCode}
-                  disabled={!!emailError || !form.email || codeSending || emailVerified || resendCooldown > 0}
-                  className="shrink-0 px-4 rounded-xl border border-primary text-primary text-sm font-medium hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
-                >
-                  {codeSending
-                    ? <Loader2 size={14} className="animate-spin" />
-                    : emailVerified
-                      ? "Vérifié"
-                      : resendCooldown > 0
-                        ? `${resendCooldown}s`
-                        : codeSent ? "Renvoyer" : "Envoyer code"}
-                </button>
+              <div className="relative">
+                <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={e => handleChange("email", e.target.value)}
+                  required
+                  aria-invalid={!!emailError}
+                  className="w-full pl-10 pr-4 py-3 text-sm"
+                  placeholder="mohamed@gmail.com"
+                />
               </div>
-
-              {emailError && !emailVerified && (
+              {emailError && (
                 <p className="text-xs text-destructive mt-1.5 flex items-center gap-1">
                   <AlertCircle size={11} className="shrink-0" />
                   {emailError}
-                </p>
-              )}
-
-              {codeSent && !emailVerified && (
-                <motion.div
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.22 }}
-                  className="mt-3 p-3 rounded-xl border border-primary/30 bg-primary/5"
-                >
-                  <div className="flex items-start gap-2 mb-2">
-                    <Mail size={14} className="text-primary mt-0.5 shrink-0" />
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Un code à 5 chiffres a été envoyé à{" "}
-                      <span className="font-semibold text-foreground">{form.email}</span>. Il expire dans 10 minutes.
-                    </p>
-                  </div>
-                  <div className="flex gap-2 mt-2">
-                    <input
-                      ref={codeInputRef}
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={5}
-                      value={code}
-                      onChange={e => {
-                        setCodeError("");
-                        setCode(e.target.value.replace(/\D/g, "").slice(0, 5));
-                      }}
-                      placeholder="• • • • •"
-                      className="flex-1 py-2.5 text-center text-lg font-mono tracking-[0.6em]"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleVerifyCode}
-                      disabled={code.length !== 5 || codeVerifying}
-                      className="shrink-0 px-4 rounded-xl gradient-hero text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                    >
-                      {codeVerifying && <Loader2 size={13} className="animate-spin" />}
-                      {codeVerifying ? "..." : "Vérifier"}
-                    </button>
-                  </div>
-                  {codeError && (
-                    <p className="text-xs text-destructive mt-1.5 flex items-center gap-1">
-                      <AlertCircle size={11} className="shrink-0" />
-                      {codeError}
-                    </p>
-                  )}
-                </motion.div>
-              )}
-
-              {!codeSent && codeError && (
-                <p className="text-xs text-destructive mt-1.5 flex items-center gap-1">
-                  <AlertCircle size={11} className="shrink-0" />
-                  {codeError}
-                </p>
-              )}
-
-              {emailVerified && (
-                <p className="text-xs text-success mt-1.5 flex items-center gap-1">
-                  <Shield size={12} /> Email vérifié
                 </p>
               )}
             </motion.div>
@@ -445,43 +305,36 @@ export default function Register() {
               </div>
             </motion.div>
 
-            {/* Senior status — médecin chooses, admin is senior by default, adminIT excluded */}
+            {/* Senior status — médecin & admin choose, adminIT excluded */}
             {form.rôle !== "adminIT" && (
               <motion.div variants={itemVariants}>
                 <label className="text-sm font-medium text-foreground mb-1.5 block">Statut senior</label>
-                {form.rôle === "admin" ? (
-                  <div className="flex items-center gap-2 px-3.5 py-3 rounded-xl border border-primary/30 bg-primary/5 text-sm text-foreground">
-                    <Award size={15} className="text-primary shrink-0" />
-                    <span>En tant qu'administrateur, vous êtes senior par défaut.</span>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    {([
-                      { value: true,  label: "Oui, je suis senior" },
-                      { value: false, label: "Non" },
-                    ] as const).map(({ value, label }) => (
-                      <button
-                        key={String(value)}
-                        type="button"
-                        onClick={() => setForm(f => ({ ...f, senior: value, seniorCode: value ? f.seniorCode : "" }))}
-                        className={`px-3 py-2.5 rounded-xl border text-sm font-medium transition-all text-center ${
-                          form.senior === value
-                            ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/20"
-                            : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { value: true,  label: "Oui, je suis senior" },
+                    { value: false, label: "Non" },
+                  ] as const).map(({ value, label }) => (
+                    <button
+                      key={String(value)}
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, senior: value, seniorCode: value ? f.seniorCode : "" }))}
+                      className={`px-3 py-2.5 rounded-xl border text-sm font-medium transition-all text-center ${
+                        form.senior === value
+                          ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/20"
+                          : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </motion.div>
             )}
 
             {/* Senior code — required whenever the account is senior */}
             {isSeniorForCheck && (
               <motion.div variants={itemVariants}>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">Numéro / code senior</label>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Code senior</label>
                 <div className="relative">
                   <Hash size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                   <input

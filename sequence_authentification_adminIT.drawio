@@ -1,0 +1,219 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="seq_auth_adminIT" name="Séquence - Authentification Administrateur IT">
+    <mxGraphModel dx="1200" dy="800" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="900" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- BANDES MVC                                             -->
+        <!-- ══════════════════════════════════════════════════════ -->
+
+        <mxCell id="band0" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=none;opacity=40;" vertex="1" parent="1">
+          <mxGeometry x="10" y="0" width="170" height="590" as="geometry" />
+        </mxCell>
+        <mxCell id="band0t" value="Acteur" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontStyle=1;fontSize=10;fontColor=#666666;rotation=-90;" vertex="1" parent="1">
+          <mxGeometry x="-30" y="80" width="120" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="band1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=none;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="180" y="0" width="230" height="590" as="geometry" />
+        </mxCell>
+        <mxCell id="band1t" value="TEMPLATE" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontStyle=1;fontSize=12;fontColor=#6c8ebf;rotation=-90;" vertex="1" parent="1">
+          <mxGeometry x="155" y="90" width="100" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="band2" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=none;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="410" y="0" width="230" height="590" as="geometry" />
+        </mxCell>
+        <mxCell id="band2t" value="VUE" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontStyle=1;fontSize=12;fontColor=#d6b656;rotation=-90;" vertex="1" parent="1">
+          <mxGeometry x="385" y="110" width="140" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="band3" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=none;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="640" y="0" width="230" height="590" as="geometry" />
+        </mxCell>
+        <mxCell id="band3t" value="MODÈLE" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontStyle=1;fontSize=12;fontColor=#b85450;rotation=-90;" vertex="1" parent="1">
+          <mxGeometry x="615" y="90" width="100" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- PARTICIPANTS                                           -->
+        <!-- cx: AdminIT=90  Interface=295  Serveur=525  BD=755    -->
+        <!-- ══════════════════════════════════════════════════════ -->
+
+        <mxCell id="p1" value="AdminIT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="15" y="40" width="150" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="p2" value="&lt;b&gt;Template&lt;/b&gt;&#xa;Interface (React)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="215" y="40" width="160" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="p3" value="&lt;b&gt;Vue&lt;/b&gt;&#xa;Serveur (Django)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="445" y="40" width="160" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="p4" value="&lt;b&gt;Modèle&lt;/b&gt;&#xa;Base de données" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="675" y="40" width="160" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- LIFELINES                                              -->
+        <!-- ══════════════════════════════════════════════════════ -->
+
+        <mxCell id="ll1" value="" style="endArrow=none;dashed=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="90" y="80" as="sourcePoint"/>
+            <mxPoint x="90" y="555" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ll2" value="" style="endArrow=none;dashed=1;strokeColor=#6c8ebf;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="295" y="80" as="sourcePoint"/>
+            <mxPoint x="295" y="555" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ll3" value="" style="endArrow=none;dashed=1;strokeColor=#d6b656;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="525" y="80" as="sourcePoint"/>
+            <mxPoint x="525" y="555" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ll4" value="" style="endArrow=none;dashed=1;strokeColor=#b85450;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="755" y="80" as="sourcePoint"/>
+            <mxPoint x="755" y="555" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- MESSAGES                                               -->
+        <!-- ══════════════════════════════════════════════════════ -->
+
+        <!-- 1. AdminIT → Interface : Accéder à la page de connexion -->
+        <mxCell id="m1" value="1. Accéder à la page de connexion" style="text;html=1;align=center;fontSize=10;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="95" y="108" width="195" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="a1" value="" style="endArrow=block;endFill=1;strokeColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="90" y="126" as="sourcePoint"/>
+            <mxPoint x="295" y="126" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 2. Interface → AdminIT : Afficher formulaire de connexion -->
+        <mxCell id="m2" value="2. Afficher formulaire de connexion" style="text;html=1;align=center;fontSize=10;fontColor=#555555;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="95" y="148" width="195" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="a2" value="" style="endArrow=open;endFill=0;dashed=1;strokeColor=#555555;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="295" y="165" as="sourcePoint"/>
+            <mxPoint x="90" y="165" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 3. AdminIT → Interface : Saisir identifiant et mot de passe -->
+        <mxCell id="m3" value="3. Saisir identifiant et mot de passe" style="text;html=1;align=center;fontSize=10;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="90" y="188" width="200" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="a3" value="" style="endArrow=block;endFill=1;strokeColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="90" y="205" as="sourcePoint"/>
+            <mxPoint x="295" y="205" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 4. Interface → Serveur : Envoyer les credentials -->
+        <mxCell id="m4" value="4. Envoyer les credentials" style="text;html=1;align=center;fontSize=10;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="300" y="228" width="220" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="a4" value="" style="endArrow=block;endFill=1;strokeColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="295" y="245" as="sourcePoint"/>
+            <mxPoint x="525" y="245" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 5. Serveur → BD : Vérifier les credentials -->
+        <mxCell id="m5" value="5. Vérifier les credentials" style="text;html=1;align=center;fontSize=10;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="530" y="268" width="220" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="a5" value="" style="endArrow=block;endFill=1;strokeColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="525" y="285" as="sourcePoint"/>
+            <mxPoint x="755" y="285" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 6. BD → Serveur : Utilisateur / Rôle : AdminIT -->
+        <mxCell id="m6" value="6. Utilisateur trouvé — Rôle : Administrateur IT" style="text;html=1;align=center;fontSize=10;fontColor=#555555;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="530" y="308" width="220" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="a6" value="" style="endArrow=open;endFill=0;dashed=1;strokeColor=#555555;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="755" y="325" as="sourcePoint"/>
+            <mxPoint x="525" y="325" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 7. Serveur → Interface : Accès autorisé + session -->
+        <mxCell id="m7" value="7. Accès autorisé + session créée" style="text;html=1;align=center;fontSize=10;fontColor=#555555;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="300" y="348" width="220" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="a7" value="" style="endArrow=open;endFill=0;dashed=1;strokeColor=#555555;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="525" y="365" as="sourcePoint"/>
+            <mxPoint x="295" y="365" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 8. Interface → AdminIT : Rediriger vers tableau de bord AdminIT -->
+        <mxCell id="m8" value="8. Rediriger → Tableau de bord AdminIT" style="text;html=1;align=center;fontSize=10;fontColor=#555555;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="90" y="388" width="200" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="a8" value="" style="endArrow=open;endFill=0;dashed=1;strokeColor=#555555;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="295" y="405" as="sourcePoint"/>
+            <mxPoint x="90" y="405" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- NOTE : Tableau de bord AdminIT vs Admin               -->
+        <!-- ══════════════════════════════════════════════════════ -->
+
+        <mxCell id="note_box" value="Note : Le tableau de bord AdminIT donne accès&#xa;à la gestion des comptes utilisateurs et à&#xa;la configuration du système (vs. Admin : gestion&#xa;des rapports et des médecins)." style="text;html=1;align=left;fontSize=10;fontColor=#444444;fontStyle=0;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="415" y="430" width="310" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- EXCEPTION : Credentials incorrects                    -->
+        <!-- ══════════════════════════════════════════════════════ -->
+
+        <mxCell id="exc_box" value="[Exception : Identifiant ou mot de passe incorrect]" style="text;html=1;align=left;fontSize=10;fontColor=#b85450;fontStyle=3;" vertex="1" parent="1">
+          <mxGeometry x="95" y="435" width="310" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="exc1" value="Accès refusé — erreur d'authentification" style="text;html=1;align=center;fontSize=10;fontColor=#b85450;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="300" y="458" width="220" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="ea1" value="" style="endArrow=open;endFill=0;dashed=1;strokeColor=#b85450;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="525" y="475" as="sourcePoint"/>
+            <mxPoint x="295" y="475" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="exc2" value="Afficher «Identifiant ou mot de passe incorrect»" style="text;html=1;align=center;fontSize=10;fontColor=#b85450;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="90" y="495" width="200" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="ea2" value="" style="endArrow=open;endFill=0;dashed=1;strokeColor=#b85450;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="295" y="512" as="sourcePoint"/>
+            <mxPoint x="90" y="512" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -85,7 +85,6 @@ import AdminITReclamations from "./pages/adminit/Reclamations";
 import AdminITAdmins from "./pages/adminit/Admins";
 import AdminITProfil from "./pages/adminit/Profil";
 import AdminITTraining from "./pages/adminit/Training";
-import { ChangePasswordModal } from "./components/ChangePasswordModal";
 import AdminITLifecycle from "./pages/adminit/Lifecycle";
 
 const queryClient = new QueryClient();

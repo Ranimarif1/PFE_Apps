@@ -3,7 +3,6 @@ from __future__ import annotations
 import base64
 import datetime as dt
 import json
-import random
 import re
 import secrets
 from pathlib import Path
@@ -11,7 +10,6 @@ from typing import Any, Dict
 
 from bson import ObjectId
 from django.conf import settings
-from django.core.mail import send_mail
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -19,12 +17,6 @@ from core.auth import create_access_token, create_refresh_token, decode_token, g
 from core.mongo import get_collection, serialize_document
 
 from .validators import validate_email_format, validate_password_strength
-
-
-# ── Email verification code settings ──────────────────────────────────────
-VERIFICATION_CODE_TTL_MIN = 10          # code expires 10 min after send
-VERIFICATION_RESEND_COOLDOWN_SEC = 30   # min seconds between resends
-VERIFIED_GRACE_PERIOD_MIN = 30          # user must register within 30 min of verifying
 
 
 def _parse_body(request: HttpRequest) -> Dict[str, Any]:
@@ -89,119 +81,6 @@ def _save_avatar(user_id: str, data_uri: str) -> str:
 
 
 @csrf_exempt
-def send_verification_code(request: HttpRequest) -> JsonResponse:
-    """Generate a 5-digit code, store it, and email it to the user."""
-    if request.method != "POST":
-        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
-
-    data = _parse_body(request)
-    email = (data.get("email") or "").strip().lower()
-
-    err = validate_email_format(email)
-    if err:
-        return JsonResponse({"detail": err}, status=400)
-
-    users_col = get_collection("users")
-    if users_col.find_one({"email": email}):
-        return JsonResponse({"detail": "Cet email est déjà enregistré."}, status=400)
-
-    codes_col = get_collection("email_verification_codes")
-    existing = codes_col.find_one({"email": email})
-
-    now = dt.datetime.utcnow()
-    if existing:
-        try:
-            last_sent = dt.datetime.fromisoformat(existing.get("last_sent_at", ""))
-        except Exception:
-            last_sent = None
-        if last_sent and (now - last_sent).total_seconds() < VERIFICATION_RESEND_COOLDOWN_SEC:
-            wait = int(VERIFICATION_RESEND_COOLDOWN_SEC - (now - last_sent).total_seconds())
-            return JsonResponse(
-                {"detail": f"Veuillez patienter {wait}s avant de redemander un code."},
-                status=429,
-            )
-
-    code = f"{random.randint(0, 99999):05d}"
-    expires_at = (now + dt.timedelta(minutes=VERIFICATION_CODE_TTL_MIN)).isoformat()
-
-    codes_col.update_one(
-        {"email": email},
-        {"$set": {
-            "email": email,
-            "code": code,
-            "expires_at": expires_at,
-            "last_sent_at": now.isoformat(),
-            "verified": False,
-            "verified_at": None,
-            "attempts": 0,
-        }},
-        upsert=True,
-    )
-
-    try:
-        send_mail(
-            subject="Votre code de vérification — ReportEase",
-            message=(
-                f"Bonjour,\n\n"
-                f"Votre code de vérification ReportEase est :\n\n"
-                f"    {code}\n\n"
-                f"Ce code est valable pendant {VERIFICATION_CODE_TTL_MIN} minutes.\n\n"
-                f"Si vous n'avez pas demandé ce code, ignorez cet email.\n\n"
-                f"— L'équipe ReportEase\n"
-                f"CHU Fattouma-Bourguiba de Monastir"
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=False,
-        )
-    except Exception as exc:
-        return JsonResponse({"detail": f"Erreur d'envoi de l'email : {exc}"}, status=500)
-
-    return JsonResponse({"detail": "Code envoyé."})
-
-
-@csrf_exempt
-def verify_email_code(request: HttpRequest) -> JsonResponse:
-    """Check a submitted 5-digit code and mark the email as verified."""
-    if request.method != "POST":
-        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
-
-    data = _parse_body(request)
-    email = (data.get("email") or "").strip().lower()
-    code = (data.get("code") or "").strip()
-
-    if not email or not code:
-        return JsonResponse({"detail": "Email et code requis."}, status=400)
-
-    codes_col = get_collection("email_verification_codes")
-    doc = codes_col.find_one({"email": email})
-    if not doc:
-        return JsonResponse({"detail": "Aucun code trouvé. Veuillez redemander un code."}, status=400)
-
-    attempts = int(doc.get("attempts", 0))
-    if attempts >= 5:
-        return JsonResponse({"detail": "Trop de tentatives. Veuillez redemander un code."}, status=429)
-
-    try:
-        expires_at = dt.datetime.fromisoformat(doc["expires_at"])
-    except Exception:
-        return JsonResponse({"detail": "Code invalide."}, status=400)
-
-    if dt.datetime.utcnow() > expires_at:
-        return JsonResponse({"detail": "Code expiré. Veuillez en redemander un."}, status=400)
-
-    if code != doc.get("code"):
-        codes_col.update_one({"email": email}, {"$inc": {"attempts": 1}})
-        return JsonResponse({"detail": "Code incorrect."}, status=400)
-
-    codes_col.update_one(
-        {"email": email},
-        {"$set": {"verified": True, "verified_at": dt.datetime.utcnow().isoformat()}},
-    )
-    return JsonResponse({"detail": "Email vérifié."})
-
-
-@csrf_exempt
 def check_senior_code(request: HttpRequest) -> JsonResponse:
     """GET /api/auth/check-senior-code?code=<code> — public, checks if a senior code is available."""
     if request.method != "GET":
@@ -230,11 +109,9 @@ def register(request: HttpRequest) -> JsonResponse:
         return JsonResponse({"detail": "Rôle invalide."}, status=400)
 
     # ── Senior status & code ──
-    # admin → always senior; doctor → optional; adminIT → never senior.
+    # admin & doctor → optional (chosen at registration); adminIT → never senior.
     senior_code = (data.get("seniorCode") or "").strip()
-    if role == "admin":
-        senior = True
-    elif role == "doctor":
+    if role in {"doctor", "admin"}:
         senior = bool(data.get("senior"))
     else:  # adminIT
         senior = False
@@ -277,36 +154,6 @@ def register(request: HttpRequest) -> JsonResponse:
     }
     inserted = users_col.insert_one(user_doc)
     created = users_col.find_one({"_id": inserted.inserted_id})
-
-    # ── Notify all admins & adminIT accounts of the new registration ──
-    try:
-        admins = list(users_col.find(
-            {"role": {"$in": ["admin", "adminIT"]}, "status": "validated"},
-            {"email": 1}
-        ))
-        admin_emails = [a["email"] for a in admins if a.get("email")]
-        if admin_emails:
-            full_name = f"{prenom} {nom}".strip() or email
-            send_mail(
-                subject="Nouvelle demande d'inscription — ReportEase",
-                message=(
-                    f"Bonjour,\n\n"
-                    f"Une nouvelle demande d'inscription vient d'être soumise sur ReportEase.\n\n"
-                    f"Nom complet : {full_name}\n"
-                    f"Email       : {email}\n"
-                    f"Rôle        : {role}\n\n"
-                    f"Veuillez vous connecter à la plateforme pour valider ou refuser ce compte :\n"
-                    f"{settings.FRONTEND_URL}/admin/dashboard\n\n"
-                    f"— L'équipe ReportEase\n"
-                    f"CHU Fattouma-Bourguiba de Monastir"
-                ),
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=admin_emails,
-                fail_silently=True,
-            )
-    except Exception:
-        pass  # Never block registration because of a mail failure
-
     return JsonResponse({"user": serialize_document(created)}, status=201)
 
 
@@ -419,55 +266,49 @@ def update_user_status(request: HttpRequest, user_id: str) -> JsonResponse:
         return JsonResponse({"detail": "Utilisateur introuvable."}, status=404)
 
     updated = users_col.find_one({"_id": oid})
+    return JsonResponse({"user": serialize_document(updated)})
 
-    # ── Send decision email to the user ──
-    mail_error: str | None = None
-    if new_status in {"validated", "refused"}:
-        try:
-            full_name = f"{updated.get('prenom', '')} {updated.get('nom', '')}".strip() or updated["email"]
-            if new_status == "validated":
-                send_mail(
-                    subject="Votre compte ReportEase a été validé ✓",
-                    message=(
-                        f"Bonjour {full_name},\n\n"
-                        f"Votre demande d'inscription sur ReportEase a été examinée et votre compte a été validé.\n\n"
-                        f"Vous pouvez maintenant vous connecter à la plateforme :\n"
-                        f"{settings.FRONTEND_URL}/login\n\n"
-                        f"Bienvenue au service de radiologie du CHU Fattouma-Bourguiba de Monastir.\n\n"
-                        f"— L'équipe ReportEase"
-                    ),
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[updated["email"]],
-                    fail_silently=False,
-                )
-            else:
-                reason_section = (
-                    f"\nMotif du refus :\n{reason}\n"
-                    if reason else
-                    "\nAucun motif spécifique n'a été indiqué. Vous pouvez contacter l'administration pour plus d'informations.\n"
-                )
-                send_mail(
-                    subject="Votre demande d'inscription — ReportEase",
-                    message=(
-                        f"Bonjour {full_name},\n\n"
-                        f"Après examen de votre dossier, nous avons le regret de vous informer que votre demande "
-                        f"d'inscription sur ReportEase n'a pas pu être acceptée.\n"
-                        f"{reason_section}\n"
-                        f"Pour toute question, veuillez contacter l'administration du service de radiologie.\n\n"
-                        f"— L'équipe ReportEase\n"
-                        f"CHU Fattouma-Bourguiba de Monastir"
-                    ),
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[updated["email"]],
-                    fail_silently=False,
-                )
-        except Exception as exc:
-            mail_error = str(exc)
 
-    response: dict = {"user": serialize_document(updated)}
-    if mail_error:
-        response["mail_warning"] = f"Statut mis à jour, mais l'email n'a pas pu être envoyé : {mail_error}"
-    return JsonResponse(response)
+@csrf_exempt
+def user_report_info(request: HttpRequest, user_id: str) -> JsonResponse:
+    """GET /api/auth/users/<id>/report-info — report count + auto-senior for pre-delete modal."""
+    if request.method != "GET":
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+
+    current = get_current_user(request)
+    if not current or current.role not in {"admin", "adminIT"}:
+        return JsonResponse({"detail": "Accès refusé."}, status=403)
+
+    users_col = get_collection("users")
+    try:
+        oid = ObjectId(user_id)
+    except Exception:
+        return JsonResponse({"detail": "Identifiant invalide."}, status=400)
+
+    user = users_col.find_one({"_id": oid})
+    if not user:
+        return JsonResponse({"detail": "Utilisateur introuvable."}, status=404)
+
+    reports_col = get_collection("reports")
+    report_count = reports_col.count_documents({"doctorId": str(oid)})
+
+    # For a non-senior doctor, try to find their senior automatically from their reports.
+    auto_senior = None
+    is_senior = user.get("senior") or user.get("role") == "admin"
+    if not is_senior and report_count > 0:
+        sample = reports_col.find_one({"doctorId": str(oid), "seniorId": {"$nin": [None, ""]}})
+        if sample:
+            senior_id = sample.get("seniorId")
+            try:
+                senior_doc = users_col.find_one({"_id": ObjectId(senior_id)})
+                if senior_doc:
+                    name = f"{senior_doc.get('prenom', '')} {senior_doc.get('nom', '')}".strip()
+                    auto_senior = {"id": str(senior_doc["_id"]), "name": name or senior_doc.get("email", senior_id)}
+            except Exception:
+                pass
+            # If senior_doc not found (deleted user), auto_senior stays None → frontend shows dropdown
+
+    return JsonResponse({"report_count": report_count, "auto_senior": auto_senior})
 
 
 @csrf_exempt
@@ -497,6 +338,13 @@ def delete_user(request: HttpRequest, user_id: str) -> JsonResponse:
         return JsonResponse({"detail": "Les admins ne peuvent supprimer que des médecins."}, status=403)
     if current.role == "adminIT" and user.get("role") != "admin":
         return JsonResponse({"detail": "L'Admin IT ne peut supprimer que des comptes admin."}, status=403)
+
+    # Clear seniorId on any reports this user supervised
+    reports_col = get_collection("reports")
+    reports_col.update_many(
+        {"seniorId": str(oid)},
+        {"$set": {"seniorId": None, "seniorName": None, "seniorCode": None}},
+    )
 
     users_col.delete_one({"_id": oid})
     return JsonResponse({"detail": "Utilisateur supprimé."})
@@ -538,7 +386,9 @@ def mark_notifications_read(request: HttpRequest) -> JsonResponse:
 def list_seniors(request: HttpRequest) -> JsonResponse:
     """GET /api/auth/seniors — validated seniors a non-senior can work under.
 
-    Includes senior médecins and all admins (admins default to senior).
+    Includes senior médecins and senior admins. Admins who explicitly opted out
+    of senior status (senior == False) are excluded; legacy admins without the
+    flag still count as seniors.
     """
     if request.method != "GET":
         return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
@@ -553,7 +403,7 @@ def list_seniors(request: HttpRequest) -> JsonResponse:
             "status": "validated",
             "$or": [
                 {"role": "doctor", "senior": True},
-                {"role": "admin"},
+                {"role": "admin", "senior": {"$ne": False}},
             ],
         },
         {"nom": 1, "prenom": 1, "seniorCode": 1, "role": 1},
@@ -875,30 +725,6 @@ def forgot_password(request: HttpRequest) -> JsonResponse:
     tokens_col = get_collection("password_reset_tokens")
     tokens_col.delete_many({"email": email})
     tokens_col.insert_one({"email": email, "token": token, "expires_at": expires_at, "used": False})
-
-    prenom = user.get("prenom", "")
-    nom = user.get("nom", "")
-    full_name = f"{prenom} {nom}".strip() or email
-    reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
-
-    try:
-        send_mail(
-            subject="Réinitialisation de votre mot de passe — ReportEase",
-            message=(
-                f"Bonjour {full_name},\n\n"
-                f"Vous avez demandé la réinitialisation de votre mot de passe ReportEase.\n\n"
-                f"Cliquez sur le lien ci-dessous pour définir un nouveau mot de passe :\n\n"
-                f"{reset_url}\n\n"
-                f"Ce lien est valable pendant 1 heure.\n\n"
-                f"Si vous n'avez pas effectué cette demande, ignorez cet email.\n\n"
-                f"L'équipe ReportEase\nCHU Fattouma-Bourguiba de Monastir"
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=False,
-        )
-    except Exception as exc:
-        return JsonResponse({"detail": f"Erreur SMTP : {exc}"}, status=500)
 
     return JsonResponse({"detail": success_msg})
 

@@ -1,0 +1,313 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="seq_simple" name="Séquence Simple - Créer Rapport">
+    <mxGraphModel dx="2117" dy="1335" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1200" pageHeight="1300" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="p2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=13;" value="🖥️ Système" vertex="1">
+          <mxGeometry height="50" width="180" x="294" y="-172" as="geometry" />
+        </mxCell>
+        <mxCell id="p3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=13;" value="🎙️ Module de transcription" vertex="1">
+          <mxGeometry height="50" width="180" x="570" y="-172" as="geometry" />
+        </mxCell>
+        <mxCell id="p4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=13;" value="✏️ Modèle de correction" vertex="1">
+          <mxGeometry height="50" width="180" x="835" y="-172" as="geometry" />
+        </mxCell>
+        <mxCell id="l1" edge="1" parent="1" source="03jCej63BpNSygYMEKRH-1" style="endArrow=none;dashed=1;strokeColor=#aaaaaa;strokeWidth=2;exitX=0.367;exitY=1.3;exitDx=0;exitDy=0;exitPerimeter=0;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="110" y="80" as="sourcePoint" />
+            <mxPoint x="110" y="1606" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l2" edge="1" parent="1" source="p2" style="endArrow=none;dashed=1;strokeColor=#6c8ebf;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="380" y="80" as="sourcePoint" />
+            <mxPoint x="380" y="1594" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l3" edge="1" parent="1" source="p3" style="endArrow=none;dashed=1;strokeColor=#9673a6;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="650" y="80" as="sourcePoint" />
+            <mxPoint x="650" y="1603" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l4" edge="1" parent="1" source="p4" style="endArrow=none;dashed=1;strokeColor=#82b366;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="920" y="80" as="sourcePoint" />
+            <mxPoint x="920" y="1610" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="step1" parent="1" style="text;html=1;strokeColor=none;fillColor=#f0f0ff;align=left;fontStyle=1;fontSize=11;fontColor=#333399;rounded=1;" value="ÉTAPE 1 — Identification de l&#39;examen" vertex="1">
+          <mxGeometry height="22" width="300" x="20" y="105" as="geometry" />
+        </mxCell>
+        <mxCell id="m1" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Clique sur «Nouveau rapport»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="110" y="138" as="sourcePoint" />
+            <mxPoint x="380" y="138" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m2" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="Affiche le formulaire de création">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="380" y="168" as="sourcePoint" />
+            <mxPoint x="110" y="168" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m3" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Saisit l&#39;identifiant de l&#39;examen">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="110" y="200" as="sourcePoint" />
+            <mxPoint x="380" y="200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m4" edge="1" parent="1" style="endArrow=block;endFill=1;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="Vérifie que l&#39;identifiant est valide">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="430" y="228" />
+              <mxPoint x="430" y="250" />
+            </Array>
+            <mxPoint x="380" y="228" as="sourcePoint" />
+            <mxPoint x="380" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="f1t" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="&lt;font style=&quot;font-size: 13px;&quot;&gt;[Identifiant existe]&lt;/font&gt;" vertex="1">
+          <mxGeometry height="25" width="200" x="-231" y="261" as="geometry" />
+        </mxCell>
+        <mxCell id="m4e" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;strokeColor=#cc0000;fontSize=12;" value="Affiche un message d&#39;erreur ">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="380" y="292" as="sourcePoint" />
+            <mxPoint x="110" y="292" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m5" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Choisit comment enregistrer l&#39;audio">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="111" y="373" as="sourcePoint" />
+            <mxPoint x="383" y="373" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="f2t" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=11;fontStyle=1;" value="&amp;nbsp;[Méthode choisie]" vertex="1">
+          <mxGeometry height="18" width="200" x="-243" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="m6a" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Parle dans le microphone de l&#39;ordinateur">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="111" y="439" as="sourcePoint" />
+            <mxPoint x="380" y="439" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sep1" edge="1" parent="1" source="21eKSlbiRIuLAAYBlghw-3" style="endArrow=none;strokeColor=#0066cc;dashed=1;entryX=0.997;entryY=0.261;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.004;exitY=0.266;exitDx=0;exitDy=0;exitPerimeter=0;" target="21eKSlbiRIuLAAYBlghw-3" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-35" y="477" as="sourcePoint" />
+            <mxPoint x="499" y="477" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="g2" parent="1" style="text;html=1;strokeColor=none;fillColor=#d5e8d4;align=left;fontSize=10;fontStyle=3;" value="[Téléphone mobile]" vertex="1">
+          <mxGeometry height="16" width="145" x="-23" y="475" as="geometry" />
+        </mxCell>
+        <mxCell id="m6b1" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="Affiche un QR code à scanner">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="380" y="506" as="sourcePoint" />
+            <mxPoint x="111" y="506" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m6b2" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Scanne le QR avec son téléphone et enregistre">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="108" y="533" as="sourcePoint" />
+            <mxPoint x="384" y="533" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="g3" parent="1" style="text;html=1;strokeColor=none;fillColor=#fff2cc;align=left;fontSize=10;fontStyle=3;" value="[Fichier audio existant]" vertex="1">
+          <mxGeometry height="16" width="170" x="-26" y="558" as="geometry" />
+        </mxCell>
+        <mxCell id="m6c" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Importe un fichier audio ">
+          <mxGeometry relative="1" x="0.0148" y="12" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="113" y="596" as="sourcePoint" />
+            <mxPoint x="383" y="596" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="step3" parent="1" style="text;html=1;strokeColor=none;fillColor=#f0f0ff;align=left;fontStyle=1;fontSize=11;fontColor=#333399;rounded=1;" value="ÉTAPE 3 — Conversion audio en texte" vertex="1">
+          <mxGeometry height="22" width="270" x="20" y="678" as="geometry" />
+        </mxCell>
+        <mxCell id="m7" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Envoie l&#39;enregistrement audio">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="380" y="708" as="sourcePoint" />
+            <mxPoint x="650" y="708" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m8" edge="1" parent="1" style="endArrow=block;endFill=1;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="Convertit l&#39;audio en texte écrit">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="700" y="735" />
+              <mxPoint x="700" y="758" />
+            </Array>
+            <mxPoint x="650" y="735" as="sourcePoint" />
+            <mxPoint x="650" y="758" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="f3t" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[Enregistrement illisible]" vertex="1">
+          <mxGeometry height="16" width="220" x="57" y="763" as="geometry" />
+        </mxCell>
+        <mxCell id="m8e" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;strokeColor=#cc0000;fontSize=11;" value="Signale l&#39;erreur + propose de réessayer">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="650" y="797" as="sourcePoint" />
+            <mxPoint x="110" y="797" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m9" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="Retourne le texte transcrit">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="650" y="840" as="sourcePoint" />
+            <mxPoint x="380" y="840" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="step4" parent="1" style="text;html=1;strokeColor=none;fillColor=#f0f0ff;align=left;fontStyle=1;fontSize=11;fontColor=#333399;rounded=1;" value="ÉTAPE 4 — Correction du texte médical" vertex="1">
+          <mxGeometry height="22" width="280" x="20" y="868" as="geometry" />
+        </mxCell>
+        <mxCell id="m12" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="Retourne le texte normalisé et structuré">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="647" y="938" as="sourcePoint" />
+            <mxPoint x="377" y="941" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="step5" parent="1" style="text;html=1;strokeColor=none;fillColor=#f0f0ff;align=left;fontStyle=1;fontSize=11;fontColor=#333399;rounded=1;" value="ÉTAPE 5 — Affichage et vérification" vertex="1">
+          <mxGeometry height="22" width="260" x="20" y="1003" as="geometry" />
+        </mxCell>
+        <mxCell id="m13" edge="1" parent="1" style="endArrow=block;endFill=1;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="Sauvegarde automatiquement le rapport en brouillon">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="430" y="1033" />
+              <mxPoint x="430" y="1058" />
+            </Array>
+            <mxPoint x="380" y="1033" as="sourcePoint" />
+            <mxPoint x="380" y="1058" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m14" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="Affiche le rapport ">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="378" y="1071" as="sourcePoint" />
+            <mxPoint x="108" y="1071" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="step6" parent="1" style="text;html=1;strokeColor=none;fillColor=#f0f0ff;align=left;fontStyle=1;fontSize=11;fontColor=#333399;rounded=1;" value="ÉTAPE 6 — Sauvegarde finale" vertex="1">
+          <mxGeometry height="22" width="220" x="8" y="1343" as="geometry" />
+        </mxCell>
+        <mxCell id="m16" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Choisit : Brouillon / Valider / Enregistrer">
+          <mxGeometry relative="1" x="-0.0222" y="-13" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="107" y="1378" as="sourcePoint" />
+            <mxPoint x="377" y="1378" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m17" edge="1" parent="1" style="endArrow=block;endFill=1;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="Enregistre le rapport dans la base de données">
+          <mxGeometry relative="1" x="0.0076" y="26" as="geometry">
+            <mxPoint y="-1" as="offset" />
+            <Array as="points">
+              <mxPoint x="429" y="1392" />
+              <mxPoint x="429" y="1415" />
+            </Array>
+            <mxPoint x="379" y="1392" as="sourcePoint" />
+            <mxPoint x="379" y="1415" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m18" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="Confirme et redirige vers l&#39;historique des rapports">
+          <mxGeometry relative="1" x="0.0148" y="15" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="376" y="1447" as="sourcePoint" />
+            <mxPoint x="106" y="1447" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="21eKSlbiRIuLAAYBlghw-1" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;fillColor=#f8cecc;strokeColor=#b85450;" value="alt" vertex="1">
+          <mxGeometry height="1256" width="1507" x="-297" y="261" as="geometry" />
+        </mxCell>
+        <mxCell id="21eKSlbiRIuLAAYBlghw-3" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="alt" vertex="1">
+          <mxGeometry height="267" width="587" x="-34" y="391" as="geometry" />
+        </mxCell>
+        <mxCell id="21eKSlbiRIuLAAYBlghw-5" edge="1" parent="1" style="endArrow=none;strokeColor=#0066cc;dashed=1;entryX=0.997;entryY=0.261;entryDx=0;entryDy=0;entryPerimeter=0;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-33" y="549" as="sourcePoint" />
+            <mxPoint x="552" y="550" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="21eKSlbiRIuLAAYBlghw-6" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;fillColor=#f8cecc;strokeColor=#b85450;" value="opt" vertex="1">
+          <mxGeometry height="59" width="719" x="-8" y="765" as="geometry" />
+        </mxCell>
+        <mxCell id="21eKSlbiRIuLAAYBlghw-7" edge="1" parent="1" style="endArrow=block;endFill=1;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="normalise le text">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="701" y="892" />
+              <mxPoint x="701" y="915" />
+            </Array>
+            <mxPoint x="651" y="892" as="sourcePoint" />
+            <mxPoint x="651" y="915" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="21eKSlbiRIuLAAYBlghw-8" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="envoie le rapport">
+          <mxGeometry relative="1" x="0.0148" y="12" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="380" y="1101" as="sourcePoint" />
+            <mxPoint x="921" y="1101" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="21eKSlbiRIuLAAYBlghw-9" edge="1" parent="1" style="endArrow=block;endFill=1;edgeStyle=orthogonalEdgeStyle;fontSize=11;fontColor=light-dark(#000000,#EDEDED);" value="genere des suggestions de corrections">
+          <mxGeometry relative="1" x="-0.0738" y="88" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="971" y="1104" />
+              <mxPoint x="971" y="1127" />
+            </Array>
+            <mxPoint x="921" y="1104" as="sourcePoint" />
+            <mxPoint x="921" y="1127" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="21eKSlbiRIuLAAYBlghw-14" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;fillColor=#f8cecc;strokeColor=#b85450;" value="opt" vertex="1">
+          <mxGeometry height="252" width="1145" x="-16" y="1079" as="geometry" />
+        </mxCell>
+        <mxCell id="21eKSlbiRIuLAAYBlghw-15" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[modifier rapport]" vertex="1">
+          <mxGeometry height="16" width="220" x="53" y="1079" as="geometry" />
+        </mxCell>
+        <mxCell id="21eKSlbiRIuLAAYBlghw-16" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="Retourne les suggestions ">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="919" y="1163" as="sourcePoint" />
+            <mxPoint x="382" y="1163" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="21eKSlbiRIuLAAYBlghw-17" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="Affiche le les suggestion">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="379" y="1177" as="sourcePoint" />
+            <mxPoint x="109" y="1177" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="21eKSlbiRIuLAAYBlghw-18" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;fillColor=#f8cecc;strokeColor=#b85450;" value="opt" vertex="1">
+          <mxGeometry height="97" width="1061" x="8" y="1193" as="geometry" />
+        </mxCell>
+        <mxCell id="21eKSlbiRIuLAAYBlghw-19" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="modifie le rapport">
+          <mxGeometry relative="1" x="0.0148" y="12" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="111" y="1227" as="sourcePoint" />
+            <mxPoint x="381" y="1227" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="03jCej63BpNSygYMEKRH-1" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" value="Actor" vertex="1">
+          <mxGeometry height="60" width="30" x="99" y="-182" as="geometry" />
+        </mxCell>
+        <mxCell id="03jCej63BpNSygYMEKRH-4" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;fillColor=#b0e3e6;strokeColor=#0e8088;labelBackgroundColor=none;gradientColor=none;swimlaneFillColor=default;" value="Ref" vertex="1">
+          <mxGeometry height="167" width="1109" x="-48" y="-83" as="geometry" />
+        </mxCell>
+        <mxCell id="03jCej63BpNSygYMEKRH-5" parent="1" style="text;align=center;fontStyle=1;verticalAlign=middle;spacingLeft=3;spacingRight=3;strokeColor=none;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;" value="&lt;font style=&quot;font-size: 19px;&quot;&gt;S&#39;authentifier&lt;/font&gt;" vertex="1">
+          <mxGeometry height="48" width="195" x="378" y="-23.5" as="geometry" />
+        </mxCell>
+        <mxCell id="03jCej63BpNSygYMEKRH-6" edge="1" parent="1" style="endArrow=none;html=1;rounded=0;fillColor=#fad9d5;strokeColor=#ae4132;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="-297" y="347" as="sourcePoint" />
+            <mxPoint x="1208" y="347" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="03jCej63BpNSygYMEKRH-10" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="&lt;font style=&quot;font-size: 13px;&quot;&gt;[Identifiant n&#39;existe pas]&lt;/font&gt;" vertex="1">
+          <mxGeometry height="25" width="200" x="-286" y="354" as="geometry" />
+        </mxCell>
+        <mxCell id="g1" parent="1" style="text;html=1;strokeColor=none;fillColor=#dae8fc;align=left;fontSize=10;fontStyle=3;" value="[Microphone direct]" vertex="1">
+          <mxGeometry height="16" width="155" x="33" y="402" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

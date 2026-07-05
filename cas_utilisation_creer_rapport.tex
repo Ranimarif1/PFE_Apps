@@ -1,0 +1,108 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[french]{babel}
+\usepackage[margin=1in]{geometry}
+\usepackage{enumitem}
+
+\begin{document}
+
+\section*{Cas d'utilisation : Créer rapport}
+
+\begin{description}[leftmargin=4.2cm, style=nextline]
+    \item[Titre de cas d'utilisation] Créer rapport
+
+    \item[Acteurs principaux] Médecin, Administrateur (hérite les fonctionnalités du Médecin)
+
+    \item[Description] Permet au médecin de créer un rapport radiologique par dictée vocale
+          (navigateur ou mobile via QR code) ou import audio. Le système transcrit automatiquement
+          via notre modèle de reconnaissance vocale médicale, normalise le texte,
+          puis propose des corrections avec MedCorrect.
+
+    \item[Préconditions]
+    \begin{itemize}[leftmargin=*, nosep]
+        \item Le médecin est authentifié dans le système.
+        \item Le modèle de transcription est chargé en mémoire.
+    \end{itemize}
+
+    \item[Scénario principal]
+    \begin{enumerate}[leftmargin=*, topsep=0pt, itemsep=0pt]
+        \item Le médecin clique sur «~Nouveau rapport~».
+        \item Le système affiche le formulaire de création.
+        \item Le médecin saisit l'identifiant de l'examen et sélectionne la catégorie.
+        \item Le système valide le format de l'identifiant et vérifie qu'il n'est pas déjà utilisé.
+        \item Le médecin choisit la méthode d'enregistrement parmi :
+        \begin{itemize}[leftmargin=*, nosep]
+            \item Enregistrement direct via le microphone du navigateur.
+            \item Enregistrement via une page web mobile après scan d'un QR code.
+            \item Importation d'un fichier audio existant.
+        \end{itemize}
+        \item Le médecin effectue ou fournit l'enregistrement audio.
+        \item Le système envoie l'audio au module de transcription.
+        \item Le système applique le pipeline de normalisation et de ponctuation médicale
+              sur le texte brut.
+        \item Le système sauvegarde automatiquement le rapport avec le statut \textbf{Brouillon}.
+        \item Le système affiche le texte transcrit et normalisé dans l'éditeur, structuré en
+              sections~: \textbf{Indication}, \textbf{Résultat} et \textbf{Conclusion}
+              (la section \textbf{Technique} est ajoutée pour les catégories IRM et Scanner).
+        \item Le médecin vérifie et corrige si nécessaire le contenu du rapport, assisté par
+              \textbf{MedCorrect} qui propose des suggestions de corrections.
+        \item Le médecin choisit l'action de sauvegarde parmi~:
+              \textbf{Brouillon}, \textbf{Valider} et \textbf{Enregistrer}.
+        \item Le système enregistre le rapport et redirige le médecin vers son historique.
+    \end{enumerate}
+
+    \item[Scénarios alternatifs]
+    \textbf{Scénario alternatif 1 : Enregistrement via page web mobile}
+    \begin{enumerate}[leftmargin=*, topsep=0pt, itemsep=0pt]
+        \item Le médecin sélectionne l'option «~Enregistrer via smartphone~».
+        \item Le système génère une session d'appairage et affiche un QR code.
+        \item Le médecin scanne le QR code avec son smartphone~; une page web s'ouvre.
+        \item L'interface desktop confirme la connexion du mobile.
+        \item Le médecin enregistre l'audio depuis son appareil mobile.
+        \item Une fois l'enregistrement terminé, l'audio est transmis au desktop.
+        \item Le desktop lance la transcription comme décrit aux étapes 7 à 9 du scénario principal.
+    \end{enumerate}
+
+    \textbf{Scénario alternatif 2 : Importation d'un fichier audio}
+    \begin{enumerate}[leftmargin=*, topsep=0pt, itemsep=0pt]
+        \item Le médecin sélectionne l'option «~Importer un fichier audio~».
+        \item Le médecin choisit un fichier audio depuis son poste.
+        \item Le système lance la transcription comme décrit aux étapes 7 à 9 du scénario principal.
+    \end{enumerate}
+
+    \item[Postconditions]
+    \begin{itemize}[leftmargin=*, nosep]
+        \item Le rapport est enregistré dans la base de données avec son statut.
+        \item Si le statut est \textbf{Enregistrer}, une ligne d'archive est ajoutée au fichier CSV global.
+        \item Le rapport est consultable depuis la liste des rapports du médecin (historique).
+        \item Les administrateurs voient les rapports au statut \textbf{Valider} ou \textbf{Enregistrer}
+              dans leurs propres listes.
+    \end{itemize}
+
+    \item[Exceptions]
+    \textbf{Exception 1 : Format d'identifiant invalide}
+    \begin{itemize}[leftmargin=*, nosep]
+        \item Si l'identifiant saisi est invalide (non numérique, trop court ou année incorrecte),
+              le système affiche un message d'erreur et bloque le passage à l'étape suivante.
+    \end{itemize}
+    \textbf{Exception 2 : Identifiant d'examen déjà utilisé}
+    \begin{itemize}[leftmargin=*, nosep]
+        \item Si un rapport portant le même identifiant d'examen existe déjà,
+              le système refuse la création et affiche un message d'erreur.
+    \end{itemize}
+    \textbf{Exception 3 : Échec de la transcription}
+    \begin{itemize}[leftmargin=*, nosep]
+        \item Si le module de transcription échoue (audio corrompu, format non supporté ou erreur serveur),
+              le système affiche un message d'erreur et propose de réessayer sans quitter la page.
+    \end{itemize}
+    \textbf{Exception 4 : Expiration ou perte de session mobile}
+    \begin{itemize}[leftmargin=*, nosep]
+        \item Si la session QR code expire ou si la connexion avec la page mobile est interrompue,
+              le système notifie le médecin. Le médecin doit créer une nouvelle session
+              pour relancer l'appairage mobile.
+    \end{itemize}
+\end{description}
+
+\end{document}

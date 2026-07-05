@@ -15,8 +15,9 @@ export default function Historique() {
   const isAdmin = user?.rôle === "admin";
   // A senior doctor supervises reports created under their senior code and can
   // see/manage them alongside their own.
-  const isSenior = user?.rôle === "médecin" && !!user?.senior;
-  const canViewAll = isAdmin || isSenior;
+  const isSenior = (user?.rôle === "médecin" && !!user?.senior) || (user?.rôle === "admin" && !!user?.senior);
+  const isSeniorDoctor = user?.rôle === "médecin" && !!user?.senior;
+  const canViewAll = isAdmin || isSeniorDoctor;
 
   const [filterStatut, setFilterStatut] = useState("tous");
   const [filterCategory, setFilterCategory] = useState("");
@@ -25,16 +26,19 @@ export default function Historique() {
   const [filterDay, setFilterDay] = useState("");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [searchId, setSearchId] = useState("");
-  const [viewMode, setViewMode] = useState<"all" | "mine">(canViewAll ? "all" : "mine");
+  const [viewMode, setViewMode] = useState<"all" | "mine" | "supervised">(canViewAll ? "all" : "mine");
 
   const { data: reports = [] } = useQuery<Report[]>({
     queryKey: ["reports"],
     queryFn: getReports,
   });
 
-  const visibleReports = canViewAll && viewMode === "mine"
-    ? reports.filter(r => r.isOwn)
-    : reports;
+  const visibleReports =
+    canViewAll && viewMode === "mine"
+      ? reports.filter(r => r.isOwn)
+      : canViewAll && viewMode === "supervised"
+        ? reports.filter(r => r.seniorId === user?.id)
+        : reports;
 
   const availableYears = useMemo(() => {
     const years = new Set(visibleReports.map(r => new Date(r.createdAt).getFullYear().toString()));
@@ -92,25 +96,30 @@ export default function Historique() {
     return result;
   }, [visibleReports, filterStatut, filterCategory, filterYear, filterMonth, filterDay, searchId, sortOrder]);
 
-  const showDoctorCol = canViewAll && viewMode === "all";
+  const showDoctorCol = canViewAll && (viewMode === "all" || viewMode === "supervised");
 
   return (
     <AppLayout title="Historique des rapports">
       <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
         <div className="px-6 py-4 border-b border-border flex flex-wrap gap-3 items-center">
 
-          {/* Admin / senior: toggle all (incl. supervised) / mine */}
+          {/* Admin / senior: toggle all / supervised / mine */}
           {canViewAll && (
             <div className="flex gap-1 bg-muted p-1 rounded-lg mr-2">
               <button onClick={() => setViewMode("all")}
                 className={cn("px-3 py-1 rounded-md text-sm font-medium transition-all",
                   viewMode === "all" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
-                {isAdmin ? "Tous les rapports" : "Rapports supervisés"}
+                Tous les rapports
               </button>
               <button onClick={() => setViewMode("mine")}
                 className={cn("px-3 py-1 rounded-md text-sm font-medium transition-all",
                   viewMode === "mine" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
                 Mes rapports
+              </button>
+              <button onClick={() => setViewMode("supervised")}
+                className={cn("px-3 py-1 rounded-md text-sm font-medium transition-all",
+                  viewMode === "supervised" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+                Supervisés
               </button>
             </div>
           )}

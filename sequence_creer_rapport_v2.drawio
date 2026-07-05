@@ -1,0 +1,704 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="seq-creer-rapport-v2" name="Séquence Détaillée - Créer Rapport">
+    <mxGraphModel dx="2412" dy="1060" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1300" pageHeight="3500" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=15;fontStyle=1;" value="Diagramme de Séquence — Créer un rapport médical (tous cas possibles)" vertex="1">
+          <mxGeometry height="30" width="1200" x="50" y="-230" as="geometry" />
+        </mxCell>
+        <mxCell id="p_med" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" value="Médecin" vertex="1">
+          <mxGeometry height="60" width="30" x="65" y="-190" as="geometry" />
+        </mxCell>
+        <mxCell id="p_spa" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" value="SPA (React)" vertex="1">
+          <mxGeometry height="45" width="120" x="180" y="-170" as="geometry" />
+        </mxCell>
+        <mxCell id="p_api" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" value="API REST (Django)" vertex="1">
+          <mxGeometry height="45" width="130" x="365" y="-170" as="geometry" />
+        </mxCell>
+        <mxCell id="p_db" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" value="MongoDB" vertex="1">
+          <mxGeometry height="60" width="80" x="565" y="-180" as="geometry" />
+        </mxCell>
+        <mxCell id="p_wsp" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1;" value="Whisper ONNX" vertex="1">
+          <mxGeometry height="45" width="130" x="750" y="-170" as="geometry" />
+        </mxCell>
+        <mxCell id="p_oll" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;" value="Ollama (mistral)" vertex="1">
+          <mxGeometry height="45" width="130" x="960" y="-170" as="geometry" />
+        </mxCell>
+        <mxCell id="ll_med" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#6c8ebf;strokeWidth=1;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="80" y="-125" as="sourcePoint" />
+            <mxPoint x="80" y="3400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ll_spa" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#6c8ebf;strokeWidth=1;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="240" y="-125" as="sourcePoint" />
+            <mxPoint x="240" y="3400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ll_api" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#6c8ebf;strokeWidth=1;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="-125" as="sourcePoint" />
+            <mxPoint x="430" y="3400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ll_db" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#6c8ebf;strokeWidth=1;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="605" y="-118" as="sourcePoint" />
+            <mxPoint x="605" y="3400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ll_wsp" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#9673a6;strokeWidth=1;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="815" y="-125" as="sourcePoint" />
+            <mxPoint x="815" y="3400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ll_oll" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#d6b656;strokeWidth=1;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1025" y="-125" as="sourcePoint" />
+            <mxPoint x="1025" y="3400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ref_auth" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;fillColor=#dae8fc;strokeColor=#6c8ebf;swimlaneFillColor=default;" value="ref" vertex="1">
+          <mxGeometry height="75" width="1082" x="6" y="-95" as="geometry" />
+        </mxCell>
+        <mxCell id="ref_auth_lbl" parent="1" style="text;html=1;align=center;fontSize=18;fontStyle=1;" value="S&#39;authentifier" vertex="1">
+          <mxGeometry height="35" width="200" x="425" y="-77" as="geometry" />
+        </mxCell>
+        <mxCell id="s1_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=#f0f0ff;align=left;fontStyle=1;fontSize=11;fontColor=#333399;rounded=1;" value="ÉTAPE 1 — Identification de l&#39;examen" vertex="1">
+          <mxGeometry height="22" width="330" x="25" y="-3" as="geometry" />
+        </mxCell>
+        <mxCell id="m1" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Clique «Nouveau Rapport»">
+          <mxGeometry relative="1" x="-0.05" y="14" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="80" y="45" as="sourcePoint" />
+            <mxPoint x="240" y="45" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m2" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="Affiche formulaire (ID_Exam + catégorie)">
+          <mxGeometry relative="1" x="-0.05" y="-9" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="240" y="68" as="sourcePoint" />
+            <mxPoint x="80" y="68" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m3" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Saisit ID_Exam (ex: 20240123) + sélectionne catégorie">
+          <mxGeometry relative="1" y="10" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="80" y="95" as="sourcePoint" />
+            <mxPoint x="240" y="95" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_fmtcheck" edge="1" parent="1" style="endArrow=block;endFill=1;edgeStyle=orthogonalEdgeStyle;fontSize=10;" value="verifierFormatId(id) [numérique, ≥5 chiffres, année courante]">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="279" y="104" />
+              <mxPoint x="279" y="124" />
+            </Array>
+            <mxPoint x="244" y="104" as="sourcePoint" />
+            <mxPoint x="244" y="124" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="alt_fmt" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;fillColor=#f8cecc;strokeColor=#b85450;" value="alt" vertex="1">
+          <mxGeometry height="2906" width="1194" x="-18" y="135" as="geometry" />
+        </mxCell>
+        <mxCell id="alt_fmt_inv_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[Format invalide : non numérique | &lt; 5 chiffres | année incorrecte | catégorie manquante]" vertex="1">
+          <mxGeometry height="18" width="600" x="50" y="135" as="geometry" />
+        </mxCell>
+        <mxCell id="m_err_fmt" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;strokeColor=#cc0000;fontSize=11;" value="Message d&#39;erreur inline (attend correction)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="240" y="183" as="sourcePoint" />
+            <mxPoint x="80" y="183" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="alt_fmt_val_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[Format valide]" vertex="1">
+          <mxGeometry height="18" width="150" x="-5" y="206" as="geometry" />
+        </mxCell>
+        <mxCell id="m_chk_api" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="GET /api/reports/check-exam-id/?id=...">
+          <mxGeometry relative="1" x="0.0211" y="16" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="240" y="235" as="sourcePoint" />
+            <mxPoint x="430" y="235" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_chk_db" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Vérifie unicité ID_Exam">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="255" as="sourcePoint" />
+            <mxPoint x="605" y="255" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_chk_db_r" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="{available: true/false}">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="605" y="273" as="sourcePoint" />
+            <mxPoint x="430" y="273" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="opt_id_taken" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;fillColor=#ffe6cc;strokeColor=#d79b00;" value="opt" vertex="1">
+          <mxGeometry height="83" width="1017" x="34" y="3291" as="geometry" />
+        </mxCell>
+        <mxCell id="opt_id_taken_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[ID_Exam déjà utilisé]" vertex="1">
+          <mxGeometry height="16" width="200" x="98" y="3287" as="geometry" />
+        </mxCell>
+        <mxCell id="m_err_id" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;strokeColor=#cc0000;fontSize=11;" value="«Identifiant déjà utilisé, veuillez en choisir un autre»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="468" y="3318" as="sourcePoint" />
+            <mxPoint x="118" y="3318" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s2_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=#f0f0ff;align=left;fontStyle=1;fontSize=11;fontColor=#333399;rounded=1;" value="ÉTAPE 2 — Choix de la méthode d&#39;enregistrement audio" vertex="1">
+          <mxGeometry height="22" width="430" x="25" y="289" as="geometry" />
+        </mxCell>
+        <mxCell id="alt_methods" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="alt" vertex="1">
+          <mxGeometry height="589" width="1106" x="6" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="alt_mic_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[Microphone navigateur]" vertex="1">
+          <mxGeometry height="18" width="220" x="68" y="323" as="geometry" />
+        </mxCell>
+        <mxCell id="m_usermedia" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="Popup autorisation microphone (getUserMedia API)">
+          <mxGeometry relative="1" y="-10" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="240" y="366" as="sourcePoint" />
+            <mxPoint x="80" y="366" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="opt_perm_denied" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;fillColor=#f8cecc;strokeColor=#b85450;" value="opt" vertex="1">
+          <mxGeometry height="126" width="476" x="-605" y="371" as="geometry" />
+        </mxCell>
+        <mxCell id="opt_perm_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[Permission refusée par le navigateur]" vertex="1">
+          <mxGeometry height="16" width="300" x="-559" y="455" as="geometry" />
+        </mxCell>
+        <mxCell id="m_perm_err" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;strokeColor=#cc0000;fontSize=11;" value="Erreur : «Impossible d&#39;accéder au microphone»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-394" y="482" as="sourcePoint" />
+            <mxPoint x="-554" y="482" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_mic_speak" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Parle dans le microphone (pause / reprise possibles)">
+          <mxGeometry relative="1" x="-0.1375" y="11" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="80" y="398" as="sourcePoint" />
+            <mxPoint x="240" y="398" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_chunks" edge="1" parent="1" style="endArrow=block;endFill=1;edgeStyle=orthogonalEdgeStyle;fontSize=10;" value="MediaRecorder: chunks 250 ms ">
+          <mxGeometry relative="1" x="0.0244" y="71" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="270.98" y="410" />
+              <mxPoint x="270.98" y="428" />
+            </Array>
+            <mxPoint x="238.98" y="410" as="sourcePoint" />
+            <mxPoint x="238.98" y="428" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_stop_mic" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Clique «Arrêter l&#39;enregistrement»">
+          <mxGeometry relative="1" y="15" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="80" y="458" as="sourcePoint" />
+            <mxPoint x="240" y="458" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="alt_sep1" edge="1" parent="1" style="endArrow=none;strokeColor=#6c8ebf;dashed=1;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="6" y="490" as="sourcePoint" />
+            <mxPoint x="1116" y="490" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="alt_phone_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[Smartphone via QR code]" vertex="1">
+          <mxGeometry height="18" width="250" x="25" y="497" as="geometry" />
+        </mxCell>
+        <mxCell id="m_session_post" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="POST /api/session (crée session Socket.io)">
+          <mxGeometry relative="1" x="-0.0211" y="17" as="geometry">
+            <mxPoint x="1" as="offset" />
+            <mxPoint x="240" y="540" as="sourcePoint" />
+            <mxPoint x="430" y="540" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_session_resp" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="{sessionId, mobileUrl}">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="431" y="558" as="sourcePoint" />
+            <mxPoint x="241" y="558" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_qr" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="Affiche QR code">
+          <mxGeometry relative="1" x="0.0125" y="-12" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="240" y="592" as="sourcePoint" />
+            <mxPoint x="80" y="592" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_scan" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Scanne QR → téléphone rejoint salle Socket.io">
+          <mxGeometry relative="1" x="-0.0625" y="11" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="80" y="626" as="sourcePoint" />
+            <mxPoint x="240" y="626" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_mobile_send" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Enregistre sur mobile → clique «Envoyer» ">
+          <mxGeometry relative="1" x="0.6375" y="12" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="165" y="654" />
+            </Array>
+            <mxPoint x="80" y="654" as="sourcePoint" />
+            <mxPoint x="240" y="654" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="opt_session_exp" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;fillColor=#ffe6cc;strokeColor=#d79b00;" value="opt" vertex="1">
+          <mxGeometry height="42" width="540" x="-637" y="647" as="geometry" />
+        </mxCell>
+        <mxCell id="opt_session_exp_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[Session expirée (timeout 3600s) ou mobile déconnecté]" vertex="1">
+          <mxGeometry height="16" width="400" x="-612" y="647" as="geometry" />
+        </mxCell>
+        <mxCell id="m_session_exp" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;strokeColor=#cc0000;fontSize=11;" value="«Session expirée» + bouton Rafraîchir">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-447" y="674" as="sourcePoint" />
+            <mxPoint x="-607" y="674" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="alt_sep2" edge="1" parent="1" style="endArrow=none;strokeColor=#6c8ebf;dashed=1;entryX=0.999;entryY=0.561;entryDx=0;entryDy=0;entryPerimeter=0;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="7.11" y="670.52" as="sourcePoint" />
+            <mxPoint x="1112.0040000000001" y="670.0000000000002" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="alt_import_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[Import fichier audio existant (MP3, WAV, M4A ≤ 50 MB)]" vertex="1">
+          <mxGeometry height="18" width="380" x="12" y="678" as="geometry" />
+        </mxCell>
+        <mxCell id="m_import" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Sélectionne un fichier audio via dialogue fichier">
+          <mxGeometry relative="1" x="-0.0125" y="15" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="80" y="736" as="sourcePoint" />
+            <mxPoint x="240" y="736" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="opt_file_err" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;opt&lt;/font&gt;" vertex="1">
+          <mxGeometry height="118" width="1058" x="18" y="748" as="geometry" />
+        </mxCell>
+        <mxCell id="opt_file_err_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[Fichier &gt; 50 MB ou format non supporté]" vertex="1">
+          <mxGeometry height="16" width="320" x="85" y="751" as="geometry" />
+        </mxCell>
+        <mxCell id="m_file_err" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;strokeColor=#cc0000;fontSize=11;" value="Erreur : format ou taille invalide">
+          <mxGeometry relative="1" y="-15" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="240" y="806" as="sourcePoint" />
+            <mxPoint x="80" y="806" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s3_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=#f0f0ff;align=left;fontStyle=1;fontSize=11;fontColor=#333399;rounded=1;" value="ÉTAPE 3 — Upload de l&#39;audio" vertex="1">
+          <mxGeometry height="22" width="260" x="25" y="924" as="geometry" />
+        </mxCell>
+        <mxCell id="m_upload" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="POST /api/audios/ (multipart: audio Blob, examId, duration)">
+          <mxGeometry relative="1" y="15" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="242" y="970" as="sourcePoint" />
+            <mxPoint x="432" y="970" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_upload_db" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Sauvegarde fichier audio (media/audios/{examId}_{uuid}.ext)">
+          <mxGeometry relative="1" x="-0.0171" y="16" as="geometry">
+            <mxPoint x="-1" as="offset" />
+            <mxPoint x="432" y="1000" as="sourcePoint" />
+            <mxPoint x="607" y="1000" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_upload_db_r" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="AudioRecord {_id, filename, mimeType, size, duration}">
+          <mxGeometry relative="1" x="0.0171" y="-15" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="605" y="1035" as="sourcePoint" />
+            <mxPoint x="430" y="1035" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="alt_upload" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;fillColor=#f8cecc;strokeColor=#b85450;" value="alt" vertex="1">
+          <mxGeometry height="1942" width="1127" x="8" y="1054" as="geometry" />
+        </mxCell>
+        <mxCell id="alt_upload_ok_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[Upload réussi]" vertex="1">
+          <mxGeometry height="16" width="160" x="75" y="1057" as="geometry" />
+        </mxCell>
+        <mxCell id="m_upload_ok" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="Retourne audioId">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="429" y="1088" as="sourcePoint" />
+            <mxPoint x="239" y="1088" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="alt_upload_sep" edge="1" parent="1" source="alt_upload" style="endArrow=none;strokeColor=#b85450;dashed=1;exitX=0.005;exitY=0.031;exitDx=0;exitDy=0;exitPerimeter=0;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="30" y="1124" as="sourcePoint" />
+            <mxPoint x="1138" y="1121" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="alt_upload_fail_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[Erreur réseau / API indisponible]" vertex="1">
+          <mxGeometry height="16" width="280" x="-468" y="3049" as="geometry" />
+        </mxCell>
+        <mxCell id="m_upload_fail" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;strokeColor=#cc0000;fontSize=11;" value="Audio mis dans «Audios en attente» (retry manuel via transcribeById)">
+          <mxGeometry relative="1" x="-1" y="-79" as="geometry">
+            <mxPoint x="68" y="38" as="offset" />
+            <mxPoint x="-243" y="3135" as="sourcePoint" />
+            <mxPoint x="-403" y="3135" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s4_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=#f0f0ff;align=left;fontStyle=1;fontSize=11;fontColor=#333399;rounded=1;" value="ÉTAPE 4 — Transcription audio → texte (Whisper ONNX)" vertex="1">
+          <mxGeometry height="22" width="420" x="22" y="1152" as="geometry" />
+        </mxCell>
+        <mxCell id="m_transcribe" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="POST /api/transcribe/ (audio Blob + Authorization: Bearer token)">
+          <mxGeometry relative="1" x="-0.0211" y="16" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="239" y="1207" as="sourcePoint" />
+            <mxPoint x="429" y="1207" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_wsp_call" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Découpe en chunks (détection silences), transcrit chaque chunk (lang=fr)">
+          <mxGeometry relative="1" x="0.0026" y="15" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="432" y="1232" as="sourcePoint" />
+            <mxPoint x="817" y="1232" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_normalize" edge="1" parent="1" style="endArrow=block;endFill=1;edgeStyle=orthogonalEdgeStyle;fontSize=10;" value="Normalise: ponctuation vocale · abréviations médicales · nombres · accents ASR">
+          <mxGeometry relative="1" x="0.0238" y="188" as="geometry">
+            <mxPoint y="1" as="offset" />
+            <Array as="points">
+              <mxPoint x="847" y="1237" />
+              <mxPoint x="847" y="1255" />
+            </Array>
+            <mxPoint x="814" y="1237" as="sourcePoint" />
+            <mxPoint x="814" y="1255" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="alt_transcribe" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;fillColor=#f8cecc;strokeColor=#b85450;" value="alt" vertex="1">
+          <mxGeometry height="1636" width="1085" x="18" y="1275" as="geometry" />
+        </mxCell>
+        <mxCell id="alt_tr_ok_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[Transcription réussie]" vertex="1">
+          <mxGeometry height="16" width="200" x="88" y="1275" as="geometry" />
+        </mxCell>
+        <mxCell id="m_wsp_ok" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="{text: &#39;Indication: ... Résultat: ... Conclusion: ...&#39;}">
+          <mxGeometry relative="1" x="0.1481" y="-10" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="814" y="1308" as="sourcePoint" />
+            <mxPoint x="429" y="1308" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_tr_ok" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="Retourne texte normalisé et structuré">
+          <mxGeometry relative="1" x="-0.1263" y="-16" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="429" y="1337" as="sourcePoint" />
+            <mxPoint x="239" y="1337" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="alt_tr_sep" edge="1" parent="1" style="endArrow=none;strokeColor=#b85450;dashed=1;exitX=0.003;exitY=0.339;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.999;entryY=0.339;entryDx=0;entryDy=0;entryPerimeter=0;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-1107.0049999999999" y="1745.0040000000004" as="sourcePoint" />
+            <mxPoint x="-26.345000000000027" y="1745.0040000000004" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="alt_tr_fail_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[Audio illisible / timeout Whisper (&gt; 60 s)]" vertex="1">
+          <mxGeometry height="16" width="350" x="-807" y="1530" as="geometry" />
+        </mxCell>
+        <mxCell id="m_wsp_err" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;strokeColor=#cc0000;fontSize=11;" value="Erreur STT (audio illisible ou timeout)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-47" y="1560" as="sourcePoint" />
+            <mxPoint x="-432" y="1560" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_tr_err" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;strokeColor=#cc0000;fontSize=11;" value="Affiche erreur + bouton «Réessayer»">
+          <mxGeometry relative="1" x="0.0343" y="12" as="geometry">
+            <mxPoint x="-1" as="offset" />
+            <mxPoint x="-432" y="1580" as="sourcePoint" />
+            <mxPoint x="-782" y="1580" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s5_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=#f0f0ff;align=left;fontStyle=1;fontSize=11;fontColor=#333399;rounded=1;" value="ÉTAPE 5 — Structuration du contenu et création du brouillon" vertex="1">
+          <mxGeometry height="22" width="440" x="30" y="1392" as="geometry" />
+        </mxCell>
+        <mxCell id="m_structure" edge="1" parent="1" style="endArrow=block;endFill=1;edgeStyle=orthogonalEdgeStyle;fontSize=10;" value="structureContent(text, catégorie) → sections Indication / Technique? / Résultat / Conclusion">
+          <mxGeometry relative="1" x="-0.0013" y="214" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="275" y="1424" />
+              <mxPoint x="275" y="1442" />
+            </Array>
+            <mxPoint x="243" y="1424" as="sourcePoint" />
+            <mxPoint x="243" y="1442" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_create_report" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="POST /api/reports/ {ID_Exam, content, category, status:&#39;draft&#39;, audioId}">
+          <mxGeometry relative="1" x="-0.0421" y="14" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="241" y="1482" as="sourcePoint" />
+            <mxPoint x="431" y="1482" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_save_draft_db" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Insère rapport (status=draft, originalContent=texte brut STT)">
+          <mxGeometry relative="1" x="-0.0514" y="9" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="431" y="1508" as="sourcePoint" />
+            <mxPoint x="606" y="1508" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_save_draft_db_r" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="Rapport {_id, status:&#39;draft&#39;, createdAt, ...}">
+          <mxGeometry relative="1" x="0.04" y="-16" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="602" y="1546" as="sourcePoint" />
+            <mxPoint x="427" y="1546" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="opt_id_conflict" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;fillColor=#ffe6cc;strokeColor=#d79b00;" value="opt" vertex="1">
+          <mxGeometry height="42" width="530" x="-662" y="1783" as="geometry" />
+        </mxCell>
+        <mxCell id="opt_id_conflict_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[ID_Exam conflit (race condition)]" vertex="1">
+          <mxGeometry height="16" width="280" x="-637" y="1783" as="geometry" />
+        </mxCell>
+        <mxCell id="m_conflict_err" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;strokeColor=#cc0000;fontSize=11;" value="Rollback upload audio + message erreur conflit ID">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-282" y="1812" as="sourcePoint" />
+            <mxPoint x="-632" y="1812" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_report_created" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="Retourne rapport brouillon {_id, status:&#39;draft&#39;, content, ...}">
+          <mxGeometry relative="1" x="-0.0105" y="-21" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="430" y="1599" as="sourcePoint" />
+            <mxPoint x="240" y="1599" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s6_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=#f0f0ff;align=left;fontStyle=1;fontSize=11;fontColor=#333399;rounded=1;" value="ÉTAPE 6 — Affichage, édition et correction IA (RapportDetail)" vertex="1">
+          <mxGeometry height="22" width="450" x="30" y="1630" as="geometry" />
+        </mxCell>
+        <mxCell id="m_navigate" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="Redirige vers /rapport/{id} — mode lecture (brouillon)">
+          <mxGeometry relative="1" x="-0.025" y="-16" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="240" y="1703" as="sourcePoint" />
+            <mxPoint x="80" y="1703" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="opt_edit" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;fillColor=#d5e8d4;strokeColor=#82b366;" value="opt" vertex="1">
+          <mxGeometry height="542" width="1066" x="30" y="1740" as="geometry" />
+        </mxCell>
+        <mxCell id="opt_edit_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[Médecin veut modifier le rapport]" vertex="1">
+          <mxGeometry height="16" width="280" x="100" y="1743" as="geometry" />
+        </mxCell>
+        <mxCell id="m_toggle_edit" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Clique «Modifier» → active mode édition des sections">
+          <mxGeometry relative="1" x="0.0875" y="15" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="79" y="1797.95" as="sourcePoint" />
+            <mxPoint x="239" y="1797.95" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_edit_sections" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Édite le rapport ">
+          <mxGeometry relative="1" x="-0.05" y="16" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="80" y="1840" as="sourcePoint" />
+            <mxPoint x="240" y="1840" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="opt_ai" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;fillColor=#fff2cc;strokeColor=#d6b656;" value="opt" vertex="1">
+          <mxGeometry height="371" width="1090" x="36" y="1889" as="geometry" />
+        </mxCell>
+        <mxCell id="opt_ai_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[Médecin clique «Assistant IA»]" vertex="1">
+          <mxGeometry height="16" width="280" x="100" y="1894" as="geometry" />
+        </mxCell>
+        <mxCell id="m_ai_click" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Clique «Assistant IA»">
+          <mxGeometry relative="1" x="-0.05" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="79" y="1929" as="sourcePoint" />
+            <mxPoint x="239" y="1929" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_analyse_api" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="POST /api/analyse/ {text: contenu_rapport}">
+          <mxGeometry relative="1" x="-0.0421" y="11" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="244" y="1958" as="sourcePoint" />
+            <mxPoint x="434" y="1958" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_ollama_call" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Analyse phrase par phrase (corrections orthographiques médicales, domaine neuroradiologie)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="432" y="1972" as="sourcePoint" />
+            <mxPoint x="1027" y="1972" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="alt_ollama" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;fillColor=#ffe6cc;strokeColor=#d79b00;" value="alt" vertex="1">
+          <mxGeometry height="251" width="1080" x="45" y="2000" as="geometry" />
+        </mxCell>
+        <mxCell id="alt_ollama_ok_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[Ollama disponible]" vertex="1">
+          <mxGeometry height="16" width="180" x="115" y="2003" as="geometry" />
+        </mxCell>
+        <mxCell id="m_ollama_resp" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=10;" value="{sentences:[{sentence_index, sentence, corrections:[{mot_original, suggestion, position}]}]}">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1026" y="2028" as="sourcePoint" />
+            <mxPoint x="431" y="2028" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_suggestions" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="Retourne suggestions de corrections">
+          <mxGeometry relative="1" x="0.0105" y="-13" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="430" y="2070" as="sourcePoint" />
+            <mxPoint x="240" y="2070" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_show_sugg" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="Affiche suggestions mot par mot (Accepter / Refuser)">
+          <mxGeometry relative="1" x="-0.3625" y="-17" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="239" y="2102" as="sourcePoint" />
+            <mxPoint x="79" y="2102" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="alt_ollama_sep" edge="1" parent="1" style="endArrow=none;strokeColor=#d79b00;dashed=1;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="50" y="2160" as="sourcePoint" />
+            <mxPoint x="1121" y="2160" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="alt_ollama_fail_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[Ollama indisponible / timeout]" vertex="1">
+          <mxGeometry height="16" width="250" x="48" y="2161" as="geometry" />
+        </mxCell>
+        <mxCell id="m_ollama_err" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;strokeColor=#cc0000;fontSize=11;" value="Affiche erreur : «Service IA indisponible»">
+          <mxGeometry relative="1" x="0.0875" y="17" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="241" y="2191" as="sourcePoint" />
+            <mxPoint x="81" y="2191" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_accept_corr" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Accepte ou refuse chaque suggestion → texte des sections mis à jour">
+          <mxGeometry relative="1" x="0.7625" y="17" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="81" y="2142" as="sourcePoint" />
+            <mxPoint x="241" y="2142" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s7_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=#f0f0ff;align=left;fontStyle=1;fontSize=11;fontColor=#333399;rounded=1;" value="ÉTAPE 7 — Sauvegarde finale du rapport" vertex="1">
+          <mxGeometry height="22" width="320" x="30" y="2291" as="geometry" />
+        </mxCell>
+        <mxCell id="alt_save" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;fillColor=#f8cecc;strokeColor=#b85450;" value="alt" vertex="1">
+          <mxGeometry height="450" width="930" x="30" y="2332" as="geometry" />
+        </mxCell>
+        <mxCell id="alt_save_draft_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[Enregistrer comme brouillon (draft)]" vertex="1">
+          <mxGeometry height="16" width="300" x="55" y="2332" as="geometry" />
+        </mxCell>
+        <mxCell id="m_click_draft" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Clique «Brouillon»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="80" y="2362" as="sourcePoint" />
+            <mxPoint x="240" y="2362" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_put_draft" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="PUT /api/reports/{id} {content, status:&#39;draft&#39;}">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="240" y="2382" as="sourcePoint" />
+            <mxPoint x="430" y="2382" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_draft_db" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Mise à jour en base">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="2400" as="sourcePoint" />
+            <mxPoint x="605" y="2400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_draft_confirm" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="«Brouillon sauvegardé»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="2418" as="sourcePoint" />
+            <mxPoint x="80" y="2418" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="alt_save_sep1" edge="1" parent="1" style="endArrow=none;strokeColor=#b85450;dashed=1;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="30" y="2440" as="sourcePoint" />
+            <mxPoint x="960" y="2440" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="alt_save_valid_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[Valider le rapport (validated)]" vertex="1">
+          <mxGeometry height="16" width="250" x="55" y="2440" as="geometry" />
+        </mxCell>
+        <mxCell id="m_click_valid" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Clique «Valider»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="80" y="2465" as="sourcePoint" />
+            <mxPoint x="240" y="2465" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_put_valid" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="PUT /api/reports/{id} {content, status:&#39;validated&#39;}">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="240" y="2485" as="sourcePoint" />
+            <mxPoint x="430" y="2485" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_accuracy" edge="1" parent="1" style="endArrow=block;endFill=1;edgeStyle=orthogonalEdgeStyle;fontSize=10;" value="Calcule accuracy Levenshtein (content vs originalContent STT)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="462" y="2505" />
+              <mxPoint x="462" y="2523" />
+            </Array>
+            <mxPoint x="430" y="2505" as="sourcePoint" />
+            <mxPoint x="430" y="2523" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_valid_db" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Mise à jour {status:&#39;validated&#39;, accuracy: 0.xx}">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="2545" as="sourcePoint" />
+            <mxPoint x="605" y="2545" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_valid_confirm" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="«Rapport validé» + score accuracy affiché">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="2565" as="sourcePoint" />
+            <mxPoint x="80" y="2565" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="alt_save_sep2" edge="1" parent="1" style="endArrow=none;strokeColor=#b85450;dashed=1;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="30" y="2587" as="sourcePoint" />
+            <mxPoint x="960" y="2587" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="alt_save_final_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[Enregistrer définitivement (saved)]" vertex="1">
+          <mxGeometry height="16" width="300" x="55" y="2587" as="geometry" />
+        </mxCell>
+        <mxCell id="m_click_save" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Clique «Enregistrer»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="80" y="2613" as="sourcePoint" />
+            <mxPoint x="240" y="2613" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_put_saved" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="PUT /api/reports/{id} {content, status:&#39;saved&#39;}">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="240" y="2633" as="sourcePoint" />
+            <mxPoint x="430" y="2633" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_saved_db" edge="1" parent="1" style="endArrow=block;endFill=1;fontSize=11;" value="Mise à jour {status:&#39;saved&#39;} + append CSV global (media/exports/transcriptions_globales.csv)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="2653" as="sourcePoint" />
+            <mxPoint x="605" y="2653" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_saved_confirm" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;fontSize=11;" value="«Rapport enregistré» → redirige vers historique des rapports">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="2673" as="sourcePoint" />
+            <mxPoint x="80" y="2673" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="opt_net_err" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;fillColor=#ffe6cc;strokeColor=#d79b00;" value="opt" vertex="1">
+          <mxGeometry height="42" width="640" x="50" y="2695" as="geometry" />
+        </mxCell>
+        <mxCell id="opt_net_err_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontStyle=3;" value="[Erreur réseau lors de la sauvegarde finale]" vertex="1">
+          <mxGeometry height="16" width="350" x="75" y="2695" as="geometry" />
+        </mxCell>
+        <mxCell id="m_net_err" edge="1" parent="1" style="endArrow=open;endFill=0;dashed=1;strokeColor=#cc0000;fontSize=11;" value="Affiche erreur + rapport reste éditable (pas de perte de données)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="240" y="2722" as="sourcePoint" />
+            <mxPoint x="80" y="2722" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="GGQq7Ff1hinUIbcgYhzD-2" edge="1" parent="1" style="endArrow=none;html=1;rounded=0;entryX=1.001;entryY=0.025;entryDx=0;entryDy=0;entryPerimeter=0;" target="alt_fmt" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="-16" y="208" as="sourcePoint" />
+            <mxPoint x="1041" y="204" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="GGQq7Ff1hinUIbcgYhzD-5" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;" value="opt" vertex="1">
+          <mxGeometry height="67" width="1053" x="36" y="1805" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

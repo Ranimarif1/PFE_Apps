@@ -2,11 +2,10 @@ import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getUsers, updateUserStatus, deleteUser, changeUserRole, revokeSenior, grantSenior, type BackendUserRecord } from "@/services/usersService";
-import { getPasswordResetRequestsApi, setTempPasswordApi, type PasswordResetRequest } from "@/services/authService";
 import { toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
 import {
-  Search, Check, X, Trash2, AlertTriangle, UserRoundCheck, Star, StarOff, ShieldCheck, KeyRound,
+  Search, Check, X, Trash2, AlertTriangle, UserRoundCheck, Star, StarOff, ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getStatusBadgeClass, getStatusLabel } from "@/styles/statusSystem";
@@ -26,9 +25,7 @@ export default function AdminMedecins() {
   const [confirmRevokeSenior, setConfirmRevokeSenior] = useState<BackendUserRecord | null>(null);
   const [grantSeniorTarget,   setGrantSeniorTarget]   = useState<BackendUserRecord | null>(null);
   const [grantSeniorCode,     setGrantSeniorCode]     = useState("");
-  const [promoteCode,     setPromoteCode]     = useState("");
-  const [tempPwdTarget,  setTempPwdTarget]  = useState<PasswordResetRequest | null>(null);
-  const [tempPwdValue,   setTempPwdValue]   = useState("");
+  const [promoteCode,         setPromoteCode]         = useState("");
 
   const { data: users = [] } = useQuery<BackendUserRecord[]>({ queryKey: ["users"], queryFn: getUsers });
   const { data: resetRequests = [] } = useQuery<PasswordResetRequest[]>({
@@ -417,7 +414,6 @@ export default function AdminMedecins() {
                   value={promoteCode}
                   onChange={e => setPromoteCode(e.target.value.replace(/\D/g, "").slice(0, 3))}
                   placeholder="Ex : 123"
-                  inputMode="numeric"
                   maxLength={3}
                   className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />

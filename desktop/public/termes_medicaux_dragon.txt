@@ -1,0 +1,787 @@
+abdomen
+abdominal
+abdominale
+abdominaux
+abdominales
+abcès
+aberration
+ablation
+abrasion
+absorption
+acanthose
+accident
+acné
+acoustique
+adénite
+adénome
+adénopathie
+adénopathies
+adhérence
+adipeux
+adipeuse
+adiposité
+adrénal
+adrénale
+afébrile
+agénésie
+agranulocytose
+albumine
+albuminurie
+alcalose
+alcool
+alcoolisme
+alexithymie
+allergie
+allergique
+alopécie
+altération
+alvéole
+alvéolaire
+alvéolite
+amaigrissement
+amygdale
+amygdalite
+anaérobie
+analgésie
+anamnèse
+anasarque
+anatomie
+anémie
+anévrisme
+anévrismes
+angiographie
+angiome
+angioplastie
+angle
+anomalie
+anomalies
+anosmie
+antécédents
+antérieur
+antérieure
+antérieurs
+antérieures
+antibiothérapie
+antibiotique
+antibiotiques
+anticoagulant
+anticoagulants
+antigène
+aorte
+aortique
+aortiques
+apophyse
+appendicite
+appendice
+arachnoïde
+arrhythmie
+artère
+artères
+artériographie
+artériole
+artériopathie
+artériosclérose
+artérite
+arthrite
+arthrose
+articulation
+articulaire
+ascite
+asphyxie
+asthme
+asthmatique
+atélectasie
+athérome
+athérosclérose
+atrophie
+atteinte
+atteintes
+auscultation
+autopsie
+axillaire
+azote
+bactérie
+bactéries
+bactériémie
+bactérien
+bactérienne
+bactériologie
+bassin
+bilatéral
+bilatérale
+bilatéraux
+bilatérales
+biopsie
+bloc
+brachial
+brachiale
+brachiaux
+brachiales
+bradycardie
+bronche
+bronches
+bronchite
+bronchopneumonie
+bronchospasme
+bursite
+caecum
+calcification
+calcifications
+calcul
+calculs
+canal
+canaux
+capsule
+capsulite
+carcinome
+cardiaque
+cardiomégalie
+cardiopathie
+cardiovasculaire
+cardiovasculaires
+caroncule
+cartilage
+caverneux
+caverne
+cavité
+céphalée
+céphalées
+cérébral
+cérébrale
+cérébraux
+cérébrales
+cerveau
+cervical
+cervicale
+cervicaux
+cervicales
+cholécystite
+cholélithiase
+choléstérol
+chondrome
+chorée
+cicatrice
+circulation
+cirrhose
+cloison
+coagulation
+collagène
+colonne
+compression
+condensation
+consolidation
+contusion
+coronaire
+coronaires
+cortex
+costal
+costale
+costaux
+costales
+côte
+côtes
+coxarthrose
+crâne
+crânien
+crânienne
+crâniens
+crâniennes
+cryptorchidie
+cyanose
+cyste
+dégénérescence
+densité
+déviation
+diaphragme
+diaphragmatique
+dilatation
+disque
+disques
+dissection
+distension
+doppler
+douleur
+douleurs
+duodenum
+dyspnée
+dystrophie
+échographie
+échogène
+échogénicité
+ecchymose
+œdème
+embolie
+embolies
+emphysème
+encéphalite
+encéphalopathie
+épanchement
+épanchements
+épaississement
+épididyme
+épiphyse
+épithélium
+extravasation
+examen
+examens
+exérèse
+fascia
+fibrose
+fibromatose
+fistule
+fléchisseur
+foie
+fracture
+fractures
+ganglion
+ganglions
+genou
+hernie
+herniation
+hippocampe
+hématome
+hématomes
+hémorragie
+hémorragies
+hépatique
+hépatiques
+hyperdense
+hypodense
+hypogastre
+hypothyroïdie
+infarctus
+inflammation
+injection
+ischémie
+ischémique
+kyste
+kystique
+lame
+lésion
+lésions
+ligament
+ligaments
+lymphadénopathie
+lymphome
+malformation
+masse
+masses
+médiastin
+méninge
+méninges
+métastase
+métastases
+myélopathie
+nécrose
+néoplasie
+nerf
+nerfs
+nodule
+nodules
+normale
+normaux
+normales
+oblique
+occlusion
+œsophage
+ostéoporose
+ostéome
+parenchyme
+pathologie
+péricarde
+péricardite
+péritonite
+plèvre
+pleurite
+pneumonie
+pneumothorax
+prostate
+pseudokyste
+rachis
+rate
+rehaussement
+rein
+reins
+rétropéritonéal
+spondylarthrite
+spondylodiscite
+sténose
+sténoses
+sternum
+structure
+structures
+surrénale
+surrénales
+tassement
+thorax
+thoracique
+thrombose
+thrombus
+thyroïde
+tumeur
+tumeurs
+uretère
+urinaire
+vasculaire
+vasculaires
+veine
+veines
+ventricule
+vertèbre
+vertèbres
+vésicule
+voie
+voies
+abdominopelvien
+abcédé
+adénomégalie
+amygdalien
+angiomateux
+articulaire
+articulaires
+atypique
+atypiques
+biopsique
+bulbaire
+calcifié
+calcifiée
+cervico-thoracique
+chondromatose
+colique
+compressif
+compressive
+congenital
+congénitale
+dégénératif
+dégénérative
+diaphragmatiques
+discal
+discale
+discaux
+discales
+disséminée
+douloureuse
+dysplasique
+dysplasiques
+étendue
+fibrotique
+ganglionnaire
+ganglionnaires
+hémorragique
+hémorragiques
+hypervascularisé
+infiltratif
+infiltrative
+intraveineux
+intraveineuse
+ischémiques
+jéjunum
+kystiques
+lobulaire
+lobulaires
+lymphatique
+lymphatiques
+malin
+maligne
+malins
+malignes
+médullaire
+médullaires
+mésothéliome
+métastatique
+métastatiques
+myélome
+nécrotique
+nécrotiques
+omentum
+ovaire
+ovaires
+paraduodénal
+parenchymateux
+parenchymateuse
+pariétal
+pariétale
+pariétaux
+pariétales
+péri-aortique
+péribronchique
+péricardique
+périhilaire
+périphérique
+périphériques
+postérieur
+postérieure
+postérieurs
+postérieures
+proximal
+proximale
+proximaux
+proximales
+pulmonaire
+pulmonaires
+radiculaire
+radiculaires
+rénal
+rénale
+rénaux
+rénales
+réticulaire
+réticulaires
+rétropéritonéale
+sacré
+sacrée
+seins
+sepsique
+sigmoïde
+sous-cutané
+sous-cutanée
+splénique
+spléniques
+strié
+striée
+structurel
+structurelle
+supra-rénale
+suspicion
+synovial
+synoviale
+synoviaux
+synoviales
+tendineux
+tendineuse
+thoraco-abdominal
+transverse
+tronculaire
+unilatéral
+unilatérale
+unilatéraux
+unilatérales
+urétéral
+urétérale
+utérin
+utérine
+veineux
+veineuse
+veineux
+ventriculaire
+ventriculaires
+vertébral
+vertébrale
+vertébraux
+vertébrales
+viscéral
+viscérale
+viscéraux
+viscérales
+IRM
+TDM
+scanner
+radiographie
+échogène
+hyperéchogène
+hypoéchogène
+anéchogène
+isoéchogène
+hypersignal
+hyposignal
+isosignal
+gadolinium
+produit de contraste
+injection intraveineuse
+séquence
+pondération
+diffusion
+perfusion
+spectroscopie
+angioIRM
+angioscanner
+coronarographie
+scintigraphie
+TEP
+PET-scan
+fluoroscopie
+mammographie
+ostéodensitométrie
+densitométrie
+endomètre
+endométriose
+endométrial
+myomètre
+myome
+fibrome
+fibromes
+ovulation
+gestation
+grossesse
+placenta
+amnios
+fœtus
+obstétrical
+obstétricale
+pubienne
+pubien
+utérus
+vagin
+cervix
+trompe
+trompes
+orchiépididymite
+épididymite
+testiculaire
+testiculaires
+prostatique
+prostatiques
+adénome prostate
+hyperplasie
+vésicules séminales
+aorte abdominale
+aorte thoracique
+anévrisme aortique
+dissection aortique
+coarctation
+insuffisance aortique
+régurgitation
+sténose aortique
+valve mitrale
+insuffisance mitrale
+sténose mitrale
+valve tricuspide
+valve pulmonaire
+péricardial
+péricardiale
+épanchement péricardique
+cardiopathie ischémique
+infarctus du myocarde
+revascularisation
+stent
+pontage
+cardiomyopathie
+cardiomégalie
+dilatation cardiaque
+hypertrophie ventriculaire
+fibrillation auriculaire
+tachycardie
+bradycardie
+bloc auriculo-ventriculaire
+arythmie
+extrasystole
+canal artériel
+foramen ovale
+septum interauriculaire
+septum interventriculaire
+communication inter-auriculaire
+communication inter-ventriculaire
+sinus coronaire
+tronc commun
+artère descendante antérieure
+artère circonflexe
+artère coronaire droite
+athérome coronarien
+plaque d'athérome
+calcifications coronariennes
+calcifications aortiques
+calcifications valvulaires
+artériopathie oblitérante
+artérite des membres inférieurs
+ischémie aiguë
+ischémie chronique
+thrombose veineuse profonde
+embolie pulmonaire
+hypertension artérielle pulmonaire
+hypertension portale
+varices œsophagiennes
+cirrhose hépatique
+hépatopathie
+stéatose hépatique
+cholestase
+dilatation biliaire
+lithiase biliaire
+vésicule biliaire
+cholécystite aiguë
+pancréas
+pancréatite
+pancréas normal
+dilatation canal de Wirsung
+tumeur pancréatique
+adénome hépatique
+hémangiome hépatique
+carcinome hépatocellulaire
+métastases hépatiques
+lésion focale hépatique
+abcès hépatique
+kyste hépatique
+hémochromatose
+appendicite aiguë
+iléus
+occlusion intestinale
+volvulus
+invagination
+diverticulose
+diverticulite
+hernie inguinale
+hernie hiatale
+hernie diaphragmatique
+masse rénale
+carcinome rénal
+angiomyolipome
+kyste rénal
+lithiase rénale
+hydronéphrose
+sténose de l'artère rénale
+néphropathie
+insuffisance rénale
+carcinome urothélial
+tumeur vésicale
+adénome surrénalien
+phéochromocytome
+corticosurrénale
+médullosurrénale
+adénomégalie ganglionnaire
+carcinome bronchique
+cancer du poumon
+adénocarcinome pulmonaire
+carcinome épidermoïde
+mésothéliome pleural
+épanchement pleural
+pneumothorax spontané
+emphysème pulmonaire
+bronchopneumopathie chronique obstructive
+asthme bronchique
+sarcoïdose
+fibrose pulmonaire
+fibrose pulmonaire idiopathique
+pneumopathie interstitielle
+pneumopathie infectieuse
+tuberculose pulmonaire
+embolie pulmonaire massive
+infarctus pulmonaire
+atélectasie lobaire
+atélectasie segmentaire
+consolidation pulmonaire
+syndrome de détresse respiratoire aiguë
+condensation alvéolaire
+foyer de condensation
+gliome
+glioblastome
+méningiome
+neurinome
+astrocytome
+oligodendrogliome
+craniopharyngiome
+lymphome cérébral
+métastases cérébrales
+accident vasculaire cérébral
+AVC ischémique
+AVC hémorragique
+hématome intracérébral
+hématome sous-dural
+hématome extradural
+hémorragie sous-arachnoïdienne
+anévrisme cérébral
+malformation artérioveineuse
+sténose carotidienne
+occlusion carotidienne
+dissection carotidienne
+sténose vertébrale
+encéphalomalacie
+leucoencéphalopathie
+hydrocéphalie
+atrophie cérébrale
+atrophie corticale
+démence vasculaire
+sclérose en plaques
+lésions démyélinisantes
+espace sous-arachnoïdien
+sillon cortical
+ventricules cérébraux
+quatrième ventricule
+troisième ventricule
+ventricules latéraux
+corne frontale
+corne occipitale
+corne temporale
+corps calleux
+capsule interne
+tronc cérébral
+cervelet
+protubérance
+bulbe rachidien
+hernie discale
+protrusion discale
+pincement discal
+spondylarthrose
+spondylodiscite infectieuse
+fracture vertébrale
+tassement vertébral
+scoliose
+cyphose
+lordose
+canal rachidien étroit
+sténose canalaire
+névralgie cervicobrachiale
+névralgie sciatique
+syndrome de la queue de cheval
+ostéolyse
+ostéocondensation
+fracture de fatigue
+cal osseux
+tumeur osseuse
+ostéosarcome
+chondrosarcome
+sarcome d'Ewing
+myélome multiple
+plasmocytome
+ostéomyélite
+arthrite septique
+bursite septique
+entorse
+rupture tendineuse
+rupture ligamentaire
+déchirure musculaire
+épanchement articulaire
+synovite
+chondropathie
+ostéochondrite
+nécrose avasculaire
+hanche
+genou
+cheville
+épaule
+coude
+poignet
+fosse
+fosses
+fièvre
+fièvres
+gauche
+fine
+biliaire
+biliaires
+branches
+branche
+sigmoïdite
+diverticulaire
+diverticulaires
+diverticules
+diverticule
+colique
+coliques
+infiltration
+infiltrations
+épanchement
+épanchements
+étendu
+étendue
+abdomino-pelvien
+abdomino-pelvienne
+abdomino-pelviens
+abdomino-pelviennes
+adénomégalie
+normodistendue
+normotendu
+perméable
+perméables
+décelable
+décelables
+endoluminale
+endoluminal

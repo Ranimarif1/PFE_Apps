@@ -1,0 +1,80 @@
+<mxfile host="app.diagrams.net" modified="2026-05-05T00:00:00.000Z" agent="Claude" version="21.0.0">
+  <diagram name="Architecture Frontend" id="frontend-arch">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Client box -->
+        <mxCell id="2" value="Client" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="60" y="310" width="100" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- React/Vite outer container -->
+        <mxCell id="3" value="React + Vite" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=14;horizontal=1;" vertex="1" parent="1">
+          <mxGeometry x="240" y="140" width="620" height="380" as="geometry" />
+        </mxCell>
+
+        <!-- Tailwind CSS / UI block -->
+        <mxCell id="4" value="UI — Tailwind CSS + shadcn/ui" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="290" y="190" width="220" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- TanStack Query block -->
+        <mxCell id="5" value="TanStack Query&#xa;(Appels API + Cache)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="560" y="190" width="220" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- React Context block -->
+        <mxCell id="6" value="React Context&#xa;(Auth · Thème · Recording)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="290" y="340" width="220" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Socket.io Client block -->
+        <mxCell id="7" value="Socket.io Client&#xa;(WebSocket temps réel)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="560" y="340" width="220" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- React Router -->
+        <mxCell id="8" value="React Router v6&#xa;(Navigation SPA)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=0;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="400" y="460" width="200" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Server box -->
+        <mxCell id="9" value="Serveur" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="960" y="310" width="100" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: Client → React/Vite -->
+        <mxCell id="10" edge="1" source="2" target="3" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+          <mxCell style="edgeStyle=orthogonalEdgeStyle;" />
+        </mxCell>
+
+        <!-- Arrow: TanStack Query → Server -->
+        <mxCell id="11" edge="1" source="5" target="9" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+          <mxCell style="edgeStyle=orthogonalEdgeStyle;" />
+        </mxCell>
+
+        <!-- Arrow: Socket.io → Server -->
+        <mxCell id="12" edge="1" source="7" target="9" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+          <mxCell style="edgeStyle=orthogonalEdgeStyle;" />
+        </mxCell>
+
+        <!-- Internal arrows -->
+        <mxCell id="13" edge="1" source="4" target="6" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="14" edge="1" source="4" target="5" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="15" edge="1" source="6" target="7" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

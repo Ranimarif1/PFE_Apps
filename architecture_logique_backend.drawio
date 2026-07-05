@@ -1,0 +1,113 @@
+<mxfile host="app.diagrams.net" agent="Claude">
+  <diagram id="arch-backend-logique" name="Architecture Logique Backend">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" parent="1" value="Architecture Logique Backend — ReportEase"
+          style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=18;fontStyle=1;fontColor=#1D3557;"
+          vertex="1">
+          <mxGeometry x="200" y="15" width="750" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="desktop" parent="1" value="&lt;b&gt;Desktop App&lt;/b&gt;"
+          style="rounded=1;html=1;fillColor=#1D3557;strokeColor=#457B9D;fontColor=#FFFFFF;fontSize=12;"
+          vertex="1">
+          <mxGeometry x="30" y="200" width="150" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="mobile" parent="1" value="&lt;b&gt;Mobile App&lt;/b&gt;"
+          style="rounded=1;html=1;fillColor=#457B9D;strokeColor=#1D3557;fontColor=#FFFFFF;fontSize=12;"
+          vertex="1">
+          <mxGeometry x="30" y="370" width="150" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="django" parent="1" value="&lt;b&gt;Django REST API&lt;/b&gt;&lt;br&gt;:8000"
+          style="rounded=1;html=1;fillColor=#FFF2CC;strokeColor=#D4AC0D;strokeWidth=2;fontSize=12;"
+          vertex="1">
+          <mxGeometry x="350" y="160" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="nodejs" parent="1" value="&lt;b&gt;Node.js + Socket.io&lt;/b&gt;&lt;br&gt;:4000"
+          style="rounded=1;html=1;fillColor=#DAE8FC;strokeColor=#2E86C1;strokeWidth=2;fontSize=12;"
+          vertex="1">
+          <mxGeometry x="350" y="360" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="mongodb" parent="1" value="&lt;b&gt;MongoDB&lt;/b&gt;&lt;br&gt;:27017"
+          style="rounded=1;html=1;fillColor=#D5F5E3;strokeColor=#229954;strokeWidth=2;fontSize=12;"
+          vertex="1">
+          <mxGeometry x="700" y="160" width="160" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="filesystem" parent="1" value="&lt;b&gt;Fichiers&lt;/b&gt;&lt;br&gt;media/"
+          style="rounded=1;html=1;fillColor=#FDEBD0;strokeColor=#E67E22;strokeWidth=2;fontSize=12;"
+          vertex="1">
+          <mxGeometry x="700" y="360" width="160" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="whisper" parent="1" value="&lt;b&gt;Whisper ONNX&lt;/b&gt;"
+          style="rounded=1;html=1;fillColor=#E8DAEF;strokeColor=#8E44AD;strokeWidth=2;fontSize=12;"
+          vertex="1">
+          <mxGeometry x="350" y="560" width="160" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ollama" parent="1" value="&lt;b&gt;Ollama LLM&lt;/b&gt;&lt;br&gt;:11434"
+          style="rounded=1;html=1;fillColor=#E8DAEF;strokeColor=#8E44AD;strokeWidth=2;fontSize=12;"
+          vertex="1">
+          <mxGeometry x="560" y="560" width="160" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" parent="1" value="REST HTTP"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#C0392B;strokeWidth=2;fontColor=#C0392B;fontSize=10;fontStyle=1;"
+          edge="1" source="desktop" target="django">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e2" parent="1" value="Socket.io"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#2E86C1;strokeWidth=2;fontColor=#2E86C1;fontSize=10;fontStyle=1;dashed=1;"
+          edge="1" source="desktop" target="nodejs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e3" parent="1" value="Socket.io"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#2E86C1;strokeWidth=2;fontColor=#2E86C1;fontSize=10;fontStyle=1;dashed=1;"
+          edge="1" source="mobile" target="nodejs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e4" parent="1" value="PyMongo"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#229954;strokeWidth=2;fontColor=#229954;fontSize=10;fontStyle=1;"
+          edge="1" source="django" target="mongodb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e5" parent="1" value="Fichiers"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#E67E22;strokeWidth=2;fontColor=#E67E22;fontSize=10;fontStyle=1;"
+          edge="1" source="django" target="filesystem">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e6" parent="1" value="ONNX"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#8E44AD;strokeWidth=1;fontColor=#8E44AD;fontSize=10;dashed=1;"
+          edge="1" source="django" target="whisper">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e7" parent="1" value="HTTP"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#8E44AD;strokeWidth=1;fontColor=#8E44AD;fontSize=10;dashed=1;"
+          edge="1" source="django" target="ollama">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e8" parent="1" value="Relay audio"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#2E86C1;strokeWidth=1;fontColor=#2E86C1;fontSize=10;dashed=1;"
+          edge="1" source="nodejs" target="desktop">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

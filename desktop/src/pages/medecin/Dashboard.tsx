@@ -159,7 +159,7 @@ export default function Dashboard() {
 
   return (
     <AppLayout title="Tableau de bord">
-      <div className="flex flex-col min-h-full max-w-full overflow-hidden -mt-4">
+      <div className="flex flex-col h-full max-w-full overflow-hidden">
 
       {/* ══ KPI strip ══════════════════════════════════════════════════════ */}
       <div className="grid grid-cols-2 md:grid-cols-4 divide-y divide-x divide-border border border-border rounded-xl bg-card overflow-hidden">
@@ -170,11 +170,11 @@ export default function Dashboard() {
       </div>
 
       {/* ══ Content ════════════════════════════════════════════════════════ */}
-      <div className="pt-3">
-        <div className="space-y-3">
+      <div className="pt-3 flex-1 min-h-0 flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col gap-3">
 
           {/* Row 1: chart + calendar */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 items-stretch">
+          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-5 gap-3 items-stretch">
               {/* Activity chart */}
               <div className="lg:col-span-3 bg-card border border-border rounded-xl flex flex-col">
                 <div className="flex items-center justify-between px-4 py-2.5 border-b border-border shrink-0">

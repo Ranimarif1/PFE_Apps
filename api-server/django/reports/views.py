@@ -59,7 +59,9 @@ def _user_can_access_report(user: CurrentUser, report: Dict[str, Any]) -> bool:
 def _resolve_senior(senior_id: Optional[str]) -> Dict[str, Optional[str]]:
     """Look up a senior user by id and return a snapshot to stamp on a report.
 
-    A valid senior is a validated admin, or a validated doctor flagged senior.
+    A valid senior is a validated senior admin, or a validated doctor flagged
+    senior. Admins who opted out of senior status (senior == False) don't count;
+    legacy admins without the flag still do.
     Returns empty fields when the id is missing or doesn't reference a senior.
     """
     empty = {"seniorId": None, "seniorCode": None, "seniorName": None}
@@ -72,7 +74,10 @@ def _resolve_senior(senior_id: Optional[str]) -> Dict[str, Optional[str]]:
     user = get_collection("users").find_one({"_id": oid})
     if not user or user.get("status") != "validated":
         return empty
-    is_senior = user.get("role") == "admin" or (user.get("role") == "doctor" and user.get("senior"))
+    is_senior = (
+        (user.get("role") == "admin" and user.get("senior") is not False)
+        or (user.get("role") == "doctor" and user.get("senior"))
+    )
     if not is_senior:
         return empty
     name = f"{user.get('prenom', '')} {user.get('nom', '')}".strip()
@@ -134,24 +139,23 @@ def _append_to_global_csv(report: Dict[str, Any], doctor: Dict[str, Any]) -> Non
     except Exception:
         dt_obj = dt.datetime.utcnow()
 
-    date_str = dt_obj.date().isoformat()
-    time_str = dt_obj.time().strftime("%H:%M:%S")
+    date_str = dt_obj.strftime("%d/%m/%Y %H:%M")
     sections = _extract_sections(report.get("content") or "")
 
     file_exists = csv_path.exists()
     with csv_path.open("a", newline="", encoding="utf-8-sig") as f:
-        writer = csvlib.writer(f, delimiter=";")
+        writer = csvlib.writer(f, delimiter="\t", quoting=csvlib.QUOTE_MINIMAL)
         if not file_exists:
-            writer.writerow(["id_exam", "doctor_name", "date", "time", "superviseur_senior", "code_senior", "indication", "technique", "resultat", "conclusion", "transcription"])
+            writer.writerow(["ID Examen", "Médecin", "Type", "Date", "Superviseur Senior", "Code Senior", "Indication", "Technique", "Resultat", "Conclusion", "Fichier"])
 
         writer.writerow(
             [
                 report.get("ID_Exam", ""),
                 doctor_name,
+                report.get("category", ""),
                 date_str,
-                time_str,
-                report.get("seniorName") or "—",
-                report.get("seniorCode") or "—",
+                report.get("seniorName") or "",
+                report.get("seniorCode") or "",
                 sections.get("indication", "").replace("\n", " ").strip(),
                 sections.get("technique", "").replace("\n", " ").strip(),
                 sections.get("resultat", "").replace("\n", " ").strip(),
@@ -191,7 +195,14 @@ def check_exam_id(request: HttpRequest) -> JsonResponse:
     if not exam_id:
         return JsonResponse({"detail": "Paramètre 'id' requis."}, status=400)
     reports_col = get_collection("reports")
-    taken = reports_col.find_one({"ID_Exam": exam_id}) is not None
+    exclude_id  = request.GET.get("exclude", "").strip()
+    query: Dict[str, Any] = {"ID_Exam": exam_id}
+    if exclude_id:
+        try:
+            query["_id"] = {"$ne": ObjectId(exclude_id)}
+        except Exception:
+            pass
+    taken = reports_col.find_one(query) is not None
     return JsonResponse({"available": not taken})
 
 
@@ -225,16 +236,15 @@ def list_or_create_reports(request: HttpRequest) -> JsonResponse:
                 # Regular doctors see only their own reports.
                 query = {"doctorId": user.id, **not_note}
         else:
-            # Admins see: their own reports + every report they supervise (any
-            # status, since admins are seniors by default) + "saved" reports
-            # from others.
+            # Admins see: their own reports + saved reports from anyone
+            # + validated/saved reports they supervise as senior.
             query = {
                 "$and": [
                     not_note,
                     {"$or": [
                         {"doctorId": user.id},
-                        {"seniorId": user.id},
-                        {"doctorId": {"$ne": user.id}, "status": "saved"},
+                        {"status": "saved"},
+                        {"seniorId": user.id, "status": {"$in": ["validated", "saved"]}},
                     ]},
                 ]
             }
@@ -257,9 +267,10 @@ def list_or_create_reports(request: HttpRequest) -> JsonResponse:
                             prenom = doc.get("prenom") or ""
                             doctor_cache[did] = f"{prenom} {nom}".strip() or doc.get("email", did)
                         else:
-                            doctor_cache[did] = did
+                            # Doctor deleted — use name stored in the report itself
+                            doctor_cache[did] = r.get("doctorName") or did
                     except Exception:
-                        doctor_cache[did] = did
+                        doctor_cache[did] = r.get("doctorName") or did
                 r["doctorName"] = doctor_cache[did]
                 r["isOwn"] = did == user.id
 
@@ -282,8 +293,8 @@ def list_or_create_reports(request: HttpRequest) -> JsonResponse:
             return JsonResponse({"detail": "Catégorie invalide."}, status=400)
 
         exam_id_str = str(exam_id)
-        if not re.fullmatch(r"\d{5,}", exam_id_str):
-            return JsonResponse({"detail": "L'identifiant d'examen doit être composé de chiffres commençant par l'année (ex : 20260001)."}, status=400)
+        if not re.fullmatch(r"\d{5,10}", exam_id_str):
+            return JsonResponse({"detail": "L'identifiant doit être numérique, commencer par l'année et avoir au maximum 6 chiffres après (ex : 20261, 2026999999)."}, status=400)
 
         utcnow = dt.datetime.utcnow()
         current_year = utcnow.year
@@ -326,8 +337,12 @@ def list_or_create_reports(request: HttpRequest) -> JsonResponse:
         senior = _resolve_senior(senior_id)
 
         now = utcnow.isoformat()
+        _prenom = (user.raw.get("prenom") or "").strip()
+        _nom = (user.raw.get("nom") or "").strip()
+        _doctor_name = f"{_prenom} {_nom}".strip() or user.email
         doc = {
             "doctorId": user.id,
+            "doctorName": _doctor_name,
             "ID_Exam": exam_id_str,
             "content": content,
             "originalContent": original_content,
@@ -437,7 +452,6 @@ def get_or_update_report(request: HttpRequest, report_id: str):
         if "pinnedForCorpus" in data:
             update_doc["pinnedForCorpus"] = bool(data["pinnedForCorpus"])
 
-
         # Compute accuracy when transitioning into "validated" for the first time
         # or when content changes while already validated.
         if new_status == "validated" and (old_status != "validated" or content != report.get("content")):
@@ -459,18 +473,6 @@ def get_or_update_report(request: HttpRequest, report_id: str):
         return JsonResponse(serialize_document(updated))
 
     if request.method == "DELETE":
-        # Unlink any associated audio so it reappears in the pending queue rather
-        # than pointing to a now-deleted report.
-        audio_id = report.get("audioId")
-        if audio_id:
-            try:
-                audios_col = get_collection("audios")
-                audios_col.update_one(
-                    {"_id": ObjectId(audio_id)},
-                    {"$unset": {"reportId": ""}},
-                )
-            except Exception:
-                pass
         reports_col.delete_one({"_id": oid})
         return JsonResponse({"detail": "Supprimé."}, status=200)
 

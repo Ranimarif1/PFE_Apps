@@ -5,7 +5,7 @@ import re
 from typing import Any, Dict
 
 from django.conf import settings
-from django.core.mail import EmailMessage
+
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -36,16 +36,5 @@ def send_contact(request: HttpRequest) -> JsonResponse:
         return JsonResponse({"detail": "Nom, email et message sont requis."}, status=400)
     if not _EMAIL_RE.match(email):
         return JsonResponse({"detail": "Adresse email invalide."}, status=400)
-
-    try:
-        EmailMessage(
-            subject=f"[ReportEase] Message de {name}",
-            body=f"Nom : {name}\nEmail : {email}\n\n{message}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[CONTACT_RECIPIENT],
-            reply_to=[email],
-        ).send(fail_silently=False)
-    except Exception as exc:
-        return JsonResponse({"detail": f"Erreur d'envoi de l'email : {exc}"}, status=500)
 
     return JsonResponse({"detail": "Message envoyé."}, status=201)

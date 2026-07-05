@@ -244,6 +244,22 @@
   opacity: 0.92;
 }
 
+.rp-btn--download {
+  width: 240px;
+  height: 52px;
+  border-radius: 26px;
+  background: linear-gradient(135deg, #4D7F67, #5fa07a);
+  color: #fff;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(77,127,103,.3);
+  cursor: pointer;
+}
+.rp-btn--download:hover {
+  opacity: 0.9;
+}
+
 /* ── Sent success state ──────────────────────────────────────── */
 .rp-sent {
   display: flex;

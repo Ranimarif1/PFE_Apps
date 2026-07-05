@@ -27,7 +27,7 @@ function getAllowedYears(): Set<number> {
 }
 
 function isValidExamId(id: string): boolean {
-  if (!/^\d{5,}$/.test(id)) return false;
+  if (!/^\d{5,10}$/.test(id)) return false;
   return getAllowedYears().has(parseInt(id.slice(0, 4), 10));
 }
 
@@ -212,7 +212,7 @@ export default function NouveauRapport() {
                   <label className="text-sm font-medium text-foreground mb-2 block">ID Exam</label>
                   <input
                     value={examId}
-                    onChange={e => setExamId(e.target.value.replace(/\D/g, "").slice(0, 12))}
+                    onChange={e => setExamId(e.target.value.replace(/\D/g, "").slice(0, 10))}
                     inputMode="numeric"
                     className={cn(
                       "w-full px-4 py-3 text-foreground font-mono focus:outline-none focus:ring-2 transition-all",

@@ -87,6 +87,28 @@ function structureContent(text: string, category?: ReportCategory | null): strin
   let resultat    = extract(rMatch, nextAfter(rIdx, cIdx));
   let conclusion  = extract(cMatch, -1);
 
+  // ── Auto-split Indication → Indication + Résultat ─────────────────────────
+  // Two cases land here:
+  // 1. Doctor never said "Résultat" → everything before Conclusion is in indication
+  // 2. Doctor said "Résultat" AFTER the findings (as a transition) → indication
+  //    contains all findings, résultat is empty
+  // Fix: if indication is multi-line and résultat is empty, split at first line.
+  if (indication && !resultat) {
+    const newlineIdx  = indication.search(/\n/);
+    const sentenceIdx = indication.search(/\.\s+[A-ZÀ-Ü]/);
+    const splitAt = newlineIdx > 0 ? newlineIdx
+                  : sentenceIdx > 0 ? sentenceIdx + 1
+                  : -1;
+    if (splitAt > 0 && splitAt < indication.length - 2) {
+      const firstPart = indication.slice(0, splitAt).trim();
+      const restPart  = indication.slice(splitAt).replace(/^[\s.]+/, "").trim();
+      if (restPart) {
+        indication = firstPart;
+        resultat   = restPart;
+      }
+    }
+  }
+
   // ── Safety net ────────────────────────────────────────────────────────────
   // Verify no text was silently lost. Compare total captured characters
   // against the original. Any significant orphaned text is appended to
@@ -402,8 +424,10 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
     socket.on("session:status", ({ mobileConnected: mc }: { mobileConnected: boolean }) => setMobileConnected(mc));
     socket.on("mobile:connected",    () => setMobileConnected(true));
     socket.on("mobile:disconnected", () => setMobileConnected(false));
-    socket.on("recording:start",     () => { setIsRecording(true); startTimer(); });
-    socket.on("recording:stop",      () => { setIsRecording(false); stopTimer(); });
+    socket.on("recording:start",  () => { setIsRecording(true);  setIsPaused(false); setSeconds(0); startTimer(); });
+    socket.on("recording:stop",   () => { setIsRecording(false); setIsPaused(false); stopTimer(); });
+    socket.on("recording:pause",  () => { setIsRecording(false); setIsPaused(true);  stopTimer(); });
+    socket.on("recording:resume", () => { setIsRecording(true);  setIsPaused(false); startTimer(); });
     socket.on("audio:complete", ({ audio, mimeType }: { audio: ArrayBuffer; mimeType: string }) => {
       const blob = new Blob([audio], { type: mimeType });
       setAudioReceived(true);

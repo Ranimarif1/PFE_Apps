@@ -1,0 +1,104 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[french]{babel}
+\usepackage[margin=1in]{geometry}
+\usepackage{enumitem}
+
+\begin{document}
+
+\section*{Cas d'utilisation : Inscrire un utilisateur}
+
+\begin{description}[leftmargin=4.2cm, style=nextline]
+    \item[Titre de cas d'utilisation] Inscrire un utilisateur
+
+    \item[Acteurs]
+    \begin{itemize}[leftmargin=*, nosep]
+        \item \textbf{Acteur principal} : Nouvel utilisateur (soumet la demande)
+        \item \textbf{Acteur secondaire} : Administrateur ou Administrateur IT
+              (traite la demande)
+    \end{itemize}
+
+    \item[Description] Tout nouvel utilisateur (Médecin, Administrateur ou
+    Administrateur IT) soumet une demande d'inscription. Si les champs saisis
+    sont conformes, la demande est enregistrée et transmise à l'Administrateur
+    ou à l'Administrateur IT, qui peut l'approuver, la refuser ou la supprimer.
+    Ce processus est identique quel que soit le rôle du compte à créer.
+
+    \item[Préconditions]
+    \begin{itemize}[leftmargin=*, nosep]
+        \item Le système est en cours d'exécution.
+        \item L'Administrateur ou l'Administrateur IT est authentifié pour
+              traiter les demandes en attente.
+    \end{itemize}
+
+    \item[Scénario principal]
+    \begin{enumerate}[leftmargin=*, topsep=0pt, itemsep=0pt]
+        \item Le nouvel utilisateur accède au formulaire d'inscription.
+        \item Le système affiche le formulaire.
+        \item L'utilisateur remplit les champs (nom, prénom, identifiant,
+              mot de passe, rôle) et soumet le formulaire.
+    \end{enumerate}
+
+    \item[Alt : champs conformes]
+    \begin{enumerate}[leftmargin=*, topsep=0pt, itemsep=0pt, start=4]
+        \item Le système envoie la demande au serveur.
+        \item Le serveur enregistre la demande avec le statut «~en attente~».
+        \item Le serveur confirme l'enregistrement.
+        \item Le système confirme la transmission à l'interface.
+        \item L'interface notifie l'utilisateur~:
+              «~Demande en attente d'approbation~».
+    \end{enumerate}
+
+    L'Administrateur ou l'Administrateur IT consulte les demandes en attente
+    et choisit l'une des trois actions suivantes~:
+
+    \textbf{Alt : Admin approuve la demande}
+    \begin{itemize}[leftmargin=*, nosep]
+        \item Le système crée le compte utilisateur avec le rôle demandé.
+        \item Le serveur enregistre le compte dans la base de données.
+        \item Le système confirme~: «~Compte créé~».
+    \end{itemize}
+
+    \textbf{Alt : Admin refuse la demande}
+    \begin{itemize}[leftmargin=*, nosep]
+        \item Le système passe la demande au statut «~refusée~».
+    \end{itemize}
+
+    \textbf{Alt : Admin supprime la demande}
+    \begin{itemize}[leftmargin=*, nosep]
+        \item L'Administrateur demande la suppression.
+        \item Le serveur supprime définitivement la demande de la base de données.
+    \end{itemize}
+
+    \item[Alt : champs non conformes]
+    \begin{itemize}[leftmargin=*, nosep]
+        \item Si un champ est vide, si l'identifiant contient des caractères
+              non autorisés, ou si le mot de passe ne respecte pas les règles
+              de complexité~: le système met en évidence les erreurs
+              et bloque la soumission.
+    \end{itemize}
+
+    \item[Postconditions]
+    \begin{itemize}[leftmargin=*, nosep]
+        \item \textbf{Approbation}~: le compte est actif et l'utilisateur peut
+              s'authentifier.
+        \item \textbf{Refus}~: la demande est archivée avec le statut
+              «~refusée~».
+        \item \textbf{Suppression}~: la demande est définitivement effacée
+              de la base de données.
+        \item \textbf{Champs non conformes}~: aucune demande n'est créée~;
+              l'utilisateur corrige et ressoumet.
+    \end{itemize}
+
+    \item[Exceptions]
+    \textbf{Exception : Identifiant déjà utilisé}
+    \begin{itemize}[leftmargin=*, nosep]
+        \item Si l'identifiant est déjà attribué à un compte existant ou à
+              une demande en attente, le système affiche
+              «~Cet identifiant est déjà utilisé~» et bloque la soumission.
+    \end{itemize}
+\end{description}
+
+\end{document}

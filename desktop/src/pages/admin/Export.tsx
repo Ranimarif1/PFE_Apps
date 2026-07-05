@@ -84,10 +84,13 @@ export default function AdminExport() {
           `pdfs/${pdfName}`,
         ];
       });
-      const csv = [header, ...rows]
-        .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";"))
-        .join("\n");
-      root.file("rapports.csv", String.fromCharCode(0xFEFF) + csv);
+      const xmlEscape = (s: string) => String(s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      const toRow = (cells: string[]) =>
+        `<Row>${cells.map(v => `<Cell><Data ss:Type="String">${xmlEscape(v)}</Data></Cell>`).join("")}</Row>`;
+      const xls = `<?xml version="1.0" encoding="UTF-8"?>\n<?mso-application progid="Excel.Sheet"?>\n<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Rapports"><Table>${toRow(header)}${rows.map(toRow).join("")}</Table></Worksheet></Workbook>`;
+      root.file("rapports.xls", "﻿" + xls);
 
       // index.html — the clickable view recipients will use
       root.file("index.html", buildIndexHtml(enriched, exportStart, exportEnd));

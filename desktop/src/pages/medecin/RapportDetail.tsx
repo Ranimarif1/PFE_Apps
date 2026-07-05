@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
-import { getReport, createReport, updateReport, deleteReport } from "@/services/reportsService";
+import { getReport, createReport, updateReport, deleteReport, checkExamId } from "@/services/reportsService";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle, Edit3, Save, FileText, Check, X, Loader2, ArrowLeft, Pencil, Wand2, CloudUpload, AlertTriangle, Trash2, ClipboardCopy, RotateCcw, Star } from "lucide-react";
 import {
@@ -63,10 +63,14 @@ export default function RapportDetail() {
   const [technique,   setTechnique]   = useState(initialParsed.technique);
   const [resultat,    setResultat]    = useState(initialParsed.resultat);
   const [conclusion,  setConclusion]  = useState(initialParsed.conclusion);
-  const [examId,      setExamId]      = useState(fromState?.ID_Exam || "");
-  const [editingId,   setEditingId]   = useState(false);
-  const [examIdInput, setExamIdInput] = useState(fromState?.ID_Exam || "");
-  const [examIdError, setExamIdError] = useState("");
+  const [examId,          setExamId]          = useState(fromState?.ID_Exam || "");
+  const [editingId,       setEditingId]       = useState(false);
+  const [examIdInput,     setExamIdInput]     = useState(fromState?.ID_Exam || "");
+  const [examIdError,     setExamIdError]     = useState("");
+  const [examIdChecking,  setExamIdChecking]  = useState(false);
+  const [examIdAvailable, setExamIdAvailable] = useState<boolean | null>(null);
+  const [examIdSaving,    setExamIdSaving]    = useState(false);
+  const examIdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [status,      setStatus]      = useState<string>("draft");
   const [createdAt,   setCreatedAt]   = useState<string | null>(null);
   const [category,    setCategory]    = useState<ReportCategory | "">(fromState?.category ?? "");
@@ -117,11 +121,11 @@ export default function RapportDetail() {
     if (sections.length === 0) return;
 
     const win = window.open("", "ris-copy",
-      "width=300,height=" + (80 + sections.length * 54) + ",top=80,left=80,toolbar=no,menubar=no,location=no,status=no,scrollbars=no,resizable=no");
+      "width=300,height=" + (72 + sections.length * 52) + ",top=80,left=80,toolbar=no,menubar=no,location=no,status=no,scrollbars=no,resizable=no");
     if (!win) return;
     risWinRef.current = win;
 
-    // Expose copy helper on the popup's window
+
     (win as Window & { __risCopy: (i: number) => void }).__risCopy = (i: number) => {
       const text = sections[i].text;
       const ta = win.document.createElement("textarea");
@@ -131,18 +135,13 @@ export default function RapportDetail() {
       ta.focus(); ta.select();
       win.document.execCommand("copy");
       win.document.body.removeChild(ta);
-      // Visual feedback
       const btn = win.document.getElementById("btn-" + i);
       if (btn) {
         btn.textContent = "✓ Copié";
-        (btn as HTMLButtonElement).style.background = "rgba(52,211,153,0.20)";
-        (btn as HTMLButtonElement).style.color = "#34d399";
-        (btn as HTMLButtonElement).style.borderColor = "rgba(52,211,153,0.40)";
+        (btn as HTMLButtonElement).classList.add("copied");
         setTimeout(() => {
           btn.textContent = "Copier";
-          (btn as HTMLButtonElement).style.background = "rgba(74,123,190,0.20)";
-          (btn as HTMLButtonElement).style.color = "#6B97D0";
-          (btn as HTMLButtonElement).style.borderColor = "rgba(74,123,190,0.30)";
+          (btn as HTMLButtonElement).classList.remove("copied");
         }, 2000);
       }
     };
@@ -150,36 +149,34 @@ export default function RapportDetail() {
     win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
       <title>Copier vers RIS</title>
       <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #0D1119; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-        .header { display:flex; align-items:center; justify-content:space-between;
-                  padding: 10px 14px 8px; border-bottom: 1px solid rgba(255,255,255,0.07); }
-        .header-title { font-size:12px; font-weight:700; color:#f1f5f9; letter-spacing:.02em; }
-        .header-sub { font-size:10px; color:#475569; margin-top:1px; }
-        .rows { padding: 8px; display:flex; flex-direction:column; gap:6px; }
-        .row { display:flex; align-items:center; justify-content:space-between;
-               background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
-               border-radius: 10px; padding: 8px 10px; }
-        .row-label { font-size:12px; font-weight:600; color:#cbd5e1; }
-        .copy-btn { font-size:11px; font-weight:600; padding: 5px 12px; border-radius:7px;
-                    border: 1px solid rgba(74,123,190,0.30); background: rgba(74,123,190,0.20);
-                    color:#6B97D0; cursor:pointer; transition: all .15s; white-space:nowrap; }
-        .copy-btn:hover { background: rgba(74,123,190,0.35); color:#93b8e0; }
+        * { box-sizing:border-box; margin:0; padding:0; }
+        body { background:#111827; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; color:#f9fafb; }
+        .header { padding:12px 14px; border-bottom:1px solid #1f2937; }
+        .header-title { font-size:13px; font-weight:600; color:#f9fafb; }
+        .header-sub { font-size:11px; color:#6b7280; margin-top:2px; }
+        .rows { padding:8px; display:flex; flex-direction:column; gap:4px; }
+        .row { display:flex; align-items:center; justify-content:space-between; padding:8px 10px; border-radius:8px; }
+        .row:hover { background:#1f2937; }
+        .row-label { font-size:12px; font-weight:500; color:#d1d5db; }
+        .copy-btn {
+          font-size:11px; font-weight:500; padding:4px 12px; border-radius:6px;
+          border:1px solid #374151; background:#1f2937; color:#9ca3af;
+          cursor:pointer; transition:background .1s, color .1s;
+        }
+        .copy-btn:hover { background:#374151; color:#f9fafb; }
+        .copy-btn.copied { background:#052e16; border-color:#166534; color:#4ade80; }
       </style>
     </head><body>
       <div class="header">
-        <div>
-          <div class="header-title">📋 Copier vers RIS</div>
-          <div class="header-sub">Cliquez sur une section pour la copier</div>
-        </div>
+        <div class="header-title">Copier vers RIS</div>
+        <div class="header-sub">Cliquez sur une section pour la copier</div>
       </div>
       <div class="rows">
         ${sections.map((s, i) => `
           <div class="row">
             <span class="row-label">${s.label}</span>
             <button id="btn-${i}" class="copy-btn" onclick="__risCopy(${i})">Copier</button>
-          </div>
-        `).join("")}
+          </div>`).join("")}
       </div>
     </body></html>`);
     win.document.close();
@@ -480,14 +477,6 @@ export default function RapportDetail() {
       </AlertDialog>
 
       <div className="max-w-6xl mx-auto">
-        {!savedAsValidated && (
-          <button
-            onClick={() => fromState?._restore ? navigate("/rapport/nouveau", { state: { _restore: fromState._restore } }) : navigate(-1)}
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
-          >
-            <ArrowLeft size={16} /> Retour
-          </button>
-        )}
 
         {savedAsValidated ? (
           <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center py-16">
@@ -540,46 +529,77 @@ export default function RapportDetail() {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 text-sm">
                 <div>
                   <p className="text-muted-foreground text-xs mb-0.5">ID Exam</p>
-                  {(isNew || status === "draft") && editingId ? (
-                    <div className="flex items-center gap-1">
-                      <input
-                        autoFocus
-                        value={examIdInput}
-                        onChange={e => {
-                          const v = e.target.value;
-                          setExamIdInput(v);
-                          setExamIdError(/^\d*$/.test(v) ? "" : "Chiffres uniquement");
-                        }}
-                        className="font-mono font-bold text-foreground bg-background border border-border rounded px-1.5 py-0.5 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                      />
-                      <button
-                        onClick={() => {
-                          if (examIdError) return;
-                          setExamId(examIdInput);
-                          setEditingId(false);
-                        }}
-                        className="text-success hover:text-success/80 transition-colors"
-                        title="Confirmer"
-                      ><Check size={13} /></button>
-                      <button
-                        onClick={() => { setExamIdInput(examId); setExamIdError(""); setEditingId(false); }}
-                        className="text-muted-foreground hover:text-foreground transition-colors"
-                        title="Annuler"
-                      ><X size={13} /></button>
+                  {editingId ? (
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-1">
+                        <input
+                          autoFocus
+                          value={examIdInput}
+                          onChange={e => {
+                            const v = e.target.value;
+                            setExamIdInput(v);
+                            setExamIdAvailable(null);
+                            if (!/^\d*$/.test(v)) { setExamIdError("Chiffres uniquement"); return; }
+                            setExamIdError("");
+                            if (!v || v === examId) return;
+                            if (examIdTimerRef.current) clearTimeout(examIdTimerRef.current);
+                            setExamIdChecking(true);
+                            examIdTimerRef.current = setTimeout(async () => {
+                              try {
+                                const { available } = await checkExamId(v, isNew ? undefined : id);
+                                setExamIdAvailable(available);
+                                if (!available) setExamIdError("ID déjà utilisé");
+                              } finally { setExamIdChecking(false); }
+                            }, 400);
+                          }}
+                          className="font-mono font-bold text-foreground bg-background border border-border rounded px-1.5 py-0.5 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        />
+                        {examIdChecking && <Loader2 size={12} className="animate-spin text-muted-foreground" />}
+                        {!examIdChecking && examIdAvailable === true && examIdInput !== examId && <Check size={12} className="text-success" />}
+                        <button
+                          disabled={!!examIdError || examIdChecking || examIdAvailable === false || examIdSaving}
+                          onClick={async () => {
+                            if (examIdError || examIdChecking || examIdAvailable === false) return;
+                            if (examIdInput === examId) { setEditingId(false); return; }
+                            if (!isNew && id) {
+                              setExamIdSaving(true);
+                              try {
+                                await updateReport(id, { ID_Exam: examIdInput });
+                                setExamId(examIdInput);
+                                queryClient.invalidateQueries({ queryKey: ["reports"] });
+                              } catch (err: unknown) {
+                                setExamIdError(err instanceof Error ? err.message : "Erreur lors de la mise à jour");
+                                setExamIdSaving(false);
+                                return;
+                              }
+                              setExamIdSaving(false);
+                            } else {
+                              setExamId(examIdInput);
+                            }
+                            setEditingId(false);
+                            setExamIdAvailable(null);
+                          }}
+                          className="text-success hover:text-success/80 transition-colors disabled:opacity-40"
+                          title="Confirmer"
+                        >{examIdSaving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}</button>
+                        <button
+                          onClick={() => { setExamIdInput(examId); setExamIdError(""); setExamIdAvailable(null); setEditingId(false); }}
+                          className="text-muted-foreground hover:text-foreground transition-colors"
+                          title="Annuler"
+                        ><X size={13} /></button>
+                      </div>
+                      {examIdError && <p className="text-destructive text-[10px]">{examIdError}</p>}
                     </div>
                   ) : (
                     <div className="flex items-center gap-1 group">
                       <p className="font-mono font-bold text-foreground">{examId || "—"}</p>
-                      {(isNew || status === "draft") && (
-                        <button
-                          onClick={() => { setExamIdInput(examId); setExamIdError(""); setEditingId(true); }}
-                          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-all"
-                          title="Modifier l'ID Exam"
-                        ><Pencil size={11} /></button>
-                      )}
+                      <button
+                        onClick={() => { setExamIdInput(examId); setExamIdError(""); setExamIdAvailable(null); setEditingId(true); }}
+                        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-all"
+                        title="Modifier l'ID Exam"
+                      ><Pencil size={11} /></button>
                     </div>
                   )}
-                  {examIdError && <p className="text-destructive text-[10px] mt-0.5">{examIdError}</p>}
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs mb-0.5">Type d'examen</p>
