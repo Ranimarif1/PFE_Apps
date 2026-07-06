@@ -88,6 +88,39 @@ def _resolve_senior(senior_id: Optional[str]) -> Dict[str, Optional[str]]:
     }
 
 
+def _archive_version(report: Dict[str, Any], actor_id: str, actor_name: str, reason: str) -> None:
+    """Save an immutable snapshot of a report into the `report_versions` collection.
+
+    Called on creation and on every status change so the FULL content/state at
+    each milestone is preserved (medico-legal traceability + archive). Failures
+    never block the main flow.
+
+    reason: "created" | "status:draft" | "status:validated" | "status:saved"
+    """
+    try:
+        versions = get_collection("report_versions")
+        rid = str(report.get("_id"))
+        version_no = versions.count_documents({"reportId": rid}) + 1
+        versions.insert_one({
+            "reportId": rid,
+            "version": version_no,
+            "reason": reason,
+            "ID_Exam": report.get("ID_Exam"),
+            "content": report.get("content", ""),
+            "originalContent": report.get("originalContent"),
+            "status": report.get("status"),
+            "category": report.get("category"),
+            "accuracy": report.get("accuracy"),
+            "doctorId": report.get("doctorId"),
+            "doctorName": report.get("doctorName"),
+            "archivedBy": actor_id,
+            "archivedByName": actor_name,
+            "archivedAt": dt.datetime.utcnow().isoformat(),
+        })
+    except Exception as exc:
+        print(f"[warn] _archive_version failed: {exc}", file=sys.stderr)
+
+
 def _extract_sections(content: str) -> Dict[str, str]:
     """Extract indication, technique, resultat, conclusion from report content.
     Handles both multi-line (Indication:\\n...) and single-line (Indication: ... Resultat: ...) formats.
@@ -354,17 +387,27 @@ def list_or_create_reports(request: HttpRequest) -> JsonResponse:
             "seniorName": senior["seniorName"],
             "createdAt": now,
             "updatedAt": now,
+            # Append-only audit trail of status transitions — medico-legal
+            # traceability: who put the report in which state, and when.
+            "history": [{"status": status, "at": now, "by": user.id, "byName": _doctor_name}],
         }
         # Track when the report first reaches a finalized state (used by lifecycle)
         if status in {"saved", "validated"}:
             doc["finalizedAt"] = now
         # If the report is created directly as "validated", compute accuracy now
         if status == "validated":
+            # Stamp the validating doctor — this is the act that engages responsibility.
+            doc["validatedAt"] = now
+            doc["validatedBy"] = user.id
+            doc["validatedByName"] = _doctor_name
             acc = _compute_accuracy(original_content, content)
             if acc is not None:
                 doc["accuracy"] = acc
         inserted = reports_col.insert_one(doc)
         created = reports_col.find_one({"_id": inserted.inserted_id})
+
+        # Archive the initial version of the report.
+        _archive_version(created, user.id, _doctor_name, "created")
 
         # Link audio → report
         if audio_id:
@@ -460,8 +503,31 @@ def get_or_update_report(request: HttpRequest, report_id: str):
             if acc is not None:
                 update_doc["accuracy"] = acc
 
-        reports_col.update_one({"_id": oid}, {"$set": update_doc})
+        # ── Audit trail ──────────────────────────────────────────────────────
+        _u_prenom = (user.raw.get("prenom") or "").strip()
+        _u_nom = (user.raw.get("nom") or "").strip()
+        actor_name = f"{_u_prenom} {_u_nom}".strip() or user.email
+
+        # Stamp who/when on every transition INTO validated — a re-validation
+        # after a revert is a NEW act of responsibility, so we refresh it.
+        if new_status == "validated" and old_status != "validated":
+            update_doc["validatedAt"] = now_iso
+            update_doc["validatedBy"] = user.id
+            update_doc["validatedByName"] = actor_name
+
+        mongo_update: Dict[str, Any] = {"$set": update_doc}
+        # Append-only: never overwrite past transitions, including reverts to draft.
+        if new_status != old_status:
+            mongo_update["$push"] = {
+                "history": {"status": new_status, "at": now_iso, "by": user.id, "byName": actor_name}
+            }
+
+        reports_col.update_one({"_id": oid}, mongo_update)
         updated = reports_col.find_one({"_id": oid})
+
+        # Archive a full snapshot whenever the status changed.
+        if new_status != old_status:
+            _archive_version(updated, user.id, actor_name, f"status:{new_status}")
 
         # When report is saved (final archival), append to CSV.
         if updated and updated.get("status") == "saved":
@@ -477,6 +543,33 @@ def get_or_update_report(request: HttpRequest, report_id: str):
         return JsonResponse({"detail": "Supprimé."}, status=200)
 
     return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+
+
+@csrf_exempt
+@jwt_required(roles={"doctor", "admin", "adminIT"})
+def report_versions(request: HttpRequest, report_id: str):
+    """GET /api/reports/<id>/versions — archived snapshots of a report, newest first."""
+    if request.method != "GET":
+        return JsonResponse({"detail": "Méthode non autorisée."}, status=405)
+
+    reports_col = get_collection("reports")
+    user: CurrentUser = request.user  # type: ignore[assignment]
+
+    try:
+        oid = ObjectId(report_id)
+    except Exception:
+        return JsonResponse({"detail": "Identifiant de rapport invalide."}, status=400)
+
+    report = reports_col.find_one({"_id": oid})
+    if not report:
+        return JsonResponse({"detail": "Rapport introuvable."}, status=404)
+    if not _user_can_access_report(user, report):
+        return JsonResponse({"detail": "Accès refusé."}, status=403)
+
+    versions = list(
+        get_collection("report_versions").find({"reportId": report_id}).sort("version", -1)
+    )
+    return JsonResponse({"results": [serialize_document(v) for v in versions]}, safe=False)
 
 
 # ──────────────────────────────────────────────────────────────────────────────

@@ -159,10 +159,89 @@ def _transcribe_hf(audio_path: str) -> str:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# Backend C — ONNX Runtime (optimum) — local CPU inference
+# ══════════════════════════════════════════════════════════════════════════════
+# Set WHISPER_ONNX_MODEL to a directory produced by:
+#   pip install "optimum[onnxruntime]"
+#   optimum-cli export onnx --model amnbk/whisper-medium-medical-fr-v2 <dir>
+# (Optionally quantize the .onnx files to int8 for faster CPU inference.)
+
+ONNX_MODEL_PATH = os.getenv("WHISPER_ONNX_MODEL", "")
+
+_onnx_proc  = None
+_onnx_model = None
+
+
+def _load_onnx():
+    global _onnx_proc, _onnx_model
+    if _onnx_model is not None:
+        return _onnx_proc, _onnx_model
+    from optimum.onnxruntime import ORTModelForSpeechSeq2Seq
+    from transformers import WhisperProcessor
+    _onnx_proc  = WhisperProcessor.from_pretrained(ONNX_MODEL_PATH)
+    _onnx_model = ORTModelForSpeechSeq2Seq.from_pretrained(ONNX_MODEL_PATH)
+    return _onnx_proc, _onnx_model
+
+
+def _transcribe_onnx(audio_path: str) -> str:
+    import av
+    import librosa
+
+    _MAX_CHUNK = 28 * SAMPLE_RATE
+    _MIN_CHUNK = SAMPLE_RATE // 2
+
+    def _load_audio(path):
+        container = av.open(path)
+        resampler = av.AudioResampler(format="fltp", layout="mono", rate=SAMPLE_RATE)
+        chunks = []
+        for frame in container.decode(audio=0):
+            for out in resampler.resample(frame):
+                chunks.append(out.to_ndarray()[0])
+        for out in resampler.resample(None):
+            chunks.append(out.to_ndarray()[0])
+        container.close()
+        return np.concatenate(chunks).astype(np.float32) if chunks else np.zeros(SAMPLE_RATE, dtype=np.float32)
+
+    def _build_chunks(audio):
+        intervals = librosa.effects.split(audio, top_db=35, frame_length=2048, hop_length=512)
+        if not len(intervals):
+            return [audio] if len(audio) >= _MIN_CHUNK else []
+        result, s, e = [], int(intervals[0][0]), int(intervals[0][1])
+        for iv_s, iv_e in intervals[1:]:
+            iv_s, iv_e = int(iv_s), int(iv_e)
+            if iv_e - s <= _MAX_CHUNK:
+                e = iv_e
+            else:
+                seg = audio[s:e]
+                if len(seg) >= _MIN_CHUNK: result.append(seg)
+                s, e = iv_s, iv_e
+        seg = audio[s:e]
+        if len(seg) >= _MIN_CHUNK: result.append(seg)
+        return result
+
+    proc, mdl = _load_onnx()
+    audio  = _load_audio(audio_path)
+    chunks = _build_chunks(audio)
+    if not chunks:
+        return ""
+
+    texts = []
+    for c in chunks:
+        if c is None:
+            continue
+        inputs = proc(c, sampling_rate=SAMPLE_RATE, return_tensors="pt")
+        ids = mdl.generate(inputs.input_features, max_new_tokens=444, language="fr", task="transcribe")[0]
+        texts.append(proc.tokenizer.decode(ids, skip_special_tokens=True).strip())
+    return " ".join(t for t in texts if t)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # Router — picks the right backend
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _transcribe(audio_path: str) -> str:
+    if ONNX_MODEL_PATH and os.path.isdir(ONNX_MODEL_PATH):
+        return _transcribe_onnx(audio_path)
     if CT2_MODEL_PATH and os.path.isdir(CT2_MODEL_PATH):
         return _transcribe_fw(audio_path)
     return _transcribe_hf(audio_path)

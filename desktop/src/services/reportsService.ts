@@ -75,3 +75,26 @@ export async function updateReport(
 export async function deleteReport(id: string): Promise<void> {
   await api.delete(`/api/reports/${id}`);
 }
+
+export interface ReportVersion {
+  _id: string;
+  reportId: string;
+  version: number;
+  reason: string;                 // "created" | "status:draft" | "status:validated" | "status:saved"
+  ID_Exam?: string;
+  content: string;
+  originalContent?: string | null;
+  status: "draft" | "validated" | "saved";
+  category?: ReportCategory;
+  accuracy?: number | null;
+  doctorId?: string;
+  doctorName?: string;
+  archivedBy?: string;
+  archivedByName?: string;
+  archivedAt: string;
+}
+
+export async function getReportVersions(id: string): Promise<ReportVersion[]> {
+  const data = await api.get<{ results: ReportVersion[] }>(`/api/reports/${id}/versions`);
+  return data.results;
+}

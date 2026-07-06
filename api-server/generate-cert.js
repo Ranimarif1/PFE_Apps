@@ -13,9 +13,20 @@ const OPENSSL = process.platform === "win32"
   : "openssl";
 
 function getLocalIP() {
+  // Single source of truth: explicit LAN IP wins over fragile auto-detection.
+  // Order: LAN_IP env → VITE_LAN_IP in client/.env → auto-detect → loopback.
+  if (process.env.LAN_IP) return process.env.LAN_IP.trim();
+  try {
+    const envTxt = fs.readFileSync(path.join(DIR, "../client/.env"), "utf8");
+    const m = envTxt.match(/^\s*VITE_LAN_IP\s*=\s*(.+?)\s*$/m);
+    if (m && m[1]) return m[1].trim();
+  } catch {}
+
+  // Note: do NOT skip 172.20.x — that is the iPhone personal-hotspot range,
+  // a real network, not a virtual adapter.
   const VIRTUAL = /virtual|vmware|vbox|hyper.v|vethernet|loopback|docker|wsl|tap|tun/i;
   const VIRT_PREFIXES = ["192.168.56.","172.16.","172.17.","172.18.","172.19.",
-    "172.20.","172.21.","172.22.","172.23.","172.24.","172.25.","172.26.",
+    "172.21.","172.22.","172.23.","172.24.","172.25.","172.26.",
     "172.27.","172.28.","172.29.","172.30.","172.31."];
   for (const [name, ifaces] of Object.entries(os.networkInterfaces())) {
     if (VIRTUAL.test(name)) continue;

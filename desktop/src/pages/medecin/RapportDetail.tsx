@@ -1,9 +1,9 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
-import { getReport, createReport, updateReport, deleteReport, checkExamId } from "@/services/reportsService";
+import { getReport, createReport, updateReport, deleteReport, checkExamId, getReportVersions, type ReportVersion } from "@/services/reportsService";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle, Edit3, Save, FileText, Check, X, Loader2, ArrowLeft, Pencil, Wand2, CloudUpload, AlertTriangle, Trash2, ClipboardCopy, RotateCcw, Star } from "lucide-react";
+import { CheckCircle, Edit3, Save, FileText, Check, X, Loader2, ArrowLeft, Pencil, Wand2, CloudUpload, AlertTriangle, Trash2, ClipboardCopy, RotateCcw, Star, History } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -44,6 +44,17 @@ function AutoTextarea({ value, onChange, className }: { value: string; onChange:
   );
 }
 
+
+/* ── Map an archive "reason" to a French label ── */
+function reasonLabel(reason: string): string {
+  switch (reason) {
+    case "created":          return "Création";
+    case "status:draft":     return "Brouillon";
+    case "status:validated": return "Validé";
+    case "status:saved":     return "Enregistré";
+    default:                 return reason;
+  }
+}
 
 /* ════════════════════════════════════════ */
 export default function RapportDetail() {
@@ -92,6 +103,30 @@ export default function RapportDetail() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError,   setDeleteError]   = useState("");
   const [deleting,      setDeleting]      = useState(false);
+
+  /* ── Version history ── */
+  const [showVersions,    setShowVersions]    = useState(false);
+  const [versions,        setVersions]        = useState<ReportVersion[]>([]);
+  const [versionsLoading, setVersionsLoading] = useState(false);
+  const [versionsError,   setVersionsError]   = useState("");
+  const [selectedVersion, setSelectedVersion] = useState<ReportVersion | null>(null);
+
+  const openVersions = useCallback(async () => {
+    if (!id || isNew) return;
+    setShowVersions(true);
+    setVersionsLoading(true);
+    setVersionsError("");
+    setSelectedVersion(null);
+    try {
+      const v = await getReportVersions(id);
+      setVersions(v);
+      if (v.length) setSelectedVersion(v[0]);
+    } catch (err: unknown) {
+      setVersionsError(err instanceof Error ? err.message : "Erreur lors du chargement de l'historique.");
+    } finally {
+      setVersionsLoading(false);
+    }
+  }, [id, isNew]);
 
   /* ── Unvalidate (back to draft) ── */
   const [confirmUnvalidate, setConfirmUnvalidate] = useState(false);
@@ -649,7 +684,12 @@ export default function RapportDetail() {
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
+                    {!isNew && (
+                      <button onClick={openVersions} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors" title="Historique des versions">
+                        <History size={14} /> Historique
+                      </button>
+                    )}
                     {(isNew || status === "draft") && (
                       <button onClick={handleToggleEdit} className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors">
                         <Edit3 size={14} /> {editing ? "Lecture" : "Modifier"}
@@ -897,6 +937,74 @@ export default function RapportDetail() {
           </div>
         )}
       </div>
+
+      {/* ── Version history modal ── */}
+      <AnimatePresence>
+        {showVersions && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setShowVersions(false)}
+          >
+            <motion.div
+              className="bg-card rounded-2xl border border-border shadow-xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden"
+              initial={{ scale: 0.96, y: 8 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.96, y: 8 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+                <h3 className="font-semibold text-foreground flex items-center gap-2"><History size={16} /> Historique des versions</h3>
+                <button onClick={() => setShowVersions(false)} className="text-muted-foreground hover:text-foreground transition-colors"><X size={18} /></button>
+              </div>
+
+              <div className="flex flex-1 min-h-0">
+                {/* Version list */}
+                <div className="w-56 shrink-0 border-r border-border overflow-y-auto p-2 space-y-1">
+                  {versionsLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground p-3"><Loader2 size={14} className="animate-spin" /> Chargement…</div>
+                  ) : versionsError ? (
+                    <p className="text-destructive text-sm p-3">{versionsError}</p>
+                  ) : versions.length === 0 ? (
+                    <p className="text-muted-foreground text-sm p-3">Aucune version archivée pour ce rapport.</p>
+                  ) : versions.map(v => (
+                    <button
+                      key={v._id}
+                      onClick={() => setSelectedVersion(v)}
+                      className={`w-full text-left rounded-lg px-3 py-2 transition-colors border ${selectedVersion?._id === v._id ? "bg-primary/10 border-primary/30" : "border-transparent hover:bg-muted/50"}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-foreground">v{v.version}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{reasonLabel(v.reason)}</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{new Date(v.archivedAt).toLocaleString("fr-FR")}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{v.archivedByName || "—"}</p>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Selected version content */}
+                <div className="flex-1 overflow-y-auto p-4">
+                  {selectedVersion ? (
+                    <>
+                      <div className="text-xs text-muted-foreground mb-3 flex flex-wrap gap-x-3 gap-y-1">
+                        <span>Version <b className="text-foreground">{selectedVersion.version}</b></span>
+                        <span>· {reasonLabel(selectedVersion.reason)}</span>
+                        <span>· {new Date(selectedVersion.archivedAt).toLocaleString("fr-FR")}</span>
+                        <span>· par {selectedVersion.archivedByName || "—"}</span>
+                        {typeof selectedVersion.accuracy === "number" && (
+                          <span>· précision {Math.round(selectedVersion.accuracy * 100)}%</span>
+                        )}
+                      </div>
+                      <pre className="text-sm text-foreground whitespace-pre-wrap bg-muted/30 rounded-xl p-3 font-sans leading-relaxed">{selectedVersion.content || "—"}</pre>
+                    </>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-muted-foreground text-sm">Sélectionnez une version pour la consulter</div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AppLayout>
   );
 }

@@ -1,3 +1,5 @@
+import type { ReportCategory } from "@/constants/reportCategories";
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 export interface AudioRecord {
@@ -9,6 +11,7 @@ export interface AudioRecord {
   size: number;
   duration: number; // seconds
   seniorId?: string | null;
+  category?: ReportCategory | null;  // exam type chosen at recording time
   createdAt: string;
   reportId?: string;
 }
@@ -22,7 +25,8 @@ export async function uploadAudio(
   examId: string,
   blob: Blob,
   duration: number,
-  seniorId?: string | null
+  seniorId?: string | null,
+  category?: ReportCategory | null
 ): Promise<AudioRecord> {
   const form = new FormData();
   const ext  = blob.type.includes("webm") ? ".webm" : blob.type.includes("mp4") ? ".mp4" : ".wav";
@@ -30,6 +34,7 @@ export async function uploadAudio(
   form.append("examId",   examId);
   form.append("duration", String(Math.round(duration)));
   if (seniorId) form.append("seniorId", seniorId);
+  if (category) form.append("category", category);
 
   const res = await fetch(`${BASE_URL}/api/audios/`, {
     method:  "POST",

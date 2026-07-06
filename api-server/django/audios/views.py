@@ -49,6 +49,7 @@ def list_or_upload(request: HttpRequest) -> JsonResponse:
         exam_id    = request.POST.get("examId", "").strip()
         duration   = request.POST.get("duration", "0")
         senior_id  = request.POST.get("seniorId", "").strip()
+        category   = request.POST.get("category", "").strip().lower()
 
         if not audio_file or not exam_id:
             return JsonResponse({"detail": "Le fichier audio et l'identifiant d'examen sont requis."}, status=400)
@@ -70,6 +71,9 @@ def list_or_upload(request: HttpRequest) -> JsonResponse:
             "size":      audio_file.size,
             "duration":  int(float(duration)),
             "seniorId":  senior_id or None,
+            # Remember the exam type chosen by the doctor so it survives the
+            # pending queue and is reused when the audio is transcribed later.
+            "category":  category or None,
             "createdAt": now,
         }
         inserted = col.insert_one(doc)

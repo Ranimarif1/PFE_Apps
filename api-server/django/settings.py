@@ -5,7 +5,10 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 try:
-    load_dotenv(encoding="utf-8-sig")
+    # Charge api-server/.env (config Mongo Atlas, email, etc.) quel que soit le
+    # répertoire de lancement. settings.py est dans api-server/django/, donc le
+    # .env est un cran au-dessus.
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env", encoding="utf-8-sig")
 except Exception:
     pass
 
