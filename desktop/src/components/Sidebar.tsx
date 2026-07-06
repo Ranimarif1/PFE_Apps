@@ -15,6 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { RecordingIndicator } from "@/components/RecordingIndicator";
 import { useRecording } from "@/contexts/RecordingContext";
 import { deleteAudio } from "@/services/audioService";
+import type { ReportCategory } from "@/constants/reportCategories";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 // ── Audio Queue ────────────────────────────────────────────────────────────────
@@ -28,9 +29,11 @@ function AudioQueue({ collapsed }: { collapsed: boolean }) {
 
   if (audioQueue.length === 0) return null;
 
-  const handleTranscribe = async (id: string, examId: string) => {
+  const handleTranscribe = async (id: string, examId: string, category?: ReportCategory | null) => {
     setTranscribingId(id);
-    await transcribeById(id, examId);
+    // Reuse the exam type chosen when the audio was recorded; falls back to the
+    // default inside transcribeById only if the audio predates category storage.
+    await transcribeById(id, examId, category ?? undefined);
     setTranscribingId(null);
   };
 
@@ -99,7 +102,7 @@ function AudioQueue({ collapsed }: { collapsed: boolean }) {
                       </p>
                     </div>
                     <button
-                      onClick={() => handleTranscribe(audio._id, audio.examId)}
+                      onClick={() => handleTranscribe(audio._id, audio.examId, audio.category)}
                       disabled={!!busy || dismissingId === audio._id}
                       className="shrink-0 flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-md disabled:opacity-40 transition-all"
                       style={{ background: "rgba(74,123,190,0.12)", color: "#4A7BBE" }}

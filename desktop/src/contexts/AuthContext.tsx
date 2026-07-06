@@ -117,6 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const message =
         err instanceof Error ? err.message : "Erreur de connexion.";
       if (
+        message.includes("attente de validation") ||
         message.includes("not validated") ||
         message.includes("Doctor account not validated")
       ) {

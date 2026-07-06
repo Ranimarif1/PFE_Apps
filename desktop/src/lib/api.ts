@@ -52,18 +52,24 @@ async function request<T>(
 
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
-  if (res.status === 401 && _retry) {
-    // Access token expired — try to get a new one silently
-    const newToken = await tryRefresh();
-    if (newToken) {
-      // Retry the original request once with the new token
-      return request<T>(path, options, false);
-    }
-    forceLogout();
-    throw new Error("Session expirée. Veuillez vous reconnecter.");
-  }
-
   if (res.status === 401) {
+    // Public auth endpoints (login, password reset, …) legitimately return 401
+    // for bad credentials. Surface the backend message instead of treating it
+    // as an expired session and hard-redirecting to /login.
+    const isPublicAuth = /\/api\/auth\/(login|register|refresh|forgot-password|reset-password|request-password-reset|send-verification-code|verify-email-code|check-senior-code)/.test(path);
+    if (isPublicAuth) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data?.detail || `Erreur ${res.status}`);
+    }
+
+    // Protected endpoint: the access token likely expired. Try a silent refresh
+    // once, otherwise log the user out.
+    if (_retry) {
+      const newToken = await tryRefresh();
+      if (newToken) {
+        return request<T>(path, options, false);
+      }
+    }
     forceLogout();
     throw new Error("Session expirée. Veuillez vous reconnecter.");
   }

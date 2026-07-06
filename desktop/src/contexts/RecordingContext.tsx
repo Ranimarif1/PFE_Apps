@@ -288,7 +288,7 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
     setError(null);
     let savedId: string | null = null;
     try {
-      const saved = await uploadAudio(eid, blob, duration, sid);
+      const saved = await uploadAudio(eid, blob, duration, sid, cat);
       setSavedAudio(saved);
       savedId = saved._id;
     } catch (err) {

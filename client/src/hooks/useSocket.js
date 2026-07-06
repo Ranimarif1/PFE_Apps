@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 
-// Point at your existing backend.
-// VITE_SOCKET_URL can be set in .env, otherwise falls back to the current origin
-// (works out of the box when Vite proxies /socket.io → localhost:4000).
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || window.location.origin;
+// Always connect to the page's own origin. Vite proxies /socket.io → the Node
+// server (port 4000), so this works no matter which LAN IP the phone used to
+// load the page — no stale/auto-detected IP to get wrong, and it reuses the
+// already-accepted TLS cert of the page (no second cert prompt → no reconnect loop).
+const SOCKET_URL = window.location.origin;
 
 /**
  * Manages the Socket.io connection for the mobile recorder.
