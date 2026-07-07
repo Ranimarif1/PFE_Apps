@@ -4,12 +4,9 @@ import json
 import re
 from typing import Any, Dict
 
-from django.conf import settings
-
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-CONTACT_RECIPIENT = "contact.reportease@gmail.com"
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 

@@ -471,7 +471,7 @@ export default function Register() {
             <motion.button
               variants={itemVariants}
               type="submit"
-              disabled={loading || !emailVerified || !passwordValid || !passwordsMatch}
+              disabled={loading || !passwordValid || !passwordsMatch}
               className="w-full gradient-hero text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading ? (

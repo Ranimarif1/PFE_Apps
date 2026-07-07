@@ -2,10 +2,11 @@ import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getUsers, updateUserStatus, deleteUser, changeUserRole, revokeSenior, grantSenior, type BackendUserRecord } from "@/services/usersService";
+import { getPasswordResetRequestsApi, setTempPasswordApi, type PasswordResetRequest } from "@/services/authService";
 import { toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
 import {
-  Search, Check, X, Trash2, AlertTriangle, UserRoundCheck, Star, StarOff, ShieldCheck,
+  Search, Check, X, Trash2, AlertTriangle, UserRoundCheck, Star, StarOff, ShieldCheck, KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getStatusBadgeClass, getStatusLabel } from "@/styles/statusSystem";
@@ -26,6 +27,8 @@ export default function AdminMedecins() {
   const [grantSeniorTarget,   setGrantSeniorTarget]   = useState<BackendUserRecord | null>(null);
   const [grantSeniorCode,     setGrantSeniorCode]     = useState("");
   const [promoteCode,         setPromoteCode]         = useState("");
+  const [tempPwdTarget,       setTempPwdTarget]       = useState<PasswordResetRequest | null>(null);
+  const [tempPwdValue,        setTempPwdValue]        = useState("");
 
   const { data: users = [] } = useQuery<BackendUserRecord[]>({ queryKey: ["users"], queryFn: getUsers });
   const { data: resetRequests = [] } = useQuery<PasswordResetRequest[]>({

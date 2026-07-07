@@ -360,7 +360,7 @@ export function RegisterForm({ onSwitchToLogin, onAfterSuccess, hideHeader }: Re
 
         <button
           type="submit"
-          disabled={loading || !emailVerified || !passwordValid || !passwordsMatch}
+          disabled={loading || !passwordValid || !passwordsMatch}
           className="w-full gradient-hero text-white font-semibold py-3 rounded-xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {loading ? "Inscription en cours..." : "S'inscrire"}
