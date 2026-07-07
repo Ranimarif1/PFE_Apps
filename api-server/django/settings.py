@@ -5,10 +5,10 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 try:
-    # Charge api-server/.env (config Mongo Atlas, email, etc.) quel que soit le
-    # répertoire de lancement. settings.py est dans api-server/django/, donc le
-    # .env est un cran au-dessus.
-    load_dotenv(Path(__file__).resolve().parent.parent / ".env", encoding="utf-8-sig")
+    # Charge api-server/django/.env (config Mongo, email, Whisper, etc.) quel que
+    # soit le répertoire de lancement. settings.py est dans api-server/django/,
+    # le .env est dans le même dossier (c'est là que setup.sh l'écrit).
+    load_dotenv(Path(__file__).resolve().parent / ".env", encoding="utf-8-sig")
 except Exception:
     pass
 
